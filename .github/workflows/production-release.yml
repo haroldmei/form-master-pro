@@ -1,0 +1,59 @@
+name: Production Release
+
+on:
+  push:
+    tags:
+      - 'v*'  # Run when tag is pushed with pattern v*, e.g. v1.0.0
+  workflow_dispatch:  # Allow manual triggering
+
+jobs:
+  build-and-publish:
+    runs-on: windows-latest  # Need Windows for NSIS installer
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install build twine setuptools wheel
+      
+      - name: Extract version
+        id: get_version
+        run: |
+          $version = '0.1.27'  # Replace with your version extraction logic
+          echo "VERSION=$version" >> $env:GITHUB_OUTPUT
+      
+      - name: Build Python package
+        run: |
+          python -m build
+      
+      - name: Install NSIS
+        run: |
+          choco install nsis -y
+      
+      - name: Build Windows installer
+        shell: cmd
+        run: |
+          cd ${{ github.workspace }}
+          call build_installer.bat
+      
+      - name: Create GitHub Release
+        id: create_release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            dist/*.exe
+          tag_name: ${{ github.ref_name }}
+          name: FormMaster ${{ steps.get_version.outputs.VERSION }}
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.PRIVATE_SSH_KEY }}
