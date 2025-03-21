@@ -24,22 +24,6 @@ FormMaster is a powerful automation tool designed to streamline the process of s
 
 ## 🔧 Getting Started
 
-## Installation
-
-You can install FormMaster directly from PyPI:
-
-```bash
-pip install formmaster
-```
-
-Or install from source:
-
-```bash
-git clone https://github.com/haroldmei/form-master.git
-cd form-master
-pip install -e .
-```
-
 ## Usage
 
 After installation, you can run FormMaster in two ways:
@@ -47,6 +31,8 @@ After installation, you can run FormMaster in two ways:
 ### Command Line
 
 ```bash
+python src\files\docx-extractor.py "C:\\Users\\harol\\Documents\\0105 郭巾秋\\澳洲大学申请信息表2020.docx" --output out.json
+
 python -m formfiller --path /path/to/student/documents --portal usyd
 ```
 

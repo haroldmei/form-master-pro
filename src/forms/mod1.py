@@ -3,35 +3,14 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
 
-from .base import form_base
+from .form_base import form_base
 from getpass import getpass
 
 import sys
 import re
 import time
 
-from forms.usyd.create_profile import CreateProfileForm
-from forms.usyd.personal_info_address import PersonalInfoAddress
-from forms.usyd.personal_info_address_perm import PersonalInfoAddressPerm
-from forms.usyd.personal_info_contact import PersonalInfoContact
-from forms.usyd.personal_info_details import PersonalInfoDetails
-from forms.usyd.personal_info_residency import PersonalInfoResidency
-from forms.usyd.personal_info_course_applications import PersonalInfoCouseApplications
-from forms.usyd.personal_info_enrollment import PersonalInfoEnrollment
-from forms.usyd.personal_info_enrollment_status import PersonalInfoEnrollmentStatus
-from forms.usyd.personal_info_fee_waiver import PersonalInfoFeeWeaver
-
-from forms.usyd.qualifications_second_school_studies import QualificationsSecondSchoolStudies
-from forms.usyd.qualifications_academic_qualifications import QualificationsAcademicQualifications
-from forms.usyd.qualifications_language_proficiency import QualificationsLanguageProficiency
-from forms.usyd.qualifications_record_of_exclusions import QualificationsRecordOfExclusions
-from forms.usyd.qualifications_second_school_studies import QualificationsSecondSchoolStudies
-from forms.usyd.qualifications_highest_qualification_details import QualificationsHighestQualificationDetails
-
-from forms.usyd.scholarships import Scholarships
-from forms.usyd.login_form import LoginForm
-
-from forms.utils.form_extract import extract_and_save_form_controls
+from forms.form_extract import extract_and_save_form_controls
 
 class mod1(form_base):
     
@@ -114,53 +93,8 @@ class mod1(form_base):
 
         return self.main_application_handle
 
-    def fill_personal_info(self):
-        PersonalInfoDetails(self.driver, self.data).run()
-        PersonalInfoAddress(self.driver, self.data).run()
-        PersonalInfoAddressPerm(self.driver, self.data).run()
-        PersonalInfoContact(self.driver, self.data).run()
-        PersonalInfoResidency(self.driver, self.data).run()
-        PersonalInfoCouseApplications(self.driver, self.data).run()
-        PersonalInfoEnrollment(self.driver, self.data).run()
-        PersonalInfoEnrollmentStatus(self.driver, self.data).run()
-        PersonalInfoFeeWeaver(self.driver, self.data).run()
-
-
-    def fill_scholarships(self):
-        Scholarships(self.driver, self.data).run()
-    
-    def fill_your_qualifications(self):
-        QualificationsLanguageProficiency(self.driver, self.data).run()
-        QualificationsRecordOfExclusions(self.driver, self.data).run()
-        QualificationsHighestQualificationDetails(self.driver, self.data).run()
-        QualificationsSecondSchoolStudies(self.driver, self.data).run()
-        #QualificationsSecondSchoolStudies(self.driver, self.data).run()
-        #QualificationsAcademicQualifications(self.driver, self.data).run()
-
-    def fill_further_references(self):
-        print('>>> reference info: ')
-        pass
-
     def fill_form(self):
         driver = self.driver
-
-        app_form = '/html/body/div[1]/form/div[2]/h1'
-        title = driver.find_element("xpath", app_form).text
-        if title == 'Your personal information':
-            self.fill_personal_info()
-        elif title == 'Scholarships':
-            self.fill_scholarships()
-        elif title == 'Your qualifications':
-            self.fill_your_qualifications()
-        elif title == 'Further references':
-            self.fill_further_references()
-        elif title == 'Declaration':
-            print('Please confirm.')
-            #return self.new_application()
-        elif title == 'Manage your application fee':
-            pass
-        else:
-            pass
         
         return True
 
@@ -194,9 +128,6 @@ class mod1(form_base):
             
         course = '//*[contains(@id,"POP_UDEF") and contains(@id,"POP.MENSYS.1-1")]'
         self.set_value(course, course_applied)
-
-        #view_report = '/html/body/div[1]/form/div[3]/div/div/div[2]/div[3]/div/input[2]'
-        #driver.find_element("xpath", view_report).click()
 
         return
 

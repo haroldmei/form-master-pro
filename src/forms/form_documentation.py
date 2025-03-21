@@ -5,7 +5,7 @@ import os
 import json
 from pathlib import Path
 import datetime
-from forms.utils.logger import get_logger
+from utils.logger import get_logger
 
 logger = get_logger('form_extract')
 
@@ -203,7 +203,7 @@ def generate_code_from_controls(controls):
     code = []
     code.append("# Generated code for form interaction")
     code.append("from selenium.webdriver.common.by import By")
-    code.append("from forms.utils.form_utils import set_value_by_id, select_chosen_option_by_id, ensure_radio_selected")
+    code.append("from forms.form_utils import set_value_by_id, select_chosen_option_by_id, ensure_radio_selected")
     code.append("")
     
     # Process text inputs

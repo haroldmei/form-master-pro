@@ -21,10 +21,9 @@ from webdriver_manager.chrome import ChromeDriverManager
 from selenium.webdriver import Firefox, FirefoxOptions
 from pynput.mouse import Listener as MouseListener
 
-from forms.utils.etl import load
+from files.docxv1 import load
 from forms.mod1 import mod1
-from forms.mod2 import mod2
-from forms.utils.logger import get_logger
+from utils.logger import get_logger
 
 # Global variables
 lock = Lock()
@@ -185,7 +184,7 @@ def on_click(x, y, button, pressed):
             logger.critical("Fatal error in mouse handler, exiting")
             os._exit(1)
 
-def run(data_dir, uni='usyd', mode=0):
+def run(data_dir, mode=0):
     """Main execution function"""
     global module, driver, run_mode
     
@@ -202,15 +201,8 @@ def run(data_dir, uni='usyd', mode=0):
         logger.info(f"Loaded {len(students)} student records")
 
     # Initialize the appropriate module
-    if uni == 'usyd':
-        logger.info("Initializing Sydney University module")
-        module = mod1(driver, students, run_mode)
-    elif uni == 'unsw':
-        logger.info("Initializing UNSW module")
-        module = mod2(driver, students, run_mode)
-    else:
-        logger.error(f"University '{uni}' not supported")
-        return
+    logger.info("Initializing Sydney University module")
+    module = mod1(driver, students, run_mode)
 
     # Login and initiate the session
     main_application_handle = module.login_session()
@@ -248,9 +240,6 @@ def parse_arguments():
                       default=default_data_dir,
                       help='Directory containing student data')
     
-    parser.add_argument('--uni', type=str, choices=['usyd', 'unsw'], default='usyd',
-                      help='Target university (usyd or unsw)')
-    
     parser.add_argument('--mode', type=int, default=0,
                       help='Operation mode (0 for normal operation)')
     
@@ -258,4 +247,4 @@ def parse_arguments():
 
 if __name__ == '__main__':
     args = parse_arguments()
-    run(data_dir=args.dir, uni=args.uni, mode=args.mode)
+    run(data_dir=args.dir, mode=args.mode)

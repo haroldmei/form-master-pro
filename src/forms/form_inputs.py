@@ -1,7 +1,7 @@
 """
 Extraction utilities for text input controls.
 """
-from forms.utils.form_extract_common import find_label_for
+from forms.form_common import find_label_for
 
 def extract_inputs(container):
     """Extract text, email, password, date and number inputs"""

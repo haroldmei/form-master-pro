@@ -1,7 +1,7 @@
 """
 Extraction utilities for radio button controls.
 """
-from forms.utils.form_extract_common import find_label_for, find_group_label, get_associated_text
+from forms.form_common import find_label_for, find_group_label, get_associated_text
 
 def extract_radio_groups(container):
     """Extract radio button groups"""

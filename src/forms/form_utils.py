@@ -5,7 +5,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
 import time
-from forms.utils.logger import get_logger
+from utils.logger import get_logger
 
 def set_value_by_id(driver, element_id, value):
     """Set value to an input field by ID"""

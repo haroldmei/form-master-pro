@@ -10,18 +10,18 @@ import traceback
 from pathlib import Path
 from bs4 import BeautifulSoup
 from selenium.common.exceptions import NoSuchElementException
-from forms.utils.logger import get_logger
+from utils.logger import get_logger
 
 # Import individual control extractors
-from forms.utils.form_extract_inputs import extract_inputs
-from forms.utils.form_extract_selects import extract_selects
-from forms.utils.form_extract_textareas import extract_textareas
-from forms.utils.form_extract_buttons import extract_buttons
-from forms.utils.form_extract_radios import extract_radio_groups
-from forms.utils.form_extract_checkboxes import extract_checkboxes
+from forms.form_inputs import extract_inputs
+from forms.form_selects import extract_selects
+from forms.form_textareas import extract_textareas
+from forms.form_buttons import extract_buttons
+from forms.form_radios import extract_radio_groups
+from forms.form_checkboxes import extract_checkboxes
 
 # Import documentation utilities
-from forms.utils.form_extract_documentation import (
+from forms.form_documentation import (
     create_label_mapping,
     generate_field_documentation,
     generate_code_from_controls,

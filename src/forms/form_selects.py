@@ -1,8 +1,8 @@
 """
 Extraction utilities for select dropdown controls.
 """
-from forms.utils.form_extract_common import find_label_for
-from forms.utils.logger import get_logger
+from forms.form_common import find_label_for
+from utils.logger import get_logger
 
 logger = get_logger('form_extract_selects')
 

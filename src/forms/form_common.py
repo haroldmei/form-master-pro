@@ -3,7 +3,7 @@ Common utilities for form control extraction.
 """
 import re
 from bs4 import Tag
-from forms.utils.logger import get_logger
+from utils.logger import get_logger
 
 logger = get_logger('form_extract')
 

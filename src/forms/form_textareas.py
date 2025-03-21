@@ -1,7 +1,7 @@
 """
 Extraction utilities for textarea controls.
 """
-from forms.utils.form_extract_common import find_label_for
+from forms.form_common import find_label_for
 
 def extract_textareas(container):
     """Extract textarea elements"""
