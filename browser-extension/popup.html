@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FormMaster Pro</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <img src="images/icon48.png" alt="FormMaster Logo">
+      <h1>FormMaster Pro</h1>
+    </header>
+    
+    <div id="connection-status" class="status">
+      <span class="indicator" id="status-indicator"></span>
+      <span id="status-text">Checking connection...</span>
+    </div>
+    
+    <div class="main-actions">
+      <button id="analyze-form" class="primary-btn">Analyze Current Form</button>
+      <button id="load-data" class="secondary-btn">Load Data File</button>
+      <button id="data-mappings" class="secondary-btn">Field Mappings</button>
+      <button id="auto-fill" class="primary-btn" disabled>Auto Fill Form</button>
+    </div>
+    
+    <div id="form-analysis" class="panel hidden">
+      <h3>Form Fields Detected: <span id="field-count">0</span></h3>
+      <div id="fields-container"></div>
+    </div>
+    
+    <div class="footer">
+      <button id="open-options" class="text-btn">Settings</button>
+      <span class="version">v0.1.0</span>
+    </div>
+  </div>
+  
+  <script src="popup.js"></script>
+</body>
+</html>

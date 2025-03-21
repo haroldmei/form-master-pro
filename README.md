@@ -1,132 +1,232 @@
-# FormMaster
+I'll create a comprehensive README.md file for the FormMaster project that includes both developer setup instructions and a user tutorial.
 
-## Automate Your Form Submissions at Scale
+### [README.md](file:///c%3A/Users/harol/personal/form-master-pro/README.md)
 
-FormMaster is a powerful automation tool designed to streamline the process of submitting multiple form entries across various platforms.
+```markdown
+# FormMaster Pro
 
-![FormMaster Logo](./formmaster.png)
+FormMaster Pro is an advanced form automation tool designed to streamline the process of filling out web forms, particularly for university applications. It combines a browser extension with a companion desktop application to provide robust form analysis and automated filling capabilities.
 
-## 🚀 Key Features
+![FormMaster Logo](js-src/browser-extension/images/icon128.png)
 
-- **Bulk Processing:** With predefined templates, lodge hundreds of customer information entries within hours instead of days
-- **AI-Powered Document Extraction:** Automatically extract information from various document types (PDF, DOCX, XLSX, etc.)
-- **Flexible Automation:** Choose between full automation or semi-automation with user review
-- **Custom Templates:** Create reusable templates for your most common form submissions
-- **Reliability:** Robust error handling ensures your submissions complete successfully
+## Features
 
-## 💼 Use Cases
+- **Form Analysis**: Automatically detects and maps form fields on any webpage
+- **Data Extraction**: Extracts relevant information from DOCX and JSON files
+- **Field Mapping**: Intuitive interface for mapping data to form fields
+- **Bulk Processing**: Process multiple applications efficiently
+- **Extensible Architecture**: Modular design for adding support for different universities
 
-- **Education:** Process hundreds of student applications with speed and accuracy
-- **HR & Recruitment:** Submit candidate information to multiple job portals automatically
-- **Healthcare:** Process patient intake forms efficiently
-- **Legal Services:** Submit documentation to courts and government agencies
-- **Real Estate:** Process multiple property listings across platforms
+## System Requirements
 
-## 🔧 Getting Started
+- **Operating System**: Windows 10+ (preferred), macOS, or Linux
+- **Node.js**: v16.0.0 or higher
+- **Chromium-based browser**: Chrome, Edge, or Brave
+- **Chrome WebDriver**: Compatible with your Chrome version
 
-## Usage
+## For Developers
 
-After installation, you can run FormMaster in two ways:
+### Setting Up the Development Environment
 
-### Command Line
+1. **Clone the repository**
+
+   ```bash
+   git clone https://github.com/haroldmei/form-master.git
+   cd form-master-pro
+   ```
+
+2. **Install dependencies for JavaScript version**
+
+   ```bash
+   # Install JS dependencies
+   cd js-src
+   npm install
+   
+   # Install browser extension dependencies
+   cd ../browser-extension
+   npm install
+   
+   # Install companion app dependencies
+   cd ../companion-app
+   npm install
+   ```
+
+3. **Configure Chrome WebDriver**
+
+   Download the appropriate version of ChromeDriver that matches your installed Chrome version from:
+   https://chromedriver.chromium.org/downloads
+
+   Place the executable in the `.formmaster` directory in your user home folder.
+
+### Project Structure
+
+```
+form-master-pro/
+├── src/                  # Python implementation
+├── js-src/               # JavaScript implementation
+│   ├── files/            # Document processing utilities
+│   ├── forms/            # Form handling modules
+│   └── utils/            # Helper utilities
+├── browser-extension/    # Chrome/Firefox extension
+└── companion-app/        # Electron companion application
+```
+
+### Running the JavaScript Version
 
 ```bash
-python src\files\docx-extractor.py "C:\\Users\\harol\\Documents\\0105 郭巾秋\\澳洲大学申请信息表2020.docx" --output out.json
-
-python -m formfiller --path /path/to/student/documents --portal usyd
+cd js-src
+npm start -- --dir "/path/to/data/directory"
 ```
 
-### As Python Module
+Additional flags:
+- `--mode 1`: Run in form analysis mode
 
-```python
-from formmaster import FormFiller
+### Building the Browser Extension
 
-filler = FormFiller(path="/path/to/student/documents", portal="usyd")
-filler.run()
-```
-
-## ✨ Why FormMaster?
-
-> "FormMaster reduced our application processing time by 90%. What used to take us weeks now takes just hours." - Education Administrator
-
-### Save Time, Reduce Errors
-
-Manual form entry is tedious and error-prone. FormMaster automates the process, ensuring accuracy while saving valuable staff time. Our intelligent form filling technology understands form structures and adapts to changes, ensuring your submissions are always successful.
-
-### Powerful AI Integration
-
-Our AI capabilities mean FormMaster can:
-- Extract information from unstructured documents
-- Intelligently map extracted data to the right form fields
-- Learn from corrections to improve future accuracy
-
-### Scalable Solutions for Any Size Organization
-
-Whether you're processing dozens or thousands of submissions, FormMaster scales to meet your needs with flexible deployment options.
-
-## 📊 Performance Metrics
-
-- **Speed:** Process forms up to 50x faster than manual entry
-- **Accuracy:** Reduce data entry errors by up to 95%
-- **ROI:** Organizations typically see ROI within the first month of implementation
-
-## Development
-
-### Building the Package
-
-To build the package locally:
-
-1. Ensure you have the build tools installed:
+1. Navigate to the browser-extension directory:
    ```bash
-   pip install build twine
+   cd browser-extension
    ```
 
-2. Build the package:
+2. Load the unpacked extension in Chrome:
+   - Open Chrome and navigate to `chrome://extensions`
+   - Enable "Developer mode"
+   - Click "Load unpacked" and select the `browser-extension` folder
+
+3. Note the generated extension ID - you'll need it for the companion app setup
+
+### Setting Up the Companion App
+
+1. Navigate to the companion-app directory:
    ```bash
-   python -m build
+   cd companion-app
    ```
 
-This will create distribution files in the `dist/` directory:
-- `formmaster-0.1.0-py3-none-any.whl` (Wheel package)
-- `formmaster-0.1.0.tar.gz` (Source distribution)
-
-### Publishing to PyPI
-
-To upload the package to PyPI:
-
-1. Test your package with TestPyPI first:
-   ```bash
-   python -m twine upload --repository-url https://test.pypi.org/legacy/ dist/*
+2. Edit `register-native-messaging.js` to replace `<EXTENSION_ID>` with your Chrome extension ID:
+   ```javascript
+   // In allowed_origins array
+   "chrome-extension://<YOUR_EXTENSION_ID_HERE>/"
    ```
 
-2. Upload to the official PyPI:
+3. Register the native messaging host:
    ```bash
-   python -m twine upload dist/*
+   npm run postinstall
    ```
 
-### Release
+4. Start the companion app:
+   ```bash
+   npm start
+   ```
 
-1. Versioning
-```bash
-python increment_version.py
-```
+### Debugging
 
-2. Tagging
-```bash
-git tag -a v0.1.21 -m "FormMaster version 0.1.21 release"
-git push origin v0.1.21
-```
+- Browser extension logs are available in the browser's developer console
+- Companion app logs are written to the `.formmaster` directory in your user home folder
+- Use the `--verbose` flag for additional logging
 
-You will need to provide your PyPI credentials during upload. Alternatively, create a `.pypirc` file in your home directory:
+## For Users
 
-## Documentation
+### Installation
 
-For detailed documentation, please visit the [GitHub repository](https://github.com/haroldmei/form-master).
+#### Browser Extension
 
-## 📞 Contact Us
+1. Download the latest release from [GitHub Releases](https://github.com/haroldmei/form-master/releases)
+2. Extract the ZIP file
+3. In Chrome, navigate to `chrome://extensions`
+4. Enable "Developer mode" in the top-right corner
+5. Click "Load unpacked" and select the extracted `browser-extension` folder
+6. Note the extension ID (visible on the extensions page)
 
-Ready to revolutionize your form submission process? [Get in touch today!](mailto:contact@formmaster.com)
+#### Companion App
+
+1. Download the companion app installer for your platform
+2. Run the installer and follow the on-screen instructions
+3. During first run, you'll be asked to enter your extension ID
+4. The app will automatically register itself with your browser
+
+### Quick Start Tutorial
+
+1. **Launch the Companion App**
+   - Start the FormMaster Companion app
+   - It will appear in your system tray/menu bar
+   
+2. **Load Data File**
+   - Click the FormMaster icon in your browser
+   - Click "Load Data File"
+   - Select a DOCX or JSON file containing your form data
+   
+3. **Configure Field Mappings**
+   - Click "Field Mappings" in the extension popup
+   - Add a new URL pattern matching the form you want to fill
+   - For each form field:
+     - Enter the field ID or label
+     - Choose the mapping type (direct, table, or regex)
+     - Specify the mapping value
+   - Click "Save Mappings"
+   
+4. **Fill Forms**
+   - Navigate to the form page
+   - Click "Analyze Form" in the extension popup
+   - Review the detected form fields
+   - Click "Auto Fill Form"
+   
+5. **Review and Submit**
+   - Verify all fields were filled correctly
+   - Make any necessary corrections manually
+   - Submit the form
+
+### Field Mapping Guide
+
+#### Direct Value Mapping
+
+Use for static text values:
+- Field ID: `firstName`
+- Mapping Type: `direct`
+- Mapping Value: `John`
+
+#### Table Cell Mapping
+
+Extract data from a specific table cell:
+- Field ID: `email`
+- Mapping Type: `table`
+- Mapping Value: `0,2,1` (table 0, row 2, column 1)
+
+#### Regex Pattern Mapping
+
+Use regular expressions to extract specific data:
+- Field ID: `phoneNumber`
+- Mapping Type: `regex`
+- Mapping Value: `Phone:\s*(\d+)` (extracts digits after "Phone:")
+
+### Troubleshooting
+
+- **Connection Issues**: Ensure the companion app is running and shows "Connected"
+- **Form Detection Problems**: Try refreshing the page before analyzing
+- **Mapping Errors**: Verify your field IDs and mapping values
+- **Extension Not Working**: Check if the extension is enabled and has the necessary permissions
+
+## Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add some amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
 
 ## License
 
 This project is licensed under the MIT License - see the LICENSE file for details.
+
+## Acknowledgments
+
+- Built with Selenium WebDriver, Mammoth.js, and Electron
+- Icons from [Material Design Icons](https://material.io/resources/icons/)
+```
+
+This README.md provides comprehensive documentation for both developers wanting to work on the code and users simply wanting to install and use the FormMaster application. It includes step-by-step instructions for setting up the development environment, building the browser extension, and using the application to fill forms.
+
+Made changes.
+
+Similar code found with 2 license types
