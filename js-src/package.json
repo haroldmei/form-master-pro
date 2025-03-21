@@ -1,0 +1,44 @@
+{
+  "name": "formmaster",
+  "version": "0.1.27",
+  "description": "Form automation tool for Australian university application processes",
+  "main": "index.js",
+  "scripts": {
+    "start": "node formfiller.js",
+    "test": "jest"
+  },
+  "keywords": [
+    "form",
+    "automation",
+    "education",
+    "university",
+    "application"
+  ],
+  "author": "FormMaster Team <maintainer@example.com>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/haroldmei/form-master"
+  },
+  "bugs": {
+    "url": "https://github.com/haroldmei/form-master/issues"
+  },
+  "homepage": "https://github.com/haroldmei/form-master",
+  "dependencies": {
+    "cheerio": "^1.0.0-rc.12",
+    "luxon": "^3.4.0",
+    "mammoth": "^1.6.0",
+    "robotjs": "^0.6.0",
+    "selenium-webdriver": "^4.10.0",
+    "winston": "^3.10.0"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  },
+  "bin": {
+    "formmaster": "./bin/formmaster.js"
+  }
+}
