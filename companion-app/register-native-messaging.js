@@ -13,7 +13,7 @@ const manifest = {
   path: "", // Will be filled based on OS
   type: "stdio",
   allowed_origins: [
-    "chrome-extension://<EXTENSION_ID>/",  // Chrome extension ID placeholder
+    "chrome-extension://lpijjeiglanjpnpenimfpdnfenjcgkkf/",  // Chrome extension ID placeholder
     "mozilla-extension://<EXTENSION_ID>/"  // Firefox extension ID placeholder
   ]
 };

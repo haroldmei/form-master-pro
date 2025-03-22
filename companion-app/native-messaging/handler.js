@@ -127,7 +127,7 @@ class NativeMessagingHandler extends EventEmitter {
         }
       } else {
         // Unknown message type
-        logger.warn('Unknown message type:', message.type);
+        logger.warning('Unknown message type:', message.type);
         if (message.id) {
           this._sendResponse({
             id: message.id,
