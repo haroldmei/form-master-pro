@@ -1,6 +1,6 @@
 document.addEventListener('DOMContentLoaded', function() {
-  // Check connection to companion app
-  checkCompanionConnection();
+  // No longer need to check companion connection
+  displayExtensionMode();
   
   // Load existing settings
   loadSettings();
@@ -10,26 +10,10 @@ document.addEventListener('DOMContentLoaded', function() {
   document.getElementById('save-settings').addEventListener('click', saveSettings);
 });
 
-function checkCompanionConnection() {
+function displayExtensionMode() {
   const statusElement = document.getElementById('companion-status');
-  
-  // Try to connect to the companion app
-  chrome.runtime.sendMessage({ action: 'checkCompanionConnection' }, response => {
-    if (chrome.runtime.lastError) {
-      console.error(chrome.runtime.lastError);
-      statusElement.textContent = 'Error: Could not check companion app status';
-      statusElement.style.color = 'red';
-      return;
-    }
-    
-    if (response && response.connected) {
-      statusElement.textContent = 'Connected ✓';
-      statusElement.style.color = 'green';
-    } else {
-      statusElement.textContent = 'Not connected ✗ - Please start the companion app';
-      statusElement.style.color = 'red';
-    }
-  });
+  statusElement.textContent = 'Standalone Mode - No companion app required';
+  statusElement.style.color = 'green';
 }
 
 function loadSettings() {
@@ -112,8 +96,12 @@ function saveSettings() {
   chrome.storage.sync.set({ fieldMappings: mappings }, function() {
     showStatusMessage('Settings saved successfully!', 'success');
     
-    // Notify the background script that settings have changed
-    chrome.runtime.sendMessage({ action: 'settingsUpdated' });
+    // Directly apply settings without needing to notify external app
+    chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
+      if (tabs[0]) {
+        chrome.tabs.sendMessage(tabs[0].id, { action: 'settingsUpdated' });
+      }
+    });
   });
 }
 

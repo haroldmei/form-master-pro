@@ -15,46 +15,32 @@ document.addEventListener('DOMContentLoaded', function() {
   const fieldCount = document.getElementById('field-count');
   const fieldsContainer = document.getElementById('fields-container');
   
-  // Check companion app connection
-  checkCompanionConnection();
+  // Check connection status - in standalone mode, it's always "connected"
+  displayStandaloneStatus();
   
   // Set up event listeners
   analyzeFormBtn.addEventListener('click', analyzeCurrentForm);
-  loadDataBtn.addEventListener('click', loadDataFile);
+  loadDataBtn.addEventListener('click', loadProfileData);
   dataMappingsBtn.addEventListener('click', openDataMappings);
   autoFillBtn.addEventListener('click', autoFillForm);
   openOptionsBtn.addEventListener('click', openOptions);
   
-  // Check connection status when popup opens
-  checkCompanionConnection();
-  
   // Add event listeners
   document.getElementById('fill-form-btn').addEventListener('click', fillCurrentForm);
   document.getElementById('settings-btn').addEventListener('click', openSettings);
-  document.getElementById('reconnect-btn').addEventListener('click', reconnectCompanion);
   
-  // Function to check connection with companion app
-  function checkCompanionConnection() {
+  // Update reconnect button to be profile editor in standalone mode
+  const reconnectBtn = document.getElementById('reconnect-btn');
+  if (reconnectBtn) {
+    reconnectBtn.textContent = "Edit Profile";
+    reconnectBtn.addEventListener('click', editUserProfile);
+  }
+  
+  // Function to display standalone status
+  function displayStandaloneStatus() {
     const statusElement = document.getElementById('connection-status');
-    statusElement.textContent = 'Checking connection...';
-    statusElement.className = 'status';
-    
-    chrome.runtime.sendMessage({ action: 'checkCompanionConnection' }, response => {
-      if (chrome.runtime.lastError) {
-        console.error(chrome.runtime.lastError);
-        statusElement.textContent = 'Error checking connection';
-        statusElement.className = 'status disconnected';
-        return;
-      }
-      
-      if (response && response.connected) {
-        statusElement.textContent = 'Connected to companion app ✓';
-        statusElement.className = 'status connected';
-      } else {
-        statusElement.textContent = 'Disconnected from companion app ✗';
-        statusElement.className = 'status disconnected';
-      }
-    });
+    statusElement.textContent = 'Standalone Mode - No companion app required';
+    statusElement.className = 'status connected';
   }
   
   // Function to analyze the current form
@@ -63,9 +49,12 @@ document.addEventListener('DOMContentLoaded', function() {
     analyzeFormBtn.textContent = 'Analyzing...';
     
     chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
-      chrome.tabs.sendMessage(tabs[0].id, {action: "analyzeForm"}, function(response) {
-        if (response && response.fields) {
-          displayFormFields(response.fields);
+      chrome.scripting.executeScript({
+        target: { tabId: tabs[0].id },
+        function: scanFormFields
+      }, results => {
+        if (results && results[0] && results[0].result) {
+          displayFormFields(results[0].result);
           autoFillBtn.disabled = false;
         } else {
           fieldsContainer.innerHTML = '<p class="error">No form detected or error analyzing form.</p>';
@@ -76,6 +65,40 @@ document.addEventListener('DOMContentLoaded', function() {
         analyzeFormBtn.textContent = 'Analyze Current Form';
       });
     });
+  }
+  
+  // Function to scan form fields
+  function scanFormFields() {
+    const fields = [];
+    
+    // Get all input elements
+    const inputs = document.querySelectorAll('input, select, textarea');
+    
+    inputs.forEach(input => {
+      // Skip hidden, submit, button, and other non-data fields
+      if (['submit', 'button', 'image', 'reset', 'file'].includes(input.type)) {
+        return;
+      }
+      
+      const fieldInfo = {
+        type: input.type || 'text',
+        id: input.id || '',
+        name: input.name || '',
+        placeholder: input.placeholder || '',
+        className: input.className || '',
+        value: input.value || ''
+      };
+      
+      // Get label text if available
+      const labelElement = document.querySelector(`label[for="${input.id}"]`);
+      if (labelElement) {
+        fieldInfo.label = labelElement.textContent.trim();
+      }
+      
+      fields.push(fieldInfo);
+    });
+    
+    return fields;
   }
   
   // Function to display the analyzed form fields
@@ -103,15 +126,11 @@ document.addEventListener('DOMContentLoaded', function() {
     formAnalysisPanel.classList.remove('hidden');
   }
   
-  // Function to load data file
-  function loadDataFile() {
-    chrome.runtime.sendMessage({ action: 'openFilePicker' }, response => {
-      if (response && response.success) {
-        showToast('Data file loaded: ' + response.filename);
-      } else {
-        showToast('Failed to load data file', 'error');
-      }
-    });
+  // Function to load user profile data
+  function loadProfileData() {
+    // In standalone mode, open the profile editor
+    chrome.tabs.create({url: 'profile.html'});
+    showToast('Opening profile editor');
   }
   
   // Function to open data mappings page
@@ -147,6 +166,11 @@ document.addEventListener('DOMContentLoaded', function() {
     chrome.runtime.openOptionsPage();
   }
   
+  // Function to open user profile editor
+  function editUserProfile() {
+    chrome.tabs.create({url: 'profile.html'});
+  }
+  
   // Helper function to show toast messages
   function showToast(message, type = 'info') {
     const toast = document.createElement('div');
@@ -165,135 +189,25 @@ document.addEventListener('DOMContentLoaded', function() {
   }
   
   /**
-   * Attempt to reconnect to the companion app
-   */
-  function reconnectCompanion() {
-    const statusElement = document.getElementById('connection-status');
-    statusElement.textContent = 'Reconnecting...';
-    statusElement.className = 'status';
-    
-    // Send a message to the background script to reinitialize the connection
-    chrome.runtime.sendMessage({ action: 'sendToCompanion', data: { type: 'ping' } }, response => {
-      setTimeout(checkCompanionConnection, 1000); // Check again after a short delay
-    });
-  }
-  
-  /**
-   * Fill the current form with data from the companion app
+   * Fill the current form with data
    */
   function fillCurrentForm() {
     chrome.tabs.query({ active: true, currentWindow: true }, tabs => {
       const tab = tabs[0];
       if (!tab) return;
       
-      chrome.scripting.executeScript({
-        target: { tabId: tab.id },
-        function: scanFormFields
-      }, results => {
-        if (chrome.runtime.lastError) {
-          console.error(chrome.runtime.lastError);
-          return;
-        }
-        
-        if (!results || !results[0]) return;
-        
-        const formFields = results[0].result;
-        if (!formFields || formFields.length === 0) {
-          alert('No form fields detected on this page');
-          return;
-        }
-        
-        // Send form fields to companion app for processing
-        chrome.runtime.sendMessage({
-          action: 'sendToCompanion',
-          data: {
-            type: 'fillForm',
-            formFields,
-            url: tab.url
-          }
-        }, response => {
-          if (!response || !response.success) {
-            alert('Error retrieving form data. Please check the companion app connection.');
-            return;
-          }
-          
-          // Fill the form with the returned data
-          chrome.scripting.executeScript({
-            target: { tabId: tab.id },
-            function: fillFormWithData,
-            args: [response.data.fieldValues]
-          });
-        });
-      });
-    });
-  }
-  
-  /**
-   * Scan the page for form fields
-   * This function will be injected into the page
-   */
-  function scanFormFields() {
-    const fields = [];
-    
-    // Get all input elements
-    const inputs = document.querySelectorAll('input, select, textarea');
-    
-    inputs.forEach(input => {
-      // Skip hidden, submit, button, and other non-data fields
-      if (['submit', 'button', 'image', 'reset', 'file'].includes(input.type)) {
-        return;
-      }
-      
-      const fieldInfo = {
-        type: input.type || 'text',
-        id: input.id || '',
-        name: input.name || '',
-        placeholder: input.placeholder || '',
-        className: input.className || '',
-        value: input.value || ''
-      };
-      
-      // Get label text if available
-      const labelElement = document.querySelector(`label[for="${input.id}"]`);
-      if (labelElement) {
-        fieldInfo.label = labelElement.textContent.trim();
-      }
-      
-      fields.push(fieldInfo);
-    });
-    
-    return fields;
-  }
-  
-  /**
-   * Fill the form with the provided data
-   * This function will be injected into the page
-   * @param {object} fieldValues - The field values to fill
-   */
-  function fillFormWithData(fieldValues) {
-    if (!fieldValues || !fieldValues.fields) return;
-    
-    const fields = fieldValues.fields;
-    
-    for (const key in fields) {
-      // Find elements by ID, name, or placeholder
-      const elements = [
-        ...document.querySelectorAll(`input#${key}, input[name="${key}"], input[placeholder="${key}"]`),
-        ...document.querySelectorAll(`select#${key}, select[name="${key}"]`),
-        ...document.querySelectorAll(`textarea#${key}, textarea[name="${key}"], textarea[placeholder="${key}"]`)
-      ];
-      
-      elements.forEach(element => {
-        if (element.type === 'checkbox' || element.type === 'radio') {
-          element.checked = !!fields[key];
+      chrome.runtime.sendMessage({ 
+        action: 'fillForm', 
+        tabId: tab.id,
+        url: tab.url
+      }, response => {
+        if (response && response.success) {
+          showToast('Form filled successfully');
         } else {
-          element.value = fields[key];
-          // Trigger change event to notify the page
-          element.dispatchEvent(new Event('change', { bubbles: true }));
-          element.dispatchEvent(new Event('input', { bubbles: true }));
+          showToast('Error filling form: ' + (response?.error || 'Unknown error'), 'error');
         }
       });
-    }
+    });
   }
   
   /**
