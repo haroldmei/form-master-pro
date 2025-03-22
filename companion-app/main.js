@@ -4,9 +4,20 @@ const fs = require('fs');
 const { spawn } = require('child_process');
 const Store = require('electron-store');
 const { getLogger } = require('./utils/logger');
+const os = require('os');
 
 // Initialize logger
 const logger = getLogger('main');
+
+// Log app startup
+logger.info('----------------------------------------------------');
+logger.info(`FormMaster Companion starting at: ${new Date().toISOString()}`);
+logger.info(`Electron version: ${process.versions.electron}`);
+logger.info(`Node.js version: ${process.versions.node}`);
+logger.info(`Platform: ${process.platform}, ${os.release()}`);
+logger.info(`Architecture: ${process.arch}`);
+logger.info(`App path: ${app.getAppPath()}`);
+logger.info('----------------------------------------------------');
 
 // Configuration store
 const store = new Store();
@@ -19,8 +30,12 @@ let tray = null;
 let nativeMessagingProcess = null;
 let shouldQuit = false;
 
+// Track if shutdown is in progress
+let isShuttingDown = false;
+
 // Create the browser window
 function createWindow() {
+  logger.info('Creating main application window');
   const windowConfig = store.get('windowBounds', { 
     width: 800, 
     height: 600, 
@@ -70,18 +85,22 @@ function createWindow() {
 
   // Clear the reference when window is closed
   mainWindow.on('closed', () => {
+    logger.info('Main window closed event triggered');
     mainWindow = null;
   });
   
   // Initialize the WebDriver manager
+  logger.info('Initializing WebDriver');
   initializeWebDriver();
   
   // Initialize native messaging handler
+  logger.info('Initializing native messaging');
   initializeNativeMessaging();
 }
 
 // Initialize the app
 app.whenReady().then(() => {
+  logger.info('Electron app ready');
   createWindow();
   setupTray();
   
@@ -95,29 +114,93 @@ app.whenReady().then(() => {
   });
 });
 
-// Handle quit events
-app.on('before-quit', () => {
-  shouldQuit = true;
+// Ensure clean shutdown of the app
+function ensureCleanShutdown() {
+  if (isShuttingDown) {
+    logger.info('Shutdown already in progress, skipping duplicated shutdown');
+    return;
+  }
+  
+  isShuttingDown = true;
+  logger.info('Beginning application shutdown sequence');
   
   // Close the native messaging process if it exists
   if (nativeMessagingProcess) {
     try {
+      logger.info('Terminating native messaging process');
       nativeMessagingProcess.kill();
+      nativeMessagingProcess = null;
     } catch (error) {
       logger.error('Error killing native messaging process:', error);
     }
   }
+  
+  // Release any other resources that might cause file locks
+  try {
+    logger.info('Releasing WebDriver resources');
+    const webdriverManager = require('./webdriver/manager');
+    if (webdriverManager && typeof webdriverManager.cleanup === 'function') {
+      webdriverManager.cleanup();
+    }
+  } catch (error) {
+    logger.error('Error cleaning up WebDriver:', error);
+  }
+  
+  // Release system tray
+  if (tray) {
+    logger.info('Destroying system tray');
+    tray.destroy();
+    tray = null;
+  }
+  
+  // Close the window explicitly if it exists
+  if (mainWindow) {
+    logger.info('Closing main window');
+    mainWindow.destroy();
+    mainWindow = null;
+  }
+  
+  logger.info('Shutdown sequence completed');
+}
+
+// Handle quit events
+app.on('before-quit', () => {
+  logger.info('Application before-quit event triggered');
+  shouldQuit = true;
+  ensureCleanShutdown();
 });
 
 // Quit when all windows are closed, except on macOS
 app.on('window-all-closed', () => {
+  logger.info('All windows closed');
   if (process.platform !== 'darwin') {
+    logger.info('Not on macOS, quitting application');
     app.quit();
   }
 });
 
+// Ensure we fully release resources on exit
+process.on('exit', () => {
+  logger.info('Process exit event detected');
+  ensureCleanShutdown();
+});
+
+// Handle SIGINT (Ctrl+C) for graceful shutdown
+process.on('SIGINT', () => {
+  logger.info('SIGINT received, exiting');
+  ensureCleanShutdown();
+  process.exit(0);
+});
+
+// Handle uncaught exceptions to prevent silent crash
+process.on('uncaughtException', (error) => {
+  logger.error('Uncaught exception:', error);
+  ensureCleanShutdown();
+});
+
 // Set up system tray
 function setupTray() {
+  logger.info('Setting up system tray');
   const { Tray, Menu } = require('electron');
   
   tray = new Tray(path.join(__dirname, 'resources/icon.png'));
@@ -182,6 +265,7 @@ function initializeWebDriver() {
 function initializeNativeMessaging() {
   const nativeMessagingHandler = require('./native-messaging/handler');
   
+  logger.info('Setting up native messaging handlers');
   // Set up message handlers
   nativeMessagingHandler.on('ping', (sender, data) => {
     return { type: 'pong' };
@@ -241,7 +325,9 @@ function initializeNativeMessaging() {
   });
   
   // Start the native messaging listener
+  logger.info('Starting native messaging listener');
   nativeMessagingHandler.start();
+  logger.info('Native messaging listener started');
 }
 
 // IPC Handlers
