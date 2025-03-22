@@ -19,28 +19,64 @@ document.addEventListener('DOMContentLoaded', function() {
     fileInput.click();
   });
   
-  fileInput.addEventListener('change', function(e) {
+  fileInput.addEventListener('change', async function(e) {
     const file = e.target.files[0];
     if (file) {
-      const reader = new FileReader();
-      
-      reader.onload = function(event) {
+      statusDiv.textContent = `File selected: ${file.name}`;
+      const fileType = file.name.split('.').pop().toLowerCase();
+
+      if (fileType === 'json') {
         try {
-          const jsonData = JSON.parse(event.target.result);
-          // Store the data in Chrome's storage
-          chrome.storage.local.set({ jsonData: jsonData }, function() {
-            statusDiv.textContent = `Loaded: ${file.name}`;
-            setTimeout(() => {
-              // Close this popup window after loading
-              window.close();
-            }, 1500);
-          });
+          const content = await readFileContent(file);
+          displayContent(content);
         } catch (error) {
-          statusDiv.textContent = 'Error: Invalid JSON file';
+          statusDiv.textContent = `Error reading JSON file: ${error.message}`;
         }
-      };
-      
-      reader.readAsText(file);
+      } else if (fileType === 'docx') {
+        statusDiv.textContent = 'Converting DOCX to JSON...';
+        // Simulate DOCX to JSON conversion using a browser-compatible method
+        simulateDocxToJson(file);
+      } else {
+        statusDiv.textContent = 'Unsupported file type.';
+      }
+    } else {
+      statusDiv.textContent = 'No file selected.';
     }
   });
+
+  function readFileContent(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (event) => resolve(event.target.result);
+      reader.onerror = (error) => reject(error);
+      reader.readAsText(file);
+    });
+  }
+
+  function displayContent(content) {
+    // Display the content (for JSON)
+    statusDiv.textContent = 'File content: ' + content.substring(0, 100) + '...'; // Display first 100 characters
+    
+    // Store content in chrome.storage
+    chrome.storage.local.set({ jsonData: content }, function() {
+      statusDiv.textContent += ' (Content stored in chrome.storage)';
+    });
+  }
+
+  function simulateDocxToJson(file) {
+    // Simulate the DOCX to JSON conversion
+    setTimeout(() => {
+      const mockJson = {
+        filename: file.name,
+        content: 'This is simulated JSON content from DOCX file.'
+      };
+      const jsonString = JSON.stringify(mockJson);
+      statusDiv.textContent = 'DOCX converted to JSON (simulated): ' + jsonString.substring(0, 100) + '...';
+      
+      // Store content in chrome.storage
+      chrome.storage.local.set({ jsonData: jsonString }, function() {
+        statusDiv.textContent += ' (Content stored in chrome.storage)';
+      });
+    }, 1500); // Simulate a 1.5 second conversion
+  }
 });
