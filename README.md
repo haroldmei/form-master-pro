@@ -93,12 +93,6 @@ FormMaster Pro is an advanced form automation tool designed to streamline the pr
 5. Click "Load unpacked" and select the extracted `browser-extension` folder
 6. Note the extension ID (visible on the extensions page)
 
-#### Companion App
-
-1. Download the companion app installer for your platform
-2. Run the installer and follow the on-screen instructions
-3. During first run, you'll be asked to enter your extension ID
-4. The app will automatically register itself with your browser
 
 ### Quick Start Tutorial
 

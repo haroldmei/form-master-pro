@@ -55,6 +55,65 @@ document.addEventListener('DOMContentLoaded', function() {
     statusElement.className = 'status connected';
   }
   
+
+  // Function to analyze the current form
+  function analyzeCurrentForm2() {
+    analyzeFormBtn.disabled = true;
+    analyzeFormBtn.textContent = 'Analyzing...';
+    
+    chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
+      chrome.scripting.executeScript({
+        target: { tabId: tabs[0].id },
+        function: scanFormFields
+      }, results => {
+        if (results && results[0] && results[0].result) {
+          displayFormFields(results[0].result);
+          autoFillBtn.disabled = false;
+        } else {
+          fieldsContainer.innerHTML = '<p class="error">No form detected or error analyzing form.</p>';
+          formAnalysisPanel.classList.remove('hidden');
+        }
+        
+        analyzeFormBtn.disabled = false;
+        analyzeFormBtn.textContent = 'Analyze Current Form';
+      });
+    });
+  }
+  
+  // Function to scan form fields
+  function scanFormFields() {
+    const fields = [];
+    
+    // Get all input elements
+    const inputs = document.querySelectorAll('input, select, textarea');
+    
+    inputs.forEach(input => {
+      // Skip hidden, submit, button, and other non-data fields
+      if (['submit', 'button', 'image', 'reset', 'file'].includes(input.type)) {
+        return;
+      }
+      
+      const fieldInfo = {
+        type: input.type || 'text',
+        id: input.id || '',
+        name: input.name || '',
+        placeholder: input.placeholder || '',
+        className: input.className || '',
+        value: input.value || ''
+      };
+      
+      // Get label text if available
+      const labelElement = document.querySelector(`label[for="${input.id}"]`);
+      if (labelElement) {
+        fieldInfo.label = labelElement.textContent.trim();
+      }
+      
+      fields.push(fieldInfo);
+    });
+    
+    return fields;
+  }
+
   // Function to analyze the current form
   function analyzeCurrentForm() {
     analyzeFormBtn.disabled = true;

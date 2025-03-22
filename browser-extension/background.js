@@ -30,6 +30,8 @@ async function processForm(formFields, url) {
     // Get field mappings from storage
     const result = await chrome.storage.sync.get(['fieldMappings']);
     const mappings = result.fieldMappings || [];
+
+    console.log("field mapping:", mappings);
     
     // Match form fields with mappings and retrieve values
     const fieldValues = {};
@@ -107,6 +109,11 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return false;
   }
   
+  
+  // - **Form analysis**: analyse the forms, extract key words
+  // - **Load content**: load a file into memory
+  // - **Extract content from AI**: make api calls to AI
+  // - **Fill out the form**: automatically fill out forms
   if (message.action === 'fillForm') {
     // Get the form fields from the active tab
     chrome.scripting.executeScript({
@@ -117,11 +124,12 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         sendResponse({ success: false, error: "Could not scan form fields" });
         return;
       }
-      
+
       const formFields = results[0].result;
-      
       // Process the form fields and retrieve values
       processForm(formFields, message.url).then(result => {
+        console.log("Processing result:", result);
+
         if (result.success) {
           // Fill the form with the values
           chrome.scripting.executeScript({
@@ -264,6 +272,8 @@ function fillFormWithData(fieldValues) {
       ...document.querySelectorAll(`textarea#${key}, textarea[name="${key}"], textarea[placeholder="${key}"]`)
     ];
     
+    console.log("Filling field:", key, "with value:", fieldValues[key]);
+
     elements.forEach(element => {
       if (element.type === 'checkbox' || element.type === 'radio') {
         element.checked = !!fieldValues[key];
