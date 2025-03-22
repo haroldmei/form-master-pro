@@ -24,6 +24,13 @@ FormMaster Pro is an advanced form automation tool designed to streamline the pr
 - **Chromium-based browser**: Chrome, Edge, or Brave
 - **Chrome WebDriver**: Compatible with your Chrome version
 
+## Logic
+
+- **Form analysis**: analyse the forms, extract key words
+- **Load content**: load a file into memory
+- **Extract content from AI**: make api calls to AI
+- **Fill out the form**: automatically fill out forms
+
 ## For Developers
 
 ### Setting Up the Development Environment
@@ -51,35 +58,7 @@ FormMaster Pro is an advanced form automation tool designed to streamline the pr
    npm install
    ```
 
-3. **Configure Chrome WebDriver**
-
-   Download the appropriate version of ChromeDriver that matches your installed Chrome version from:
-   https://chromedriver.chromium.org/downloads
-
-   Place the executable in the `.formmaster` directory in your user home folder.
-
-### Project Structure
-
-```
-form-master-pro/
-├── src/                  # Python implementation
-├── js-src/               # JavaScript implementation
-│   ├── files/            # Document processing utilities
-│   ├── forms/            # Form handling modules
-│   └── utils/            # Helper utilities
-├── browser-extension/    # Chrome/Firefox extension
-└── companion-app/        # Electron companion application
-```
-
 ### Running the JavaScript Version
-
-```bash
-cd js-src
-npm start -- --dir "/path/to/data/directory"
-```
-
-Additional flags:
-- `--mode 1`: Run in form analysis mode
 
 ### Building the Browser Extension
 
@@ -94,29 +73,6 @@ Additional flags:
    - Click "Load unpacked" and select the `browser-extension` folder
 
 3. Note the generated extension ID - you'll need it for the companion app setup
-
-### Setting Up the Companion App
-
-1. Navigate to the companion-app directory:
-   ```bash
-   cd companion-app
-   ```
-
-2. Edit `register-native-messaging.js` to replace `<EXTENSION_ID>` with your Chrome extension ID:
-   ```javascript
-   // In allowed_origins array
-   "chrome-extension://<YOUR_EXTENSION_ID_HERE>/"
-   ```
-
-3. Register the native messaging host:
-   ```bash
-   npm run postinstall
-   ```
-
-4. Start the companion app:
-   ```bash
-   npm start
-   ```
 
 ### Debugging
 

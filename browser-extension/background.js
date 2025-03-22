@@ -162,6 +162,64 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 });
 
+// Add page load event listener
+chrome.webNavigation.onCompleted.addListener(function(details) {
+  // Only handle the main frame navigation (not iframes)
+  if (details.frameId !== 0) return;
+  
+  console.log("Page loaded:", details.url);
+
+  // Check if we have data to display in an overlay
+  chrome.storage.sync.get(['userProfile'], function(result) {
+
+    console.log("Data loaded:", result.userProfile);
+    if (result.userProfile && result.userProfile.personal && result.userProfile.personal.firstName) {
+      // Reset the flag so it doesn't show on every page load
+      
+      const firstName = result.userProfile.personal.firstName;
+
+      // Wait a short moment for the page to stabilize
+      setTimeout(() => {
+        // Show overlay with the loaded data or prepare for form filling
+        chrome.tabs.query({ active: true, currentWindow: true }, function(tabs) {
+          if (tabs[0]) {
+            // Pass the firstName as an argument to the executed script
+            chrome.scripting.executeScript({
+              target: { tabId: tabs[0].id },
+              function: (userName) => {
+                // Create a small notification in the page
+                const notification = document.createElement('div');
+                notification.style.cssText = `
+                  position: fixed;
+                  top: 10px;
+                  right: 10px;
+                  background: rgba(66, 133, 244, 0.9);
+                  color: white;
+                  padding: 10px 15px;
+                  border-radius: 4px;
+                  font-family: Arial, sans-serif;
+                  z-index: 9999;
+                  box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+                `;
+                notification.textContent = 'FormMaster data ready! Click extension icon to fill form for: ' + userName;
+                document.body.appendChild(notification);
+                
+                // Remove after a few seconds
+                setTimeout(() => {
+                  notification.style.opacity = '0';
+                  notification.style.transition = 'opacity 0.5s';
+                  setTimeout(() => notification.remove(), 500);
+                }, 5000);
+              },
+              args: [firstName]
+            });
+          }
+        });
+      }, 1000);
+    }
+  });
+});
+
 // Function to scan form fields (injected into page)
 function scanFormFields() {
   const fields = [];

@@ -9,7 +9,8 @@
     "developerPrivate",
     "contextMenus",
     "scripting",
-    "nativeMessaging"
+    "nativeMessaging",
+    "webNavigation"  // Add this permission
   ],
   "host_permissions": [
     "http://*/*", 
