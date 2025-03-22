@@ -65,7 +65,7 @@ function extractFormStructure(formSelector = null) {
  */
 function extractInputs(container) {
   const inputs = [];
-  const inputElements = container.querySelectorAll('input:not([type="submit"]):not([type="button"]):not([type="image"]):not([type="reset"]):not([type="file"]):not([type="radio"]):not([type="checkbox"])');
+  const inputElements = container.querySelectorAll('input:not([type="submit"]):not([type="button"]):not([type="image"]):not([type="reset"]):not([type="file"]):not([type="radio"]):not([type="checkbox"]):not([type="hidden"])');
   
   inputElements.forEach(input => {
     inputs.push({
