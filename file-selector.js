@@ -76,7 +76,7 @@ document.addEventListener('DOMContentLoaded', function() {
             .then(content => {
               const jsonString = JSON.stringify(content);
 
-              statusDiv.textContent = 'DOCX converted to JSON.';
+              statusDiv.textContent = 'DOCX converted to JSON. ' + jsonString.substring(0, 100) + '...'; // Display first 100 characters
 
               // Store content in chrome.storage
               chrome.storage.local.set({ jsonData: jsonString }, function() {
