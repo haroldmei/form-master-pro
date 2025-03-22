@@ -61,79 +61,158 @@ document.addEventListener('DOMContentLoaded', function() {
     analyzeFormBtn.textContent = 'Analyzing...';
     
     chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
+      // First inject the form_extract.js file
       chrome.scripting.executeScript({
         target: { tabId: tabs[0].id },
-        function: scanFormFields
-      }, results => {
-        if (results && results[0] && results[0].result) {
-          displayFormFields(results[0].result);
-          autoFillBtn.disabled = false;
-        } else {
-          fieldsContainer.innerHTML = '<p class="error">No form detected or error analyzing form.</p>';
-          formAnalysisPanel.classList.remove('hidden');
-        }
-        
-        analyzeFormBtn.disabled = false;
-        analyzeFormBtn.textContent = 'Analyze Current Form';
+        files: ['forms/form_extract.js']
+      }, () => {
+        // Then execute a function that uses the injected form_extract.js
+        chrome.scripting.executeScript({
+          target: { tabId: tabs[0].id },
+          function: () => {
+            // Use the FormExtract object exposed by form_extract.js
+            const formData = window.FormExtract.extractFormControls();
+
+            // Flatten the structure to match what displayFormFields expects
+            const fields = [];
+            
+            // Process inputs
+            if (formData.inputs) {
+              fields.push(...formData.inputs);
+            }
+            
+            // Process selects
+            if (formData.selects) {
+              fields.push(...formData.selects);
+            }
+            
+            // Process textareas
+            if (formData.textareas) {
+              fields.push(...formData.textareas);
+            }
+            
+            // Process radio groups
+            if (formData.radios) {
+              fields.push(...formData.radios);
+            }
+            
+            // Process checkboxes
+            if (formData.checkboxes) {
+              fields.push(...formData.checkboxes);
+            }
+            
+            return fields;
+          }
+        }, results => {
+          if (results && results[0] && results[0].result) {
+            displayFormFields(results[0].result);
+            autoFillBtn.disabled = false;
+          } else {
+            fieldsContainer.innerHTML = '<p class="error">No form detected or error analyzing form.</p>';
+            formAnalysisPanel.classList.remove('hidden');
+          }
+          
+          analyzeFormBtn.disabled = false;
+          analyzeFormBtn.textContent = 'Analyze Current Form';
+        });
       });
     });
   }
-  
-  // Function to scan form fields
-  function scanFormFields() {
-    const fields = [];
-    
-    // Get all input elements
-    const inputs = document.querySelectorAll('input, select, textarea');
-    
-    inputs.forEach(input => {
-      // Skip hidden, submit, button, and other non-data fields
-      if (['submit', 'button', 'image', 'reset', 'file'].includes(input.type)) {
-        return;
-      }
-      
-      const fieldInfo = {
-        type: input.type || 'text',
-        id: input.id || '',
-        name: input.name || '',
-        placeholder: input.placeholder || '',
-        className: input.className || '',
-        value: input.value || ''
-      };
-      
-      // Get label text if available
-      const labelElement = document.querySelector(`label[for="${input.id}"]`);
-      if (labelElement) {
-        fieldInfo.label = labelElement.textContent.trim();
-      }
-      
-      fields.push(fieldInfo);
-    });
-    
-    return fields;
-  }
-  
+
   // Function to display the analyzed form fields
   function displayFormFields(fields) {
     fieldCount.textContent = fields.length;
     fieldsContainer.innerHTML = '';
     
-    fields.forEach(field => {
-      const fieldItem = document.createElement('div');
-      fieldItem.className = 'field-item';
-      
-      const fieldLabel = document.createElement('div');
-      fieldLabel.className = 'field-label';
-      fieldLabel.textContent = field.label || field.name || field.id || 'Unnamed Field';
-      
-      const fieldType = document.createElement('div');
-      fieldType.className = 'field-type';
-      fieldType.textContent = field.type;
-      
-      fieldItem.appendChild(fieldLabel);
-      fieldItem.appendChild(fieldType);
-      fieldsContainer.appendChild(fieldItem);
+    console.log('Form data fields:', fields);
+
+    // Create table element
+    const table = document.createElement('table');
+    table.className = 'fields-table';
+    
+    // Create table header
+    const thead = document.createElement('thead');
+    const headerRow = document.createElement('tr');
+    
+    ['Label/Name', 'Type', 'ID', 'Value'].forEach(headerText => {
+      const th = document.createElement('th');
+      th.textContent = headerText;
+      headerRow.appendChild(th);
     });
+    
+    thead.appendChild(headerRow);
+    table.appendChild(thead);
+    
+    // Create table body
+    const tbody = document.createElement('tbody');
+    
+    fields.forEach(field => {
+      const row = document.createElement('tr');
+      
+      // Label/Name cell
+      const labelCell = document.createElement('td');
+      labelCell.className = 'field-label';
+      labelCell.textContent = field.label || field.name || field.id || 'Unnamed Field';
+      row.appendChild(labelCell);
+      
+      // Type cell
+      const typeCell = document.createElement('td');
+      typeCell.className = 'field-type';
+      typeCell.textContent = field.type;
+      row.appendChild(typeCell);
+      
+      // ID cell
+      const idCell = document.createElement('td');
+      idCell.className = 'field-id';
+      idCell.textContent = field.id || '-';
+      row.appendChild(idCell);
+      
+      // Value cell
+      const valueCell = document.createElement('td');
+      valueCell.className = 'field-value';
+      
+      if (field.type === 'select' || field.type === 'radio') {
+        // For select/radio, show selected option
+        const selectedOpt = field.options?.find(opt => opt.selected || opt.checked);
+        valueCell.textContent = selectedOpt ? selectedOpt.value || selectedOpt.text : '-';
+      } else if (field.type === 'checkbox') {
+        valueCell.textContent = field.checked ? 'Checked' : 'Unchecked';
+      } else {
+        valueCell.textContent = field.value || '-';
+      }
+      
+      row.appendChild(valueCell);
+      
+      tbody.appendChild(row);
+    });
+    
+    table.appendChild(tbody);
+    fieldsContainer.appendChild(table);
+    
+    // Add some basic styles for the table
+    const style = document.createElement('style');
+    style.textContent = `
+      .fields-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 10px;
+        font-size: 12px;
+      }
+      .fields-table th, .fields-table td {
+        padding: 4px 8px;
+        text-align: left;
+        border-bottom: 1px solid #ddd;
+      }
+      .fields-table th {
+        background-color: #f2f2f2;
+        position: sticky;
+        top: 0;
+      }
+      .fields-table tr:hover {
+        background-color: #f5f5f5;
+      }
+    `;
+    document.head.appendChild(style);
     
     formAnalysisPanel.classList.remove('hidden');
   }
