@@ -1,3 +1,5 @@
+// Remember to add type="module" to the script tag in your HTML file:
+// <script src="file-selector.js" type="module"></script>
 document.addEventListener('DOMContentLoaded', function() {
   const selectButton = document.getElementById('selectButton');
   const fileInput = document.getElementById('fileInput');
@@ -34,8 +36,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
       } else if (fileType === 'docx') {
         statusDiv.textContent = 'Converting DOCX to JSON...';
-        // Simulate DOCX to JSON conversion using a browser-compatible method
-        simulateDocxToJson(file);
+        convertDocxToJson(file);
       } else {
         statusDiv.textContent = 'Unsupported file type.';
       }
@@ -63,20 +64,37 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 
-  function simulateDocxToJson(file) {
-    // Simulate the DOCX to JSON conversion
-    setTimeout(() => {
-      const mockJson = {
-        filename: file.name,
-        content: 'This is simulated JSON content from DOCX file.'
-      };
-      const jsonString = JSON.stringify(mockJson);
-      statusDiv.textContent = 'DOCX converted to JSON (simulated): ' + jsonString.substring(0, 100) + '...';
-      
-      // Store content in chrome.storage
-      chrome.storage.local.set({ jsonData: jsonString }, function() {
-        statusDiv.textContent += ' (Content stored in chrome.storage)';
-      });
-    }, 1500); // Simulate a 1.5 second conversion
+  async function convertDocxToJson(file) {
+    try {
+      // Import extractDocxContent
+      import('./files/docx-extractor.js')
+        .then(module => {
+          const extractDocxContent = module.extractDocxContent;
+
+          // Use extractDocxContent to convert the DOCX file to JSON
+          extractDocxContent(file, file.name)
+            .then(content => {
+              const jsonString = JSON.stringify(content);
+
+              statusDiv.textContent = 'DOCX converted to JSON.';
+
+              // Store content in chrome.storage
+              chrome.storage.local.set({ jsonData: jsonString }, function() {
+                statusDiv.textContent += ' (Content stored in chrome.storage)';
+              });
+            })
+            .catch(error => {
+              statusDiv.textContent = `Error converting DOCX to JSON: ${error.message}`;
+              console.error(error);
+            });
+        })
+        .catch(error => {
+          statusDiv.textContent = `Error importing DOCX extractor: ${error.message}`;
+          console.error(error);
+        });
+    } catch (error) {
+      statusDiv.textContent = `Error converting DOCX to JSON: ${error.message}`;
+      console.error(error);
+    }
   }
 });
