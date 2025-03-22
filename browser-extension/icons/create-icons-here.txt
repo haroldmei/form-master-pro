@@ -1,0 +1,6 @@
+Create these icon files in this directory:
+- icon-16.png (16x16 pixels)
+- icon-48.png (48x48 pixels)
+- icon-128.png (128x128 pixels)
+
+You can use any image editor to create these icons for your FormMaster Pro extension.

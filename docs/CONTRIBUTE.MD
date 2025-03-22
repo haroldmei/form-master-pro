@@ -409,7 +409,7 @@ class FormFillerService {
         }
         
         if (!element) {
-          logger.warn(`Could not find element for field: ${field.label || field.name || field.id}`);
+          logger.warning(`Could not find element for field: ${field.label || field.name || field.id}`);
           continue;
         }
         
@@ -469,7 +469,7 @@ class FormFillerService {
           break;
           
         default:
-          logger.warn(`Unsupported field type: ${fieldType}`);
+          logger.warning(`Unsupported field type: ${fieldType}`);
       }
     } catch (error) {
       logger.error(`Error filling field of type ${fieldType}: ${error.message}`);
@@ -528,7 +528,7 @@ class FormFillerService {
         }
       }
     } catch (error) {
-      logger.warn(`Could not select option: ${value}`);
+      logger.warning(`Could not select option: ${value}`);
     }
     
     // If can't select by clicking, try using JavaScript

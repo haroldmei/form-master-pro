@@ -4,9 +4,9 @@
   "version": "0.1.0",
   "description": "Advanced form automation for web applications",
   "permissions": [
+    "storage",
     "activeTab",
     "scripting",
-    "storage",
     "nativeMessaging"
   ],
   "host_permissions": [
