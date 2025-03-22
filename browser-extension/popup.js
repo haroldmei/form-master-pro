@@ -1,4 +1,16 @@
 document.addEventListener('DOMContentLoaded', function() {
+  // Wait for the DOM to be fully loaded before accessing elements
+  
+  // Helper function to safely add event listeners
+  function addSafeEventListener(id, event, handler) {
+    const element = document.getElementById(id);
+    if (element) {
+      element.addEventListener(event, handler);
+    } else {
+      console.warn(`Element with ID "${id}" not found in the DOM`);
+    }
+  }
+  
   // Connection status elements
   const statusIndicator = document.getElementById('status-indicator');
   const statusText = document.getElementById('status-text');
@@ -19,15 +31,15 @@ document.addEventListener('DOMContentLoaded', function() {
   displayStandaloneStatus();
   
   // Set up event listeners
-  analyzeFormBtn.addEventListener('click', analyzeCurrentForm);
-  loadDataBtn.addEventListener('click', loadProfileData);
-  dataMappingsBtn.addEventListener('click', openDataMappings);
-  autoFillBtn.addEventListener('click', autoFillForm);
-  openOptionsBtn.addEventListener('click', openOptions);
+  addSafeEventListener('analyze-form', 'click', analyzeCurrentForm);
+  addSafeEventListener('load-data', 'click', loadProfileData);
+  addSafeEventListener('data-mappings', 'click', openDataMappings);
+  addSafeEventListener('auto-fill', 'click', autoFillForm);
+  addSafeEventListener('open-options', 'click', openOptions);
   
-  // Add event listeners
-  document.getElementById('fill-form-btn').addEventListener('click', fillCurrentForm);
-  document.getElementById('settings-btn').addEventListener('click', openSettings);
+  // Remove redundant event listeners for elements that don't exist
+  // addSafeEventListener('fill-form-btn', 'click', fillCurrentForm);
+  // addSafeEventListener('settings-btn', 'click', openSettings);
   
   // Update reconnect button to be profile editor in standalone mode
   const reconnectBtn = document.getElementById('reconnect-btn');
@@ -192,6 +204,7 @@ document.addEventListener('DOMContentLoaded', function() {
    * Fill the current form with data
    */
   function fillCurrentForm() {
+    // This function is now only used internally, not connected to a DOM element
     chrome.tabs.query({ active: true, currentWindow: true }, tabs => {
       const tab = tabs[0];
       if (!tab) return;
@@ -214,6 +227,14 @@ document.addEventListener('DOMContentLoaded', function() {
    * Open the extension settings page
    */
   function openSettings() {
+    // This function is now only used internally, not connected to a DOM element
     chrome.runtime.openOptionsPage();
   }
+  
+  // Initialize your popup interface
+  function initializePopup() {
+    // Your initialization code
+  }
+  
+  initializePopup();
 });

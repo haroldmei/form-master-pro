@@ -29,10 +29,11 @@ document.addEventListener('DOMContentLoaded', function() {
   function loadUserProfile() {
     chrome.storage.sync.get(['userProfile'], function(result) {
       const userProfile = result.userProfile || {};
-      
+
       // Fill form fields with profile data
       for (const [field, path] of Object.entries(profileFields)) {
         const value = getNestedValue(userProfile, path);
+        console.log(field, path, value);
         if (value) {
           document.getElementById(field).value = value;
         }
@@ -104,12 +105,17 @@ document.addEventListener('DOMContentLoaded', function() {
         try {
           const userProfile = JSON.parse(event.target.result);
           
+          // Fill form fields directly with the imported data
+          for (const [field, path] of Object.entries(profileFields)) {
+            const value = getNestedValue(userProfile, path);
+            if (value) {
+              document.getElementById(field).value = value;
+            }
+          }
+          
           // Save to Chrome storage
           chrome.storage.sync.set({ userProfile }, function() {
             showStatusMessage('Profile imported successfully!', 'success');
-            
-            // Reload the form with the new values
-            loadUserProfile();
             
             // Notify background script that profile has been updated
             chrome.runtime.sendMessage({ action: 'settingsUpdated' });
