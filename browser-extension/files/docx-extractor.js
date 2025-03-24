@@ -1,5 +1,3 @@
-// Ensure mammoth is available in the browser, e.g., via a CDN or bundling
-
 /**
  * Dynamically load a script
  * @param {string} src - The script source URL
@@ -19,7 +17,7 @@ function loadScript(src) {
  * Extract content from a DOCX file in a browser environment
  * @param {Blob} docxFile - The DOCX file as a Blob
  * @param {string} filename - The name of the file
- * @returns {Promise<Object>} Content structure with paragraphs, tables, etc.
+ * @returns {Promise<Object>} Raw content from the document
  */
 async function extractDocxContent(docxFile, filename) {
   try {
@@ -55,6 +53,7 @@ async function extractDocxContent(docxFile, filename) {
         console.error('CSP may be blocking external scripts. Please ensure mammoth.js is available locally.');
         return {
           filename: filename,
+          rawText: "",
           paragraphs: [],
           tables: []
         };
@@ -64,101 +63,64 @@ async function extractDocxContent(docxFile, filename) {
         console.error('Mammoth.js is still not available after loading attempts.');
         return {
           filename: filename,
+          rawText: "",
           paragraphs: [],
           tables: []
         };
       }
     }
 
-    // Use mammoth with options to focus on content only
-    const options = {
-      styleMap: [
-        "p[style-name='Heading 1'] => h1:fresh",
-        "p[style-name='Heading 2'] => h2:fresh",
-        "p[style-name='Heading 3'] => h3:fresh",
-        "p => p:fresh"
-      ],
-      // Ignore headers, footers and other non-content elements
-      includeDefaultStyleMap: false,
-      ignoreEmptyParagraphs: true
-    };
+    // Extract raw text content without any filtering
+    const textResult = await mammoth.extractRawText({ arrayBuffer: await docxFile.arrayBuffer() });
+    console.log('Raw text extraction completed');
     
-    // Convert the DOCX file to HTML focusing only on main content
-    const result = await mammoth.convertToHtml({ 
-      arrayBuffer: await docxFile.arrayBuffer(),
-      ignoreHeadersAndFooters: true, // Explicitly ignore headers and footers
-    }, options);
-
-    console.log('Conversion result:', result);
+    // Also extract HTML for structure preservation (tables, etc.)
+    const htmlResult = await mammoth.convertToHtml({ arrayBuffer: await docxFile.arrayBuffer() });
+    console.log('HTML conversion completed');
 
     // Use DOMParser to work with the HTML
     const parser = new DOMParser();
-    const doc = parser.parseFromString(result.value, 'text/html');
+    const doc = parser.parseFromString(htmlResult.value, 'text/html');
 
+    // Simple content object with raw text and basic structure
     const content = {
       filename: filename,
-      paragraphs: [],
-      tables: []
+      rawText: textResult.value, // Complete raw text of the document
+      paragraphs: [], // All paragraphs without filtering
+      tables: [] // All tables without filtering
     };
 
-    // Set to track seen content and avoid duplication
-    const seenContent = new Set();
-
-    // Extract meaningful paragraphs (skip empty or whitespace-only paragraphs)
+    // Extract all paragraphs without filtering
     doc.querySelectorAll('p, h1, h2, h3, h4, h5, h6').forEach(para => {
       const text = para.textContent.trim();
-      
-      // Only add non-empty text that hasn't been seen before and looks like actual content
-      if (text && text.length > 1 && !seenContent.has(text) && !/^[\s\d.,:;_-]+$/.test(text)) {
-        seenContent.add(text);
+      if (text) {
         content.paragraphs.push({
-          text: text,
-          // Tag type gives us hint about content importance (h1, h2, p, etc.)
-          elementType: para.tagName.toLowerCase()
+          text: text
         });
       }
     });
 
-    // Extract tables with meaningful data
+    // Extract all tables without filtering
     doc.querySelectorAll('table').forEach((table) => {
       const tableData = [];
-      const tableContentSet = new Set(); // Track content within this table
       
       table.querySelectorAll('tr').forEach(row => {
         const rowData = [];
-        let hasContent = false;
         
         row.querySelectorAll('td, th').forEach(cell => {
-          const cellText = cell.textContent.trim();
-          
-          // Only include cells with meaningful content
-          if (cellText && cellText.length > 1 && !/^[\s\d.,:;_-]+$/.test(cellText)) {
-            rowData.push(cellText);
-            tableContentSet.add(cellText);
-            hasContent = true;
-          } else {
-            rowData.push(''); // Keep table structure intact
-          }
+          rowData.push(cell.textContent.trim());
         });
 
-        if (hasContent && rowData.length > 0) {
+        if (rowData.length > 0) {
           tableData.push(rowData);
         }
       });
 
-      // Only include tables with actual content
-      if (tableData.length > 0 && tableContentSet.size > 0) {
+      if (tableData.length > 0) {
         content.tables.push({
           data: tableData
         });
       }
-    });
-
-    // Filter out any likely non-profile content
-    content.paragraphs = content.paragraphs.filter(p => {
-      const text = p.text.toLowerCase();
-      // Skip common document elements that aren't profile content
-      return !text.match(/^(page \d+|copyright|all rights reserved|confidential|draft|table of contents)$/);
     });
 
     return content;
@@ -166,6 +128,7 @@ async function extractDocxContent(docxFile, filename) {
     console.error(`Error extracting content: ${err.message}`, err);
     return {
       filename: filename,
+      rawText: "",
       paragraphs: [],
       tables: []
     };

@@ -148,7 +148,7 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Extract content from DOCX
         const docxContent = await extractDocxContent(file, file.name);
-        console.log('Extracted DOCX content:', docxContent);
+        console.log('Extracted DOCX content:', JSON.stringify(docxContent));
         
         // Create a user profile structure from the DOCX content
         const userProfile = {
