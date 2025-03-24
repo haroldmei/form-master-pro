@@ -25,7 +25,7 @@ function extractFormControls(formSelector = null) {
       selects: extractSelects(container),
       textareas: extractTextareas(container),
       buttons: extractButtons(container),
-      radios: extractRadioGroups(container),
+      radios: extractRadioGroups(container), // Now using the updated function
       checkboxes: extractCheckboxes(container)
     };
     
@@ -169,6 +169,22 @@ function extractButtons(container) {
  * @returns {Array} Array of radio groups
  */
 function extractRadioGroups(container) {
+  console.log('FormExtract.extractRadioGroups called', window.FormRadios ? 'FormRadios exists' : 'FormRadios missing');
+  
+  // Use FormRadios if available (from form_radios.js), otherwise fall back to internal implementation
+  if (window.FormRadios && typeof window.FormRadios.extractRadioGroups === 'function') {
+    try {
+      const radioGroups = window.FormRadios.extractRadioGroups(container);
+      console.log('FormRadios.extractRadioGroups returned', radioGroups);
+      return radioGroups;
+    } catch (error) {
+      console.error('Error using FormRadios.extractRadioGroups:', error);
+      // Fall through to fallback implementation
+    }
+  }
+  
+  // Fallback implementation if FormRadios is not available or failed
+  console.warn('Using fallback extractRadioGroups implementation');
   const groups = {};
   const radioButtons = container.querySelectorAll('input[type="radio"]');
   

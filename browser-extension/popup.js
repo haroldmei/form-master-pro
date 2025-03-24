@@ -250,12 +250,12 @@ document.addEventListener('DOMContentLoaded', function() {
     analyzeFormBtn.textContent = 'Analyzing...';
     
     chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
-      // First inject the form_extract.js file
+      // First inject both script files in the correct order
       chrome.scripting.executeScript({
         target: { tabId: tabs[0].id },
-        files: ['forms/form_extract.js']
+        files: ['forms/form_radios.js', 'forms/form_extract.js']
       }, () => {
-        // Then execute a function that uses the injected form_extract.js
+        // Then execute a function that uses the injected scripts
         chrome.scripting.executeScript({
           target: { tabId: tabs[0].id },
           function: () => {
@@ -323,7 +323,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const thead = document.createElement('thead');
     const headerRow = document.createElement('tr');
     
-    ['Label/Name', 'Type', 'ID', 'Value'].forEach(headerText => {
+    // Add column for options
+    ['Label/Name', 'Type', 'ID', 'Value', 'Options'].forEach(headerText => {
       const th = document.createElement('th');
       th.textContent = headerText;
       headerRow.appendChild(th);
@@ -372,36 +373,51 @@ document.addEventListener('DOMContentLoaded', function() {
       
       row.appendChild(valueCell);
       
+      // Options cell - new cell for displaying available options
+      const optionsCell = document.createElement('td');
+      optionsCell.className = 'field-options';
+      
+      if (field.options && field.options.length > 0) {
+        // For fields with options (select, radio), display them
+        const optionsList = document.createElement('ul');
+        optionsList.className = 'options-list';
+        
+        // Limit to first 5 options if there are many, to avoid UI clutter
+        const displayLimit = 5;
+        const displayOptions = field.options.slice(0, displayLimit);
+        
+        displayOptions.forEach(option => {
+          const optItem = document.createElement('li');
+          optItem.className = option.selected || option.checked ? 'selected-option' : '';
+          
+          // Use the most informative value available
+          const optionText = option.text || option.value || option.label || '-';
+          optItem.textContent = optionText;
+          optionsList.appendChild(optItem);
+        });
+        
+        // If there are more options than the display limit, add an indicator
+        if (field.options.length > displayLimit) {
+          const moreItem = document.createElement('li');
+          moreItem.className = 'more-options';
+          moreItem.textContent = `...and ${field.options.length - displayLimit} more`;
+          optionsList.appendChild(moreItem);
+        }
+        
+        optionsCell.appendChild(optionsList);
+      } else {
+        optionsCell.textContent = '-';
+      }
+      
+      row.appendChild(optionsCell);
+      
       tbody.appendChild(row);
     });
     
     table.appendChild(tbody);
     fieldsContainer.appendChild(table);
     
-    // Add some basic styles for the table
-    const style = document.createElement('style');
-    style.textContent = `
-      .fields-table {
-        width: 100%;
-        border-collapse: collapse;
-        margin-top: 10px;
-        font-size: 12px;
-      }
-      .fields-table th, .fields-table td {
-        padding: 4px 8px;
-        text-align: left;
-        border-bottom: 1px solid #ddd;
-      }
-      .fields-table th {
-        background-color: #f2f2f2;
-        position: sticky;
-        top: 0;
-      }
-      .fields-table tr:hover {
-        background-color: #f5f5f5;
-      }
-    `;
-    document.head.appendChild(style);
+    // No need to add inline styles here anymore since we've defined them in the HTML
     
     formAnalysisPanel.classList.remove('hidden');
   }

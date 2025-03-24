@@ -10,25 +10,43 @@
       width: 300px;
       padding: 15px;
       margin: 0;
+      max-height: 600px; /* Set a max height for the popup */
+      overflow-y: auto; /* Enable vertical scrolling if needed */
     }
+    
+    .container {
+      min-width: 100%;
+    }
+    
+    /* Add horizontal scrolling for content that exceeds width */
+    .scroll-container {
+      overflow-x: auto;
+      max-width: 100%;
+      margin-bottom: 10px;
+    }
+    
     h1 {
       font-size: 18px;
       color: #0066cc;
       margin-top: 0;
     }
+    
     .status {
       padding: 10px;
       border-radius: 4px;
       margin-bottom: 15px;
     }
+    
     .connected {
       background-color: #dff0d8;
       color: #3c763d;
     }
+    
     .disconnected {
       background-color: #f2dede;
       color: #a94442;
     }
+    
     button {
       background-color: #0066cc;
       color: white;
@@ -39,12 +57,15 @@
       width: 100%;
       margin-bottom: 8px;
     }
+    
     button:hover {
       background-color: #0055aa;
     }
+    
     .button-secondary {
       background-color: #6c757d;
     }
+    
     .button-secondary:hover {
       background-color: #5a6268;
     }
@@ -116,6 +137,79 @@
     .secondary-btn {
       background-color: #6c757d;
     }
+    
+    /* Add horizontal scroll for tables */
+    .fields-table {
+      width: 100%;
+      min-width: 500px; /* Increased from 400px */
+      border-collapse: collapse;
+      margin-top: 10px;
+      font-size: 12px;
+    }
+    
+    .fields-table th, .fields-table td {
+      padding: 4px 8px;
+      text-align: left;
+      border-bottom: 1px solid #ddd;
+      white-space: nowrap; /* Prevent text wrapping in cells */
+    }
+    
+    .fields-table th {
+      background-color: #f2f2f2;
+      position: sticky;
+      top: 0;
+    }
+    
+    .fields-table tr:hover {
+      background-color: #f5f5f5;
+    }
+    
+    /* Toast message styling */
+    .toast {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background-color: rgba(0, 0, 0, 0.7);
+      color: white;
+      padding: 10px 20px;
+      border-radius: 4px;
+      opacity: 0;
+      transition: opacity 0.3s;
+      z-index: 1000;
+    }
+    
+    .toast.show {
+      opacity: 1;
+    }
+
+    /* Styles for options list */
+    .options-list {
+      margin: 0;
+      padding: 0;
+      list-style: none;
+      font-size: 11px;
+    }
+    
+    .options-list li {
+      padding: 2px 4px;
+      margin-bottom: 1px;
+      border-radius: 3px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 150px;
+    }
+    
+    .selected-option {
+      background-color: #e6f2ff;
+      font-weight: bold;
+    }
+    
+    .more-options {
+      color: #666;
+      font-style: italic;
+    }
   </style>
 </head>
 <body>
@@ -149,7 +243,10 @@
     
     <div id="form-analysis" class="panel hidden">
       <h3>Form Fields Detected: <span id="field-count">0</span></h3>
-      <div id="fields-container"></div>
+      <!-- Add scroll-container for horizontal scrolling -->
+      <div class="scroll-container">
+        <div id="fields-container"></div>
+      </div>
     </div>
     
     <div class="footer">
@@ -158,6 +255,7 @@
     </div>
   </div>
   
+  <script src="forms/form_radios.js"></script>
   <script src="forms/form_extract.js"></script>
   <script src="popup.js"></script>
 </body>
