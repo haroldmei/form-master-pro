@@ -93,24 +93,31 @@ function saveUserProfile() {
 
 // Process a form with field mappings
 async function processForm(formFields, url) {
-  console.log("Processing form fields:", formFields);
-  
   try {
+
+    console.log("Processing form for URL:", url);
+    
+    // Extract the root URL (domain + path up to first directory)
+    const urlObj = new URL(url);
+    const rootUrl = urlObj.hostname; //urlObj.origin + urlObj.pathname.split('/').slice(0, 2).join('/');
+    console.log("Using root URL for mappings:", rootUrl);
+    
+    // Get existing field mappings from storage
+    const result = await chrome.storage.sync.get(['fieldMappings']);
+    let siteFieldMappings = result.fieldMappings || {};
+    
+    // Initialize site mappings if not present
+    if (!siteFieldMappings[rootUrl]) {
+      siteFieldMappings[rootUrl] = [];
+    }
+    
     // Collect field labels and names for AI analysis
     const fieldKeywords = formFields.map(field => {
       // Prefer label if available, otherwise use name
       return field.label || field.name || field.id || '';
     }).filter(keyword => keyword.trim() !== ''); // Filter out empty values
     
-    console.log("Field keywords for AI:", fieldKeywords);
-    
-    // Get field mappings from storage
-    const result = await chrome.storage.sync.get(['fieldMappings']);
-    const mappings = result.fieldMappings || [];
-
-    console.log("field mapping:", mappings);
-    
-    // If we have field keywords and user profile data, make a DeepSeek API call
+    // If we have field keywords and user profile data, make an API call
     let aiSuggestions = {};
     if (fieldKeywords.length > 0 && Object.keys(userProfileData).length > 0) {
       try {
@@ -126,47 +133,351 @@ async function processForm(formFields, url) {
     
     // Match form fields with mappings and retrieve values
     const fieldValues = {};
+    const updatedSiteMapping = [...siteFieldMappings[rootUrl]]; // Clone existing mappings
+    let mappingsUpdated = false;
     
     formFields.forEach(field => {
       const fieldId = field.id || '';
       const fieldName = field.name || '';
+      const fieldLabel = field.label || '';
+      const fieldType = field.type || 'text';
       
       // First check if AI provided a suggestion for this field
-      if (aiSuggestions[fieldId] || aiSuggestions[fieldName]) {
-        fieldValues[fieldId || fieldName] = aiSuggestions[fieldId] || aiSuggestions[fieldName];
+      // Try multiple identifiers to find a match
+      let suggestionValue = null;
+      
+      // Look for AI suggestions using various field identifiers
+      if (fieldId && aiSuggestions[fieldId]) {
+        suggestionValue = aiSuggestions[fieldId];
+      } else if (fieldName && aiSuggestions[fieldName]) {
+        suggestionValue = aiSuggestions[fieldName];
+      } else if (fieldLabel && aiSuggestions[fieldLabel]) {
+        suggestionValue = aiSuggestions[fieldLabel];
+      } else {
+        // Try to find any matching key in suggestions that contains our field identifiers
+        const suggestionKeys = Object.keys(aiSuggestions);
+        
+        for (const key of suggestionKeys) {
+          // Case-insensitive matching for better results
+          const keyLower = key.toLowerCase();
+          
+          if ((fieldId && keyLower.includes(fieldId.toLowerCase())) || 
+              (fieldName && keyLower.includes(fieldName.toLowerCase())) || 
+              (fieldLabel && keyLower.includes(fieldLabel.toLowerCase()))) {
+            suggestionValue = aiSuggestions[key];
+            break;
+          }
+        }
+      }
+      
+      // If we found a suggestion, process it according to field type
+      if (suggestionValue !== null) {
+        // Format the value based on field type
+        let formattedValue = formatValueForFieldType(suggestionValue, fieldType, field);
+        fieldValues[fieldId || fieldName] = formattedValue;
+        
+        // Store this successful AI mapping for future use
+        const existingIndex = updatedSiteMapping.findIndex(mapping => 
+          (mapping.id === fieldId) || (mapping.name === fieldName)
+        );
+        
+        const newMapping = {
+          id: fieldId,
+          label: fieldLabel,
+          name: fieldName,
+          type: fieldType,
+          value: formattedValue,
+          aiGenerated: true,
+          lastUsed: new Date().toISOString()
+        };
+        
+        if (existingIndex >= 0) {
+          updatedSiteMapping[existingIndex] = newMapping;
+        } else {
+          updatedSiteMapping.push(newMapping);
+        }
+        
+        mappingsUpdated = true;
         return; // Skip further processing for this field
       }
       
-      // If no AI suggestion, fall back to mappings
-      for (const mapping of mappings) {
-        const pattern = mapping.fieldPattern.toLowerCase();
-        let fieldIdentifier = '';
+      // Check if the field exists in our site-specific mappings
+      const existingMapping = siteFieldMappings[rootUrl].find(mapping => 
+        (mapping.id && mapping.id === fieldId) || (mapping.name && mapping.name === fieldName)
+      );
+      
+      if (existingMapping) {
+        // Use the existing mapping
+        const formattedValue = formatValueForFieldType(existingMapping.value, fieldType, field);
+        fieldValues[fieldId || fieldName] = formattedValue;
         
-        // Check various field properties for a match
-        if (field.id) fieldIdentifier = field.id.toLowerCase();
-        if (!isPatternMatch(fieldIdentifier, pattern) && field.name) 
-          fieldIdentifier = field.name.toLowerCase();
-        if (!isPatternMatch(fieldIdentifier, pattern) && field.label) 
-          fieldIdentifier = field.label.toLowerCase();
+        // Update the lastUsed timestamp
+        const mappingIndex = updatedSiteMapping.findIndex(m => 
+          (m.id === existingMapping.id) || (m.name === existingMapping.name)
+        );
         
-        // If we have a match, get the value from the appropriate source
-        if (isPatternMatch(fieldIdentifier, pattern)) {
-          if (mapping.dataSource === 'profile') {
-            fieldValues[field.id || field.name] = getUserProfileField(mapping.dataField);
-          } else if (mapping.dataSource === 'custom') {
-            // For custom fields, the dataField is the direct value
-            fieldValues[field.id || field.name] = mapping.dataField;
-          }
-          break;
+        if (mappingIndex >= 0) {
+          updatedSiteMapping[mappingIndex].lastUsed = new Date().toISOString();
+          mappingsUpdated = true;
+        }
+      } else {
+        // If no existing mapping found, fall back to general field mappings
+        const result = getValueFromGeneralMappings(field, fieldId, fieldName, fieldLabel, fieldType);
+        
+        if (result.value) {
+          fieldValues[fieldId || fieldName] = result.value;
+          
+          // Add this mapping to the site-specific mappings for future use
+          updatedSiteMapping.push({
+            id: fieldId,
+            label: fieldLabel,
+            name: fieldName,
+            type: fieldType,
+            value: result.value,
+            source: result.source,
+            lastUsed: new Date().toISOString()
+          });
+          
+          mappingsUpdated = true;
         }
       }
     });
+    
+    // If we made updates to the mappings, save them back to storage
+    if (mappingsUpdated) {
+      siteFieldMappings[rootUrl] = updatedSiteMapping;
+      console.log("Saving updated field mappings for site:", rootUrl);
+      
+      // Limit storage size by keeping only the last 100 mappings per site
+      if (updatedSiteMapping.length > 100) {
+        // Sort by lastUsed and keep only the most recent 100
+        siteFieldMappings[rootUrl] = updatedSiteMapping
+          .sort((a, b) => new Date(b.lastUsed) - new Date(a.lastUsed))
+          .slice(0, 100);
+      }
+      
+      // Save the updated mappings
+      chrome.storage.sync.set({ fieldMappings: siteFieldMappings }, function() {
+        console.log("Field mappings updated successfully");
+      });
+    }
     
     console.log("Processed field values:", fieldValues);
     return { success: true, fields: fieldValues };
   } catch (error) {
     console.error("Error processing form:", error);
     return { success: false, error: error.message };
+  }
+}
+
+/**
+ * Get value from general mappings (non-site-specific)
+ * This is a helper function for processForm
+ */
+function getValueFromGeneralMappings(field, fieldId, fieldName, fieldLabel, fieldType) {
+  // Check if we have a user profile value that matches
+  // Common field patterns and their corresponding user profile paths
+  const commonMappings = [
+    // Personal information
+    { pattern: /first.?name|fname|given.?name/i, path: "personal.firstName", source: "profile" },
+    { pattern: /last.?name|lname|surname|family.?name/i, path: "personal.lastName", source: "profile" },
+    { pattern: /full.?name|name/i, path: "personal.fullName", source: "profile" },
+    { pattern: /email|e.?mail|mail/i, path: "personal.email", source: "profile" },
+    { pattern: /phone|mobile|cell/i, path: "personal.phone", source: "profile" },
+    { pattern: /birth|dob|birthday/i, path: "personal.dateOfBirth", source: "profile" },
+    { pattern: /gender|sex/i, path: "personal.gender", source: "profile" },
+    
+    // Address information
+    { pattern: /address|street/i, path: "address.street", source: "profile" },
+    { pattern: /city|town|locality/i, path: "address.city", source: "profile" },
+    { pattern: /state|province|region/i, path: "address.state", source: "profile" },
+    { pattern: /zip|postal|post.?code/i, path: "address.postalCode", source: "profile" },
+    { pattern: /country/i, path: "address.country", source: "profile" },
+    
+    // Payment information (handle with care)
+    { pattern: /cc.?name|card.?name|name.?on.?card/i, path: "payment.cardholderName", source: "profile" },
+    
+    // Credential information (don't auto-fill by default)
+    { pattern: /username|user|login/i, path: "credentials.username", source: "profile" }
+  ];
+  
+  // Field identifiers to check against patterns
+  const identifiers = [
+    fieldId, 
+    fieldName,
+    fieldLabel,
+    field.placeholder
+  ].filter(Boolean).map(id => id.toLowerCase());
+  
+  // Check each identifier against our common mappings
+  for (const identifier of identifiers) {
+    for (const mapping of commonMappings) {
+      if (mapping.pattern.test(identifier)) {
+        const value = getUserProfileField(mapping.path);
+        if (value) {
+          return { 
+            value: formatValueForFieldType(value, fieldType, field),
+            source: mapping.source
+          };
+        }
+      }
+    }
+  }
+  
+  // No matching value found
+  return { value: null, source: null };
+}
+
+/**
+ * Format a value based on the field type
+ * @param {*} value - The raw value to format
+ * @param {string} fieldType - The type of the form field (e.g., 'text', 'radio', 'checkbox')
+ * @param {Object} fieldInfo - Additional field info like options for selects
+ * @returns {*} - Formatted value appropriate for the field type
+ */
+function formatValueForFieldType(value, fieldType, fieldInfo) {
+  // Return null or undefined values as empty string to avoid errors
+  if (value === null || value === undefined) {
+    return '';
+  }
+  
+  // Convert value to string if it's not already
+  const strValue = typeof value === 'string' ? value : String(value);
+  
+  // Trim leading/trailing whitespace
+  const trimmedValue = strValue.trim();
+  
+  switch (fieldType.toLowerCase()) {
+    case 'checkbox':
+      // Normalize various truthy/falsy values for checkboxes
+      if (typeof value === 'boolean') {
+        return value;
+      }
+      
+      // Handle string representations of boolean values
+      const lowercaseValue = trimmedValue.toLowerCase();
+      const truthy = ['true', 'yes', 'on', '1', 'checked', 'selected', 'enabled'];
+      const falsy = ['false', 'no', 'off', '0', 'unchecked', 'unselected', 'disabled'];
+      
+      if (truthy.includes(lowercaseValue)) {
+        return true;
+      }
+      if (falsy.includes(lowercaseValue)) {
+        return false;
+      }
+      
+      // Default to truthy for other strings
+      return !!trimmedValue;
+      
+    case 'radio':
+      return trimmedValue; // Radio value - will be checked if it matches
+      
+    case 'select':
+    case 'select-one':
+    case 'select-multiple':
+      // For select fields, try to find the option that matches
+      if (fieldInfo.options && Array.isArray(fieldInfo.options)) {
+        // Look for exact matches in option values or text
+        for (const option of fieldInfo.options) {
+          if (option.value?.toLowerCase() === trimmedValue.toLowerCase() || 
+              option.text?.toLowerCase() === trimmedValue.toLowerCase()) {
+            return option.value || option.text; // Prefer value over text
+          }
+        }
+        
+        // If no exact match, try fuzzy matching
+        for (const option of fieldInfo.options) {
+          const optValue = option.value?.toLowerCase() || '';
+          const optText = option.text?.toLowerCase() || '';
+          
+          if (optValue.includes(trimmedValue.toLowerCase()) || 
+              trimmedValue.toLowerCase().includes(optValue) ||
+              optText.includes(trimmedValue.toLowerCase()) ||
+              trimmedValue.toLowerCase().includes(optText)) {
+            return option.value || option.text;
+          }
+        }
+      }
+      
+      // If no match found among options, return the original value
+      return trimmedValue;
+      
+    case 'number':
+    case 'range':
+      // Try to convert to a number, but fallback to string if not a valid number
+      const num = parseFloat(trimmedValue);
+      return isNaN(num) ? trimmedValue : num;
+      
+    case 'date':
+      // Try to format as a valid date string if possible
+      try {
+        if (trimmedValue) {
+          const date = new Date(trimmedValue);
+          if (!isNaN(date.getTime())) {
+            // Format as YYYY-MM-DD for date inputs
+            return date.toISOString().split('T')[0];
+          }
+        }
+      } catch (e) {
+        console.log('Error formatting date:', e);
+      }
+      return trimmedValue;
+      
+    case 'time':
+      // Try to format as a valid time string
+      try {
+        if (trimmedValue) {
+          const date = new Date(`1970-01-01T${trimmedValue}`);
+          if (!isNaN(date.getTime())) {
+            // Format as HH:MM for time inputs
+            return date.toTimeString().split(' ')[0].substring(0, 5);
+          }
+        }
+      } catch (e) {
+        console.log('Error formatting time:', e);
+      }
+      return trimmedValue;
+      
+    case 'email':
+      // Ensure email format
+      if (trimmedValue && !trimmedValue.includes('@')) {
+        // If it doesn't look like an email, try to extract from user profile
+        const emailFromProfile = getUserProfileField('personal.email') || '';
+        return emailFromProfile || trimmedValue;
+      }
+      return trimmedValue;
+      
+    case 'tel':
+    case 'phone':
+      // Try to format phone numbers consistently
+      // Remove non-digit characters for consistency
+      const digitsOnly = trimmedValue.replace(/\D/g, '');
+      
+      // Apply basic formatting based on length
+      if (digitsOnly.length === 10) {
+        return `(${digitsOnly.substring(0,3)}) ${digitsOnly.substring(3,6)}-${digitsOnly.substring(6)}`;
+      }
+      return trimmedValue;
+      
+    case 'url':
+      // Ensure URLs have a protocol
+      if (trimmedValue && !trimmedValue.match(/^https?:\/\//i)) {
+        return `https://${trimmedValue}`;
+      }
+      return trimmedValue;
+      
+    case 'password':
+      // For security, don't autofill passwords unless explicitly allowed
+      return ''; // You can change this policy if needed
+      
+    case 'textarea':
+      // For textareas, preserve newlines
+      return trimmedValue;
+      
+    case 'text':
+    default:
+      // For generic text fields, just return the trimmed value
+      return trimmedValue;
   }
 }
 
@@ -188,37 +499,18 @@ async function getAiSuggestions(fieldKeywords, userProfile, url) {
     
     // Format user profile data for the prompt
     const profileJson = JSON.stringify(userProfile, null, 2);
-    
-    // Create a prompt for the API
-    const prompt = `
-You are a form filling assistant. Given a user's profile data and a list of form field names/labels, 
-extract relevant information from the profile to fill in the form fields.
-
-User's profile data:
-${profileJson}
-
-Form fields:
-${fieldKeywords.join(", ")}
-
-Form URL: ${url}
-
-Analyze the field names and match them with appropriate values from the user profile. 
-Return a JSON object where keys are the field names and values are the suggested values from the profile. 
-If you don't have a good match for a field, don't include it in the response.
-Format your response as a valid JSON object only.
-`;
-
-    console.log("Bargain4me API prompt:", prompt);
 
     // Make the API call to bargain4me.com
-    const response = await fetch("https://bargain4me.com/api/chat", {
+    const response = await fetch("http://localhost:3001/api/formmaster", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         "Authorization": `Bearer ${accessToken}`
       },
       body: JSON.stringify({
-        prompt: prompt
+        profileJson: profileJson,
+        fieldKeywords: fieldKeywords,
+        url: url
       })
     });
     
@@ -231,7 +523,7 @@ Format your response as a valid JSON object only.
     
     // Extract the content from the response
     // Adjust based on the actual response structure from bargain4me.com API
-    const content = responseData.content || responseData.message || responseData.response;
+    const content = responseData.reply;
     if (!content) {
       throw new Error("Invalid response format from Bargain4me API");
     }
