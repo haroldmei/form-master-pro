@@ -1,3 +1,75 @@
+importScripts('auth.js');
+
+// Initialize the Auth0 client
+
+// Listen for auth-related messages
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message.type === 'auth-callback') {
+    // Handle successful authentication callback
+    const expiresAt = Date.now() + (parseInt(message.expiresIn) * 1000);
+    const authState = {
+      accessToken: message.accessToken,
+      idToken: message.idToken,
+      expiresAt
+    };
+    
+    // Store auth state
+    chrome.storage.local.set({ authState }, () => {
+      console.log('Auth state stored after successful login');
+      
+      // Broadcast auth state change to any open extension pages
+      chrome.runtime.sendMessage({ type: 'auth-state-changed', isAuthenticated: true });
+    });
+    
+    sendResponse({ success: true });
+    return true;
+  }
+  
+  if (message.type === 'auth-error') {
+    console.error('Auth error:', message.error, message.errorDescription);
+    sendResponse({ success: false, error: message.error });
+    return true;
+  }
+  
+  if (message.action === 'checkAuth') {
+    auth0Service.isAuthenticated()
+      .then(isAuthenticated => sendResponse({ isAuthenticated }))
+      .catch(error => sendResponse({ error: error.message }));
+    return true;
+  }
+  
+  if (message.action === 'getToken') {
+    auth0Service.getAccessToken()
+      .then(token => sendResponse({ token }))
+      .catch(error => sendResponse({ error: error.message }));
+    return true;
+  }
+  
+  if (message.action === 'login') {
+    auth0Service.login()
+      .then(result => sendResponse({ success: true }))
+      .catch(error => sendResponse({ success: false, error: error.message }));
+    return true;
+  }
+  
+  if (message.action === 'logout') {
+    auth0Service.logout()
+      .then(() => sendResponse({ success: true }))
+      .catch(error => sendResponse({ success: false, error: error.message }));
+    return true;
+  }
+});
+
+// Initialize auth on extension startup
+auth0Service.init()
+  .then(isAuthenticated => {
+    console.log('Auth initialized, authenticated:', isAuthenticated);
+  })
+  .catch(error => {
+    console.error('Auth initialization error:', error);
+  });
+
+
 // FormMaster Pro extension - Standalone version
 console.log("FormMaster Pro extension initializing...");
 

@@ -48,6 +48,74 @@
     .button-secondary:hover {
       background-color: #5a6268;
     }
+
+    /* Auth specific styles */
+    .user-info {
+      display: flex;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+
+    .avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      margin-right: 10px;
+      background-color: #e9ecef;
+    }
+
+    #auth-container {
+      background-color: #f8f9fa;
+      padding: 10px;
+      border-radius: 4px;
+      margin-bottom: 15px;
+    }
+
+    #logged-out-view p {
+      margin: 0 0 10px 0;
+      font-size: 13px;
+    }
+
+    #logged-in-view {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    /* Add this class to fix hidden elements */
+    .hidden {
+      display: none !important;
+    }
+    
+    /* Style for text buttons */
+    .text-btn {
+      background: none;
+      border: none;
+      color: #0066cc;
+      padding: 0;
+      font-size: 13px;
+      text-decoration: underline;
+      cursor: pointer;
+      width: auto;
+    }
+    
+    /* Style for panels */
+    .panel {
+      background-color: white;
+      border: 1px solid #dee2e6;
+      border-radius: 4px;
+      padding: 10px;
+      margin-bottom: 15px;
+    }
+    
+    /* Fix primary and secondary button styles */
+    .primary-btn {
+      background-color: #0066cc;
+    }
+    
+    .secondary-btn {
+      background-color: #6c757d;
+    }
   </style>
 </head>
 <body>
@@ -56,6 +124,21 @@
       <img src="images/icon48.png" alt="FormMaster Logo">
       <h1>FormMaster Pro</h1>
     </header>
+    
+    <!-- Auth Container -->
+    <div id="auth-container" class="panel">
+      <div id="logged-out-view">
+        <p>Please log in to access all features</p>
+        <button id="login-button" class="primary-btn">Log In</button>
+      </div>
+      <div id="logged-in-view" class="hidden">
+        <div class="user-info">
+          <img id="user-picture" class="avatar" alt="Profile" src="images/icon48.png">
+          <span id="user-name">User</span>
+        </div>
+        <button id="logout-button" class="text-btn">Log Out</button>
+      </div>
+    </div>
     
     <div id="connection-status" class="status">
       <span class="indicator" id="status-indicator"></span>

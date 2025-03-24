@@ -15,6 +15,17 @@ document.addEventListener('DOMContentLoaded', function() {
   const statusIndicator = document.getElementById('status-indicator');
   const statusText = document.getElementById('status-text');
   
+  
+  // Auth-related elements
+  const loginButton = document.getElementById('login-button');
+  const logoutButton = document.getElementById('logout-button');
+  const authContainer = document.getElementById('auth-container');
+  const loggedOutView = document.getElementById('logged-out-view');
+  const loggedInView = document.getElementById('logged-in-view');
+  const userName = document.getElementById('user-name');
+  const userPicture = document.getElementById('user-picture');
+  
+
   // Button elements
   const analyzeFormBtn = document.getElementById('analyze-form');
   const loadDataBtn = document.getElementById('load-data');
@@ -30,6 +41,13 @@ document.addEventListener('DOMContentLoaded', function() {
   // Check connection status - in standalone mode, it's always "connected"
   displayStandaloneStatus();
   
+  // Check authentication state on popup open
+  checkAuthState();
+  
+  // Add auth button listeners
+  if (loginButton) loginButton.addEventListener('click', login);
+  if (logoutButton) logoutButton.addEventListener('click', logout);
+
   // Set up event listeners
   addSafeEventListener('analyze-form', 'click', analyzeCurrentForm);
   addSafeEventListener('load-data', 'click', loadProfileData);
@@ -40,6 +58,136 @@ document.addEventListener('DOMContentLoaded', function() {
   // Remove redundant event listeners for elements that don't exist
   // addSafeEventListener('fill-form-btn', 'click', fillCurrentForm);
   // addSafeEventListener('settings-btn', 'click', openSettings);
+  
+  // Listen for auth state changes from background script
+  chrome.runtime.onMessage.addListener((message) => {
+    if (message.type === 'auth-state-changed') {
+      checkAuthState();
+    }
+  });
+  
+  // Login function
+  async function login() {
+    if (loginButton) {
+      loginButton.disabled = true;
+      loginButton.textContent = 'Logging in...';
+    }
+    
+    try {
+      const response = await chrome.runtime.sendMessage({ action: 'login' });
+      
+      if (response && response.success) {
+        checkAuthState();
+      } else if (response && response.error) {
+        console.error('Login error:', response.error);
+        showError(`Login failed: ${response.error}`);
+      }
+    } catch (error) {
+      console.error('Error during login:', error);
+      showError('Login process failed');
+    }
+    
+    if (loginButton) {
+      loginButton.disabled = false;
+      loginButton.textContent = 'Log In';
+    }
+  }
+  
+  // Logout function
+  async function logout() {
+    if (logoutButton) {
+      logoutButton.disabled = true;
+    }
+    
+    try {
+      await chrome.runtime.sendMessage({ action: 'logout' });
+      checkAuthState();
+    } catch (error) {
+      console.error('Error during logout:', error);
+    }
+    
+    if (logoutButton) {
+      logoutButton.disabled = false;
+    }
+  }
+  
+  // Check authentication state
+  async function checkAuthState() {
+    try {
+      const response = await chrome.runtime.sendMessage({ action: 'checkAuth' });
+      
+      if (response && response.isAuthenticated) {
+        showAuthenticatedUI();
+        loadUserProfile();
+      } else {
+        showUnauthenticatedUI();
+      }
+    } catch (error) {
+      console.error('Error checking auth state:', error);
+      showUnauthenticatedUI();
+    }
+  }
+  
+  // Load user profile
+  async function loadUserProfile() {
+    try {
+      // Use the background script to get user info
+      const userInfo = await getUserInfo();
+      
+      if (userInfo) {
+        if (userName) userName.textContent = userInfo.name || userInfo.email || 'User';
+        if (userPicture && userInfo.picture) userPicture.src = userInfo.picture;
+      }
+    } catch (error) {
+      console.error('Error loading user profile:', error);
+    }
+  }
+  
+  // Get user info from ID token
+  async function getUserInfo() {
+    return new Promise((resolve, reject) => {
+      chrome.storage.local.get(['authState'], (result) => {
+        if (!result.authState || !result.authState.idToken) {
+          return reject(new Error('No ID token available'));
+        }
+        
+        try {
+          // Parse the ID token payload
+          const payloadBase64 = result.authState.idToken.split('.')[1];
+          const payload = JSON.parse(atob(payloadBase64));
+          resolve(payload);
+        } catch (error) {
+          reject(error);
+        }
+      });
+    });
+  }
+  
+  // Show authenticated UI
+  function showAuthenticatedUI() {
+    if (loggedOutView) loggedOutView.classList.add('hidden');
+    if (loggedInView) loggedInView.classList.remove('hidden');
+    
+    // Enable buttons that require authentication
+    enableFormFeatures(true);
+  }
+  
+  // Show unauthenticated UI
+  function showUnauthenticatedUI() {
+    if (loggedOutView) loggedOutView.classList.remove('hidden');
+    if (loggedInView) loggedInView.classList.add('hidden');
+    
+    // Disable buttons that require authentication
+    enableFormFeatures(false);
+  }
+  
+  // Enable/disable form features based on auth state
+  function enableFormFeatures(enabled) {
+    const buttons = []; //[analyzeFormButton, loadDataButton, dataMappingsButton, autoFillButton];
+    buttons.forEach(button => {
+      if (button) button.disabled = !enabled;
+    });
+  }
   
   // Update reconnect button to be profile editor in standalone mode
   const reconnectBtn = document.getElementById('reconnect-btn');
@@ -55,7 +203,6 @@ document.addEventListener('DOMContentLoaded', function() {
     statusElement.className = 'status connected';
   }
   
-
   // Function to analyze the current form
   function analyzeCurrentForm2() {
     analyzeFormBtn.disabled = true;
