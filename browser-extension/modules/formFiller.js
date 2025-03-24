@@ -54,7 +54,8 @@ const formFiller = (() => {
               'name': field.name || '',
               'type': field.type || 'text',
               'id': field.id || '',
-              'value': ''
+              'value': '',
+              'options': field.options || []
             };
             
             // Handle value based on field type

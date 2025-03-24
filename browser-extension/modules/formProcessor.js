@@ -23,16 +23,32 @@ const formProcessor = (() => {
         siteFieldMappings[rootUrl] = [];
       }
       
-      // Collect field labels and names for AI analysis
-      const fieldKeywords = formFields.map(field => {
-        // Prefer label if available, otherwise use name
-        return field.label || field.name || field.id || '';
-      }).filter(keyword => keyword.trim() !== ''); // Filter out empty values
+      // Create fieldKeywords as key/value pairs instead of an array
+      const fieldKeywords = {};
+      formFields.forEach(field => {
+        // Prefer label if available, otherwise use name or id
+        const keyName = field.label || field.name || field.id || '';
+        
+        // Skip empty keys
+        if (keyName.trim() === '') return;
+        
+        // Set the value to field options if available, otherwise empty array
+        if (field.options && Array.isArray(field.options) && field.options.length > 0) {
+          // Extract option labels/values
+          fieldKeywords[keyName] = field.options.map(option => 
+            option.text || option.label || option.value || ''
+          ).filter(Boolean);
+        } else {
+          // No options available, use empty array
+          fieldKeywords[keyName] = [];
+        }
+      });
+      
       console.log("Field keywords for AI:", fieldKeywords);
       
       // If we have field keywords and user profile data, make an API call
       let aiSuggestions = {};
-      if (fieldKeywords.length > 0) {
+      if (Object.keys(fieldKeywords).length > 0) {
         try {
           const userProfile = userProfileManager.getUserProfile();
           if (Object.keys(userProfile).length > 0) {
