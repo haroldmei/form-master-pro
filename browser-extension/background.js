@@ -70,9 +70,6 @@ auth0Service.init()
   });
 
 
-// FormMaster Pro extension - Standalone version
-console.log("FormMaster Pro extension initializing...");
-
 // User profile data - will be loaded from storage
 let userProfileData = {};
 

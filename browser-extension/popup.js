@@ -38,9 +38,6 @@ document.addEventListener('DOMContentLoaded', function() {
   const fieldCount = document.getElementById('field-count');
   const fieldsContainer = document.getElementById('fields-container');
   
-  // Check connection status - in standalone mode, it's always "connected"
-  displayStandaloneStatus();
-  
   // Check authentication state on popup open
   checkAuthState();
   
@@ -194,13 +191,6 @@ document.addEventListener('DOMContentLoaded', function() {
   if (reconnectBtn) {
     reconnectBtn.textContent = "Edit Profile";
     reconnectBtn.addEventListener('click', editUserProfile);
-  }
-  
-  // Function to display standalone status
-  function displayStandaloneStatus() {
-    const statusElement = document.getElementById('connection-status');
-    statusElement.textContent = 'Standalone Mode - No companion app required';
-    statusElement.className = 'status connected';
   }
   
   // Function to analyze the current form
