@@ -16,5 +16,10 @@
     "company": "Tech Innovations Inc.",
     "occupation": "Software Developer",
     "website": "https://johndoe.example.com"
+  },
+  "work1": {
+    "company": "Tech Innovations Inc.",
+    "occupation": "Software Developer",
+    "website": "https://johndoe.example.com"
   }
 }

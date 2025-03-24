@@ -12,7 +12,7 @@ const formProcessor = (() => {
       // Extract the root URL (domain + path up to first directory)
       const urlObj = new URL(url);
       const rootUrl = urlObj.hostname;
-      console.log("Using root URL for mappings:", rootUrl);
+      //console.log("Using root URL for mappings:", rootUrl);
       
       // Get existing field mappings from storage
       const result = await chrome.storage.sync.get(['fieldMappings']);

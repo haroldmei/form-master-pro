@@ -186,13 +186,6 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
   
-  // Update reconnect button to be profile editor in standalone mode
-  const reconnectBtn = document.getElementById('reconnect-btn');
-  if (reconnectBtn) {
-    reconnectBtn.textContent = "Edit Profile";
-    reconnectBtn.addEventListener('click', editUserProfile);
-  }
-  
   // Function to analyze the current form
   function analyzeCurrentForm2() {
     analyzeFormBtn.disabled = true;
@@ -451,11 +444,6 @@ document.addEventListener('DOMContentLoaded', function() {
   // Function to open options page
   function openOptions() {
     chrome.runtime.openOptionsPage();
-  }
-  
-  // Function to open user profile editor
-  function editUserProfile() {
-    chrome.tabs.create({url: 'profile.html'});
   }
   
   // Helper function to show toast messages

@@ -1,26 +1,9 @@
 document.addEventListener('DOMContentLoaded', function() {
-  // Profile fields mapping
-  const profileFields = {
-    firstName: 'personal.firstName',
-    lastName: 'personal.lastName',
-    email: 'personal.email',
-    phone: 'personal.phone',
-    streetAddress: 'address.street',
-    city: 'address.city',
-    state: 'address.state',
-    zipCode: 'address.zipCode',
-    country: 'address.country',
-    company: 'work.company',
-    occupation: 'work.occupation',
-    website: 'work.website'
-  };
-  
+
   // Load existing profile
   loadUserProfile();
   
-  // Add event listeners
-  document.getElementById('save-profile').addEventListener('click', saveUserProfile);
-  document.getElementById('export-profile').addEventListener('click', exportProfile);
+  // Add event listeners - only keep import
   document.getElementById('import-profile').addEventListener('click', importProfile);
   
   /**
@@ -29,60 +12,21 @@ document.addEventListener('DOMContentLoaded', function() {
   function loadUserProfile() {
     chrome.storage.sync.get(['userProfile'], function(result) {
       const userProfile = result.userProfile || {};
-
-      // Fill form fields with profile data
-      for (const [field, path] of Object.entries(profileFields)) {
-        const value = getNestedValue(userProfile, path);
-        console.log(field, path, value);
-        if (value) {
-          document.getElementById(field).value = value;
-        }
+      
+      // Get the container where we'll display the profile data
+      const profileContainer = document.getElementById('profile-container');
+      
+      // Clear existing content
+      profileContainer.innerHTML = '';
+      
+      if (Object.keys(userProfile).length === 0) {
+        profileContainer.innerHTML = '<p>No profile data loaded. Please import a profile file.</p>';
+        return;
       }
-    });
-  }
-  
-  /**
-   * Save user profile to storage
-   */
-  function saveUserProfile() {
-    const userProfile = {};
-    
-    // Get values from form fields
-    for (const [field, path] of Object.entries(profileFields)) {
-      const value = document.getElementById(field).value;
-      setNestedValue(userProfile, path, value);
-    }
-    
-    // Save to Chrome storage
-    chrome.storage.sync.set({ userProfile }, function() {
-      showStatusMessage('Profile saved successfully!', 'success');
       
-      // Notify background script that profile has been updated
-      chrome.runtime.sendMessage({ action: 'settingsUpdated' });
-    });
-  }
-  
-  /**
-   * Export profile as JSON file
-   */
-  function exportProfile() {
-    chrome.storage.sync.get(['userProfile'], function(result) {
-      const userProfile = result.userProfile || {};
-      
-      // Create a JSON blob
-      const jsonString = JSON.stringify(userProfile, null, 2);
-      const blob = new Blob([jsonString], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      
-      // Create a download link and click it
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = 'formmaster_profile.json';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      
-      showStatusMessage('Profile exported successfully!', 'success');
+      // Generate dynamic HTML for the profile
+      const profileHtml = generateProfileHtml(userProfile);
+      profileContainer.innerHTML = profileHtml;
     });
   }
   
@@ -105,13 +49,15 @@ document.addEventListener('DOMContentLoaded', function() {
         try {
           const userProfile = JSON.parse(event.target.result);
           
-          // Fill form fields directly with the imported data
-          for (const [field, path] of Object.entries(profileFields)) {
-            const value = getNestedValue(userProfile, path);
-            if (value) {
-              document.getElementById(field).value = value;
-            }
-          }
+          // Get the container where we'll display the profile data
+          const profileContainer = document.getElementById('profile-container');
+          
+          // Clear existing content
+          profileContainer.innerHTML = '';
+          
+          // Generate dynamic HTML for the profile
+          const profileHtml = generateProfileHtml(userProfile);
+          profileContainer.innerHTML = profileHtml;
           
           // Save to Chrome storage
           chrome.storage.sync.set({ userProfile }, function() {
@@ -130,6 +76,35 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Trigger the file dialog
     input.click();
+  }
+  
+  /**
+   * Generate HTML for displaying profile data
+   */
+  function generateProfileHtml(data, parentKey = '') {
+    let html = '<div class="profile-section">';
+    
+    for (const [key, value] of Object.entries(data)) {
+      const displayKey = key.charAt(0).toUpperCase() + key.slice(1);
+      const fullKey = parentKey ? `${parentKey}.${key}` : key;
+      
+      if (typeof value === 'object' && value !== null) {
+        // For nested objects, create a section with a header
+        html += `<div class="profile-subsection">
+                  <h3>${displayKey}</h3>
+                  ${generateProfileHtml(value, fullKey)}
+                </div>`;
+      } else {
+        // For simple values, create a read-only field
+        html += `<div class="profile-field">
+                  <label for="${fullKey}">${displayKey}:</label>
+                  <input type="text" id="${fullKey}" value="${value || ''}" readonly>
+                </div>`;
+      }
+    }
+    
+    html += '</div>';
+    return html;
   }
   
   /**
