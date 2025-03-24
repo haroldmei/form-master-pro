@@ -171,7 +171,7 @@ async function processForm(formFields, url) {
 }
 
 /**
- * Make an API call to DeepSeek AI to get suggestions for form fields
+ * Make an API call to bargain4me.com API to get suggestions for form fields
  * 
  * @param {Array} fieldKeywords - List of field labels/names
  * @param {Object} userProfile - User profile data
@@ -179,15 +179,18 @@ async function processForm(formFields, url) {
  * @returns {Object} Mapping of field IDs/names to suggested values
  */
 async function getAiSuggestions(fieldKeywords, userProfile, url) {
-  // Your DeepSeek API key - this should be stored securely
-  // For production, consider using environment variables or secure storage
-  const apiKey = "sk-xxxxxxxx"; // Replace with your actual API key
-  
-  // Format user profile data for the prompt
-  const profileJson = JSON.stringify(userProfile, null, 2);
-  
-  // Create a prompt for the DeepSeek API
-  const prompt = `
+  try {
+    // Get the access token from the auth service
+    const accessToken = await auth0Service.getAccessToken();
+    if (!accessToken) {
+      throw new Error("Authentication required to use AI suggestions");
+    }
+    
+    // Format user profile data for the prompt
+    const profileJson = JSON.stringify(userProfile, null, 2);
+    
+    // Create a prompt for the API
+    const prompt = `
 You are a form filling assistant. Given a user's profile data and a list of form field names/labels, 
 extract relevant information from the profile to fill in the form fields.
 
@@ -205,40 +208,32 @@ If you don't have a good match for a field, don't include it in the response.
 Format your response as a valid JSON object only.
 `;
 
-  console.log("DeepSeek API prompt:", prompt);
+    console.log("Bargain4me API prompt:", prompt);
 
-  try {
-    // Make the API call to DeepSeek
-    const response = await fetch("https://api.deepseek.com/v1/chat/completions", {
+    // Make the API call to bargain4me.com
+    const response = await fetch("https://bargain4me.com/api/chat", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${apiKey}`
+        "Authorization": `Bearer ${accessToken}`
       },
       body: JSON.stringify({
-        model: "deepseek-chat",
-        messages: [
-          {
-            role: "user",
-            content: prompt
-          }
-        ],
-        temperature: 0.2, // Low temperature for more deterministic responses
-        max_tokens: 1000
+        prompt: prompt
       })
     });
     
     if (!response.ok) {
-      throw new Error(`DeepSeek API error: ${response.status} ${response.statusText}`);
+      throw new Error(`Bargain4me API error: ${response.status} ${response.statusText}`);
     }
     
     const responseData = await response.json();
-    console.log("DeepSeek API response:", responseData);
+    console.log("Bargain4me API response:", responseData);
     
     // Extract the content from the response
-    const content = responseData.choices[0]?.message?.content;
+    // Adjust based on the actual response structure from bargain4me.com API
+    const content = responseData.content || responseData.message || responseData.response;
     if (!content) {
-      throw new Error("Invalid response format from DeepSeek API");
+      throw new Error("Invalid response format from Bargain4me API");
     }
     
     // Parse the JSON content
@@ -252,12 +247,12 @@ Format your response as a valid JSON object only.
     try {
       return JSON.parse(jsonContent);
     } catch (parseError) {
-      console.error("Error parsing DeepSeek response as JSON:", parseError);
+      console.error("Error parsing Bargain4me response as JSON:", parseError);
       console.log("Response content:", content);
       return {};
     }
   } catch (error) {
-    console.error("Error calling DeepSeek API:", error);
+    console.error("Error calling Bargain4me API:", error);
     throw error;
   }
 }
