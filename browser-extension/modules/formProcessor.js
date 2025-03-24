@@ -28,6 +28,7 @@ const formProcessor = (() => {
         // Prefer label if available, otherwise use name
         return field.label || field.name || field.id || '';
       }).filter(keyword => keyword.trim() !== ''); // Filter out empty values
+      console.log("Field keywords for AI:", fieldKeywords);
       
       // If we have field keywords and user profile data, make an API call
       let aiSuggestions = {};

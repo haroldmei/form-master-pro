@@ -9,7 +9,7 @@ const userProfileManager = (() => {
    * Load user profile from storage
    */
   function loadUserProfile() {
-    chrome.storage.sync.get(['userProfile'], function(result) {
+    chrome.storage.local.get(['userProfile'], function(result) {
       userProfileData = result.userProfile || {};
       console.log("User profile loaded:", userProfileData);
     });
@@ -19,7 +19,7 @@ const userProfileManager = (() => {
    * Save changes to user profile
    */
   function saveUserProfile() {
-    chrome.storage.sync.set({ userProfile: userProfileData }, function() {
+    chrome.storage.local.set({ userProfile: userProfileData }, function() {
       console.log("User profile saved");
     });
   }

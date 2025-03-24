@@ -1,7 +1,4 @@
 // Ensure mammoth is available in the browser, e.g., via a CDN or bundling
-// For example: <script src="https://cdn.jsdelivr.net/npm/mammoth@1.4.21/mammoth.browser.min.js"></script>
-
-// const cheerio = require('cheerio'); // Make sure cheerio is also browser compatible
 
 /**
  * Dynamically load a script
@@ -63,7 +60,6 @@ async function extractDocxContent(docxFile, filename) {
         };
       }
       
-      // Check again if mammoth is defined after attempting to load it
       if (typeof mammoth === 'undefined') {
         console.error('Mammoth.js is still not available after loading attempts.');
         return {
@@ -74,15 +70,28 @@ async function extractDocxContent(docxFile, filename) {
       }
     }
 
-    // Use mammoth to convert the DOCX file to HTML
-    const result = await mammoth.convertToHtml({ arrayBuffer: await docxFile.arrayBuffer() });
+    // Use mammoth with options to focus on content only
+    const options = {
+      styleMap: [
+        "p[style-name='Heading 1'] => h1:fresh",
+        "p[style-name='Heading 2'] => h2:fresh",
+        "p[style-name='Heading 3'] => h3:fresh",
+        "p => p:fresh"
+      ],
+      // Ignore headers, footers and other non-content elements
+      includeDefaultStyleMap: false,
+      ignoreEmptyParagraphs: true
+    };
+    
+    // Convert the DOCX file to HTML focusing only on main content
+    const result = await mammoth.convertToHtml({ 
+      arrayBuffer: await docxFile.arrayBuffer(),
+      ignoreHeadersAndFooters: true, // Explicitly ignore headers and footers
+    }, options);
 
-    console.log('Mammoth conversion result:', result);
+    console.log('Conversion result:', result);
 
-    // Log the generated HTML to inspect its structure
-    console.log('Generated HTML:', result.value);
-
-    // Use DOMParser instead of cheerio
+    // Use DOMParser to work with the HTML
     const parser = new DOMParser();
     const doc = parser.parseFromString(result.value, 'text/html');
 
@@ -92,48 +101,64 @@ async function extractDocxContent(docxFile, filename) {
       tables: []
     };
 
-    // Dictionary to track seen paragraph content (for deduplication)
-    const seenParagraphs = new Set();
+    // Set to track seen content and avoid duplication
+    const seenContent = new Set();
 
-    // Extract paragraphs
-    doc.querySelectorAll('p').forEach(para => {
+    // Extract meaningful paragraphs (skip empty or whitespace-only paragraphs)
+    doc.querySelectorAll('p, h1, h2, h3, h4, h5, h6').forEach(para => {
       const text = para.textContent.trim();
-      if (text && !seenParagraphs.has(text)) {
-        seenParagraphs.add(text);
+      
+      // Only add non-empty text that hasn't been seen before and looks like actual content
+      if (text && text.length > 1 && !seenContent.has(text) && !/^[\s\d.,:;_-]+$/.test(text)) {
+        seenContent.add(text);
         content.paragraphs.push({
           text: text,
-          style: para.className || 'Normal'
+          // Tag type gives us hint about content importance (h1, h2, p, etc.)
+          elementType: para.tagName.toLowerCase()
         });
       }
     });
 
-    // Extract tables
-    doc.querySelectorAll('table').forEach((table, i) => {
+    // Extract tables with meaningful data
+    doc.querySelectorAll('table').forEach((table) => {
       const tableData = [];
-      const seenCells = new Set();
-
+      const tableContentSet = new Set(); // Track content within this table
+      
       table.querySelectorAll('tr').forEach(row => {
         const rowData = [];
+        let hasContent = false;
+        
         row.querySelectorAll('td, th').forEach(cell => {
           const cellText = cell.textContent.trim();
-          // Only add non-empty cells that haven't been seen before within this table
-          if (cellText && !seenCells.has(cellText)) {
-            seenCells.add(cellText);
+          
+          // Only include cells with meaningful content
+          if (cellText && cellText.length > 1 && !/^[\s\d.,:;_-]+$/.test(cellText)) {
             rowData.push(cellText);
+            tableContentSet.add(cellText);
+            hasContent = true;
+          } else {
+            rowData.push(''); // Keep table structure intact
           }
         });
 
-        if (rowData.length > 0) {
+        if (hasContent && rowData.length > 0) {
           tableData.push(rowData);
         }
       });
 
-      if (tableData.length > 0) {
+      // Only include tables with actual content
+      if (tableData.length > 0 && tableContentSet.size > 0) {
         content.tables.push({
-          id: i + 1,
           data: tableData
         });
       }
+    });
+
+    // Filter out any likely non-profile content
+    content.paragraphs = content.paragraphs.filter(p => {
+      const text = p.text.toLowerCase();
+      // Skip common document elements that aren't profile content
+      return !text.match(/^(page \d+|copyright|all rights reserved|confidential|draft|table of contents)$/);
     });
 
     return content;

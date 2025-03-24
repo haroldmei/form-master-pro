@@ -108,7 +108,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   
   if (message.action === 'settingsUpdated') {
     // Reload settings
-    userProfileManager.loadUserProfile();
+    // userProfileManager.loadUserProfile();
     return false;
   }
 });
@@ -119,7 +119,7 @@ chrome.webNavigation.onCompleted.addListener(function(details) {
   if (details.frameId !== 0) return;
   
   // Check if we have data to display in an overlay
-  chrome.storage.sync.get(['userProfile'], function(result) {
+  chrome.storage.local.get(['userProfile'], function(result) {
     if (result.userProfile && result.userProfile.personal && result.userProfile.personal.firstName) {
       const firstName = result.userProfile.personal.firstName;
 

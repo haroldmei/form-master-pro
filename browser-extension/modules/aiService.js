@@ -20,7 +20,8 @@ const aiService = (() => {
       
       // Format user profile data for the prompt
       const profileJson = JSON.stringify(userProfile, null, 2);
-
+      console.log("User profile JSON:", profileJson.length, "bytes");
+      
       // Make the API call to bargain4me.com
       const response = await fetch("http://localhost:3001/api/formmaster", {
         method: "POST",
