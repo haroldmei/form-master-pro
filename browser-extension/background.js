@@ -125,7 +125,25 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   switch (message.action) {
     case 'analyze-form':
       analyzeFormInTab(tabId, message.url)
-        .then(result => sendResponse({ success: true, ...result }))
+        .then(result => {
+          // Save the form analysis data temporarily
+          chrome.storage.local.set({
+            formAnalysisData: {
+              url: message.url,
+              timestamp: new Date().toISOString(),
+              data: result.data
+            }
+          }, () => {
+            // Open the form analysis page in a new tab
+            chrome.tabs.create({ url: 'formAnalysis.html' });
+            
+            // Send response to the original message
+            sendResponse({ 
+              success: true, 
+              message: 'Opening form analysis in new tab'
+            });
+          });
+        })
         .catch(err => sendResponse({ success: false, error: err.message }));
       return true; // Keep the message channel open for async response
       
