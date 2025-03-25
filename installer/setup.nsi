@@ -30,12 +30,14 @@
 !define MUI_HEADERIMAGE
 !define MUI_HEADERIMAGE_BITMAP "${NSISDIR}\Contrib\Graphics\Header\win.bmp"
 
-; Define license page pre-function
-!define MUI_PAGE_CUSTOMFUNCTION_PRE LicensePagePre
+; Define license file paths
+!define LICENSE_FILE "..\installer\LICENSE"
+!define LICENSE_FILE_DEFAULT "${NSISDIR}\Docs\Modern UI\License.txt"
 
 ; Pages
 !insertmacro MUI_PAGE_WELCOME
-!insertmacro MUI_PAGE_LICENSE "${NSISDIR}\Docs\Modern UI\License.txt" ; Default license, will be changed in LicensePagePre
+; License page without pre-function
+!insertmacro MUI_PAGE_LICENSE "${LICENSE_FILE}"  ; Use installer LICENSE directly
 !insertmacro MUI_PAGE_DIRECTORY
 !insertmacro MUI_PAGE_INSTFILES
 !insertmacro MUI_PAGE_FINISH
@@ -46,11 +48,6 @@
 ; Languages
 !insertmacro MUI_LANGUAGE "English"
 
-; Define license file paths
-!define LICENSE_FILE "..\LICENSE"
-!define LICENSE_FILE_INSTALLER "..\installer\LICENSE"
-!define LICENSE_FILE_DEFAULT "${NSISDIR}\Docs\Modern UI\License.txt"
-
 ; Installer Information
 Name "${PRODUCT_NAME} ${PRODUCT_VERSION}"
 OutFile "..\FormMaster-Setup.exe"
@@ -58,24 +55,6 @@ InstallDir "$PROGRAMFILES\FormMaster Pro"
 InstallDirRegKey HKLM "${PRODUCT_DIR_REGKEY}" ""
 ShowInstDetails show
 ShowUnInstDetails show
-
-; License file selection function
-Function LicensePagePre
-  ; Check which license file exists and set accordingly
-  ${If} ${FileExists} "${LICENSE_FILE}"
-    File "${LICENSE_FILE}" "$TEMP\license.txt"
-  ${ElseIf} ${FileExists} "${LICENSE_FILE_INSTALLER}"
-    File "${LICENSE_FILE_INSTALLER}" "$TEMP\license.txt"
-  ${Else}
-    File "${LICENSE_FILE_DEFAULT}" "$TEMP\license.txt"
-  ${EndIf}
-  
-  ; Set the license file to use
-  StrCpy $LicenseData "$TEMP\license.txt"
-  
-  ; Log which license file we're using (just for debugging)
-  DetailPrint "Using license file: $LicenseData"
-FunctionEnd
 
 Section "MainSection" SEC01
   SetOutPath "$INSTDIR"
@@ -185,7 +164,7 @@ Function .onInit
   ${EndIf}
   
   ; Initialize default installation directory
-  ${If} ${RunningX64}
+  ${If} ${RunningX64} == 1
     StrCpy $INSTDIR "$PROGRAMFILES64\FormMaster Pro"
   ${Else}
     StrCpy $INSTDIR "$PROGRAMFILES\FormMaster Pro"
