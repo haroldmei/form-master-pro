@@ -116,11 +116,12 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 // Handle messages from the injected UI
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   const tabId = sender.tab?.id;
-  
-  if (!tabId) {
-    sendResponse({ success: false, error: 'Invalid tab' });
-    return;
-  }
+  console.log("Received message from injected UI:", message, "from tab:", tabId);
+
+  //if (!tabId) {
+  //  sendResponse({ success: false, error: 'Invalid tab' });
+  //  return;
+  //}
   
   switch (message.action) {
     case 'analyze-form':

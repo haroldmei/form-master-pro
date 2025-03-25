@@ -1,118 +1,68 @@
 name: Production Release
 
 on:
-  pull_request:
-    branches:
-      - main
   push:
     tags:
-      - 'v*'  # Run when tag is pushed with pattern v*, e.g. v1.0.0
+      - 'v*.*.*'  # Run when version tags are pushed
   workflow_dispatch:  # Allow manual triggering
 
 jobs:
-  check-version:
+  build-and-package:
     runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request'
-    steps:
-      - name: Checkout current code
-        uses: actions/checkout@v3
-        
-      - name: Checkout target branch
-        uses: actions/checkout@v3
-        with:
-          ref: ${{ github.base_ref }}
-          path: target-branch
-      
-      - name: Compare versions
-        id: compare_versions
-        run: |
-          # Extract current version from PR branch
-          current_version=$(grep -o "'[0-9]\+\.[0-9]\+\.[0-9]\+'" setup.py | tr -d "'")
-          echo "Current version: $current_version"
-          
-          # Extract previous version from target branch
-          cd target-branch
-          previous_version=$(grep -o "'[0-9]\+\.[0-9]\+\.[0-9]\+'" setup.py | tr -d "'")
-          echo "Previous version: $previous_version"
-          
-          # Compare versions
-          if [ "$(printf '%s\n' "$previous_version" "$current_version" | sort -V | head -n1)" != "$previous_version" ] || [ "$previous_version" == "$current_version" ]; then
-            echo "Error: New version must be greater than previous version"
-            exit 1
-          fi
-          
-          echo "VERSION=$current_version" >> $GITHUB_ENV
-
-  build-and-publish:
-    runs-on: windows-latest  # Need Windows for NSIS installer
-    needs: [check-version]
-    if: always() && (github.event_name != 'pull_request' || needs.check-version.result == 'success')
     
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
-      
-      - name: Set up Python
-        uses: actions/setup-python@v4
         with:
-          python-version: '3.11'
+          fetch-depth: 0  # Fetch all history for git tags and commits
+      
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '16'
+          cache: 'npm'
       
       - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install build twine setuptools wheel
+        run: npm ci
       
-      - name: Extract version
-        id: get_version
-        run: |
-          $version = '0.1.27'  # Replace with your version extraction logic
-          echo "VERSION=$version" >> $env:GITHUB_OUTPUT
+      - name: Build extension
+        run: npm run build
       
-      - name: Build Python package
-        run: |
-          python -m build
+      - name: Obfuscate code
+        run: npm run obfuscate
       
-      - name: Install NSIS
-        run: |
-          choco install nsis -y
+      - name: Package extension
+        run: node scripts/package.js
       
-      - name: Build Windows installer
-        shell: cmd
+      - name: Get package name
+        id: get-package
         run: |
-          cd ${{ github.workspace }}
-          call build_installer.bat
-      
-      - name: Bundle browser extension
-        run: |
-          # Create directory for extension files
-          mkdir -p extension-build
-          
-          # Copy extension files
-          xcopy /E /I browser-extension\* extension-build\
-          
-          # Create zip package
-          powershell Compress-Archive -Path extension-build\* -DestinationPath dist\form-master-extension-${{ steps.get_version.outputs.VERSION }}.zip
-      
-      - name: Publish to Chrome Web Store
-        uses: trmcnvn/chrome-addon@v2
-        with:
-          extension: ${{ secrets.CHROME_EXTENSION_ID }}
-          zip: dist/form-master-extension-${{ steps.get_version.outputs.VERSION }}.zip
-          client-id: ${{ secrets.CHROME_CLIENT_ID }}
-          client-secret: ${{ secrets.CHROME_CLIENT_SECRET }}
-          refresh-token: ${{ secrets.CHROME_REFRESH_TOKEN }}
+          PACKAGE_NAME=$(find packages -name "form-master-pro-v*.zip" | sort -r | head -n 1)
+          echo "::set-output name=package::$PACKAGE_NAME"
+          echo "::set-output name=filename::$(basename $PACKAGE_NAME)"
       
       - name: Create GitHub Release
         id: create_release
+        if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v1
         with:
-          files: |
-            dist/*.exe
-            dist/*.zip
-          tag_name: ${{ github.ref_name }}
-          name: FormMaster ${{ steps.get_version.outputs.VERSION }}
+          files: ${{ steps.get-package.outputs.package }}
+          name: FormMaster Pro ${{ github.ref_name }}
           draft: false
           prerelease: false
-          generate_release_notes: true
-        env:
-          GITHUB_TOKEN: ${{ secrets.PRIVATE_SSH_KEY }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Upload artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ steps.get-package.outputs.filename }}
+          path: ${{ steps.get-package.outputs.package }}
+          if-no-files-found: error
+      
+      - name: Package summary
+        run: |
+          echo "Package created: ${{ steps.get-package.outputs.filename }}"
+          echo "To publish to Chrome Web Store:"
+          echo "1. Download the artifact from this workflow run"
+          echo "2. Visit https://chrome.google.com/webstore/devconsole/"
+          echo "3. Upload the ZIP file to update your extension"
