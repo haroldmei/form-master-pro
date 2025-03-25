@@ -8,7 +8,7 @@ on:
 
 jobs:
   build-and-package:
-    runs-on: ubuntu-latest
+    runs-on: windows-latest  # Changed to Windows for NSIS
     
     steps:
       - name: Checkout code
@@ -37,32 +37,51 @@ jobs:
       - name: Get package name
         id: get-package
         run: |
-          PACKAGE_NAME=$(find packages -name "form-master-pro-v*.zip" | sort -r | head -n 1)
-          echo "::set-output name=package::$PACKAGE_NAME"
-          echo "::set-output name=filename::$(basename $PACKAGE_NAME)"
+          $packageName = Get-ChildItem -Path packages -Filter "form-master-pro-v*.zip" | Sort-Object -Property LastWriteTime -Descending | Select-Object -First 1 -ExpandProperty FullName
+          echo "package=$packageName" >> $env:GITHUB_OUTPUT
+          echo "filename=$(Split-Path -Leaf $packageName)" >> $env:GITHUB_OUTPUT
+        shell: pwsh
+      
+      - name: Install NSIS
+        run: |
+          choco install nsis -y --version=3.08
+          refreshenv
+      
+      - name: Build Windows installer
+        run: npm run build:installer
       
       - name: Create GitHub Release
         id: create_release
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v1
         with:
-          files: ${{ steps.get-package.outputs.package }}
+          files: |
+            ${{ steps.get-package.outputs.package }}
+            FormMaster-Setup.exe
           name: FormMaster Pro ${{ github.ref_name }}
           draft: false
           prerelease: false
           token: ${{ secrets.GITHUB_TOKEN }}
       
-      - name: Upload artifact
+      - name: Upload extension artifact
         uses: actions/upload-artifact@v3
         with:
           name: ${{ steps.get-package.outputs.filename }}
           path: ${{ steps.get-package.outputs.package }}
           if-no-files-found: error
       
+      - name: Upload installer artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: FormMaster-Setup.exe
+          path: FormMaster-Setup.exe
+          if-no-files-found: error
+      
       - name: Package summary
         run: |
           echo "Package created: ${{ steps.get-package.outputs.filename }}"
+          echo "Installer created: FormMaster-Setup.exe"
           echo "To publish to Chrome Web Store:"
-          echo "1. Download the artifact from this workflow run"
+          echo "1. Download the extension artifact from this workflow run"
           echo "2. Visit https://chrome.google.com/webstore/devconsole/"
           echo "3. Upload the ZIP file to update your extension"
