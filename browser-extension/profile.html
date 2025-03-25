@@ -17,6 +17,7 @@
       padding: 20px;
       border-radius: 5px;
       box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+      position: relative; /* Add this for positioning the button */
     }
     h1, h2, h3 {
       color: #333;
@@ -54,11 +55,14 @@
     button:hover {
       background-color: #3367d6;
     }
-    .button-row {
-      display: flex;
-      justify-content: space-between;
-      margin-top: 20px;
+    
+    /* Updated button styling for top-right positioning */
+    #import-profile {
+      position: absolute;
+      top: 20px;
+      right: 20px;
     }
+    
     .status-message {
       padding: 10px;
       margin-top: 15px;
@@ -110,6 +114,10 @@
 </head>
 <body>
   <div class="container">
+    
+    <!-- Import button moved to top right via CSS positioning -->
+    <button id="import-profile">Import Profile</button>
+    
     <h1>User Profile</h1>
     <p>Manage your personal information that will be used to automatically fill out forms.</p>
     
@@ -118,10 +126,6 @@
     <!-- Container for dynamically generated profile content -->
     <div id="profile-container">
       <p>No profile data loaded. Please import a profile file.</p>
-    </div>
-    
-    <div class="button-row">
-      <button id="import-profile">Import Profile</button>
     </div>
   </div>
   

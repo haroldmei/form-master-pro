@@ -167,11 +167,11 @@
     const panel = document.createElement('div');
     panel.className = 'formmaster-panel';
     
-    // Add buttons to panel
+    // Add buttons to panel - remove 'analyze-form' and 'data-mappings'
     const buttons = [
-      { id: 'analyze-form', text: 'Analyze Form', icon: '🔍' },
+      // { id: 'analyze-form', text: 'Analyze Form', icon: '🔍' }, // Removed
       { id: 'load-data', text: 'Load Data', icon: '📂' },
-      { id: 'data-mappings', text: 'Mappings', icon: '🔗' },
+      // { id: 'data-mappings', text: 'Mappings', icon: '🔗' }, // Removed
       { id: 'auto-fill', text: 'Auto Fill', icon: '✏️' }
     ];
     
