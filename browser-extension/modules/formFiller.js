@@ -190,29 +190,213 @@ const formFiller = (() => {
   }
   
   /**
-   * Function to fill form fields (injected into page)
-   */
-  function fillFormWithData(fieldValues) {
+ * Function to fill form fields (injected into page)
+ */
+function fillFormWithData(fieldValues) {
+    console.log("Filling form with data:", fieldValues);
+    
+    // First, process all non-radio controls
     for (const key in fieldValues) {
-      // Find elements by ID, name, or placeholder
-      const elements = [
-        ...document.querySelectorAll(`input#${key}, input[name="${key}"], input[placeholder="${key}"]`),
-        ...document.querySelectorAll(`select#${key}, select[name="${key}"]`),
-        ...document.querySelectorAll(`textarea#${key}, textarea[name="${key}"], textarea[placeholder="${key}"]`)
-      ];
+      const value = fieldValues[key];
       
-      console.log("Filling field:", key, "with value:", fieldValues[key]);
-  
-      elements.forEach(element => {
-        if (element.type === 'checkbox' || element.type === 'radio') {
-          element.checked = !!fieldValues[key];
-        } else {
-          element.value = fieldValues[key];
-          // Trigger change event to notify the page
-          element.dispatchEvent(new Event('change', { bubbles: true }));
-          element.dispatchEvent(new Event('input', { bubbles: true }));
+      // Skip if no value to fill
+      if (value === null || value === undefined) continue;
+      
+      // Find elements by ID or name (ID takes precedence)
+      const elementsByIdOrName = document.querySelectorAll(
+        `#${CSS.escape(key)}, [name="${CSS.escape(key)}"]`
+      );
+      
+      if (elementsByIdOrName.length === 0) {
+        console.log(`No element found for key: ${key}`);
+        continue;
+      }
+      
+      elementsByIdOrName.forEach(element => {
+        // Handle different input types
+        switch(element.type) {
+          case 'checkbox':
+            // Convert various truthy/falsy values for checkboxes
+            if (typeof value === 'boolean') {
+              element.checked = value;
+            } else if (typeof value === 'string') {
+              const lowercaseValue = value.toLowerCase();
+              element.checked = ['true', 'yes', 'on', '1', 'checked'].includes(lowercaseValue);
+            } else {
+              element.checked = !!value;
+            }
+            break;
+            
+          case 'radio':
+            // For radio buttons, only check it if the value matches
+            if (element.value === String(value)) {
+              element.checked = true;
+            }
+            break;
+            
+          case 'select-one':
+          case 'select-multiple':
+            // For select elements, find the matching option
+            const options = Array.from(element.options);
+            const matchingOption = options.find(option => 
+              option.value === String(value) || 
+              option.text === String(value)
+            );
+            
+            if (matchingOption) {
+              matchingOption.selected = true;
+            } else {
+              // If no exact match, try case-insensitive or partial matching
+              const lcValue = String(value).toLowerCase();
+              const altOption = options.find(option => 
+                option.value.toLowerCase() === lcValue || 
+                option.text.toLowerCase() === lcValue ||
+                option.text.toLowerCase().includes(lcValue) ||
+                lcValue.includes(option.value.toLowerCase())
+              );
+              
+              if (altOption) {
+                altOption.selected = true;
+              } else {
+                console.log(`No matching option found for select ${key} with value ${value}`);
+              }
+            }
+            break;
+            
+          default:
+            // For text inputs, textareas, etc.
+            element.value = value;
         }
+        
+        // Trigger change event to notify the page
+        element.dispatchEvent(new Event('change', { bubbles: true }));
+        element.dispatchEvent(new Event('input', { bubbles: true }));
       });
+    }
+    
+    // Special handling for radio groups by name
+    // This finds all radio groups and then sets the right one based on value
+    const processedRadioGroups = new Set();
+    
+    for (const key in fieldValues) {
+      // Skip already processed items
+      if (processedRadioGroups.has(key)) continue;
+      
+      const value = fieldValues[key];
+      if (value === null || value === undefined) continue;
+      
+      // Look for radio buttons with this name
+      const radioGroup = document.querySelectorAll(`input[type="radio"][name="${CSS.escape(key)}"]`);
+      
+      if (radioGroup.length > 1) {
+        console.log(`Processing radio group: ${key} with value: ${value}`);
+        processedRadioGroups.add(key);
+        
+        // Try to find the radio with matching value
+        let foundMatch = false;
+        
+        // First try exact match
+        for (const radio of radioGroup) {
+          if (radio.value === String(value)) {
+            radio.checked = true;
+            foundMatch = true;
+            radio.dispatchEvent(new Event('change', { bubbles: true }));
+            break;
+          }
+        }
+        
+        // If no exact match, try case-insensitive
+        if (!foundMatch) {
+          const lcValue = String(value).toLowerCase();
+          for (const radio of radioGroup) {
+            if (radio.value.toLowerCase() === lcValue) {
+              radio.checked = true;
+              foundMatch = true;
+              radio.dispatchEvent(new Event('change', { bubbles: true }));
+              break;
+            }
+          }
+        }
+        
+        // If still no match, try matching against labels
+        if (!foundMatch) {
+          for (const radio of radioGroup) {
+            // Try to get the label text
+            let labelText = '';
+            
+            // By "for" attribute
+            if (radio.id) {
+              const labelElement = document.querySelector(`label[for="${radio.id}"]`);
+              if (labelElement) labelText = labelElement.textContent.trim();
+            }
+            
+            // By parent label
+            if (!labelText) {
+              let parent = radio.parentElement;
+              while (parent && parent.tagName !== 'FORM') {
+                if (parent.tagName === 'LABEL') {
+                  labelText = parent.textContent.trim();
+                  break;
+                }
+                parent = parent.parentElement;
+              }
+            }
+            
+            // By next sibling text node
+            if (!labelText) {
+              let nextSibling = radio.nextSibling;
+              while (nextSibling && !labelText) {
+                if (nextSibling.nodeType === 3) { // Text node
+                  labelText = nextSibling.textContent.trim();
+                  if (labelText) break;
+                } else if (nextSibling.nodeType === 1) { // Element node
+                  labelText = nextSibling.textContent.trim();
+                  if (labelText) break;
+                }
+                nextSibling = nextSibling.nextSibling;
+              }
+            }
+            
+            // Compare if we found any label text
+            if (labelText && 
+               (labelText.toLowerCase() === String(value).toLowerCase() ||
+                labelText.toLowerCase().includes(String(value).toLowerCase()))) {
+              radio.checked = true;
+              foundMatch = true;
+              radio.dispatchEvent(new Event('change', { bubbles: true }));
+              break;
+            }
+          }
+        }
+        
+        if (!foundMatch) {
+          console.log(`Could not find matching radio button for ${key} with value ${value}`);
+        }
+      }
+    }
+    
+    // Process radio groups passed as objects with name and options
+    for (const key in fieldValues) {
+      const value = fieldValues[key];
+      
+      // Check if this is a radio group object from our extraction
+      if (value && typeof value === 'object' && value.type === 'radio' && 
+          value.name && Array.isArray(value.options)) {
+        
+        const groupName = value.name;
+        const selectedValue = value.selectedValue || '';
+        
+        if (!selectedValue) continue;
+        
+        const radioButtons = document.querySelectorAll(`input[type="radio"][name="${CSS.escape(groupName)}"]`);
+        for (const radio of radioButtons) {
+          if (radio.value === selectedValue) {
+            radio.checked = true;
+            radio.dispatchEvent(new Event('change', { bubbles: true }));
+            break;
+          }
+        }
+      }
     }
     
     return true;
