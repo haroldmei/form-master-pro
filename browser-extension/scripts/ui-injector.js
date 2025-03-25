@@ -4,6 +4,9 @@
  */
 
 (function() {
+  // Version information - should match manifest.json
+  const VERSION = "0.1.0";
+  
   // Check if we're in a frame - only inject in the main frame
   if (window !== window.top) return;
 
@@ -84,14 +87,23 @@
         padding: 8px 10px;
         margin: 5px 0;
         cursor: pointer;
-        transition: background-color 0.3s;
+        transition: background-color 0.3s, transform 0.1s;
         text-align: left;
         display: flex;
         align-items: center;
+        width: 100%;
+        position: relative;
+        z-index: 1;
+        overflow: visible; /* Ensure content doesn't clip */
       }
       
       .formmaster-button:hover {
         background-color: rgba(66, 133, 244, 1);
+        transform: translateY(-1px);
+      }
+      
+      .formmaster-button:active {
+        transform: translateY(1px);
       }
       
       .formmaster-icon {
@@ -102,6 +114,12 @@
         background-size: contain;
         background-repeat: no-repeat;
         background-position: center;
+        pointer-events: none; /* Ensure icon doesn't capture clicks */
+      }
+      
+      .formmaster-button span, 
+      .formmaster-button::after {
+        pointer-events: none; /* Prevent child elements from capturing clicks */
       }
       
       .formmaster-toast {
@@ -149,6 +167,24 @@
       .formmaster-button.loading .formmaster-icon {
         visibility: hidden;
       }
+      
+      /* Status bar styles */
+      .formmaster-status-bar {
+        font-size: 11px;
+        padding: 5px 0;
+        margin-top: 5px;
+        border-top: 1px solid rgba(0, 0, 0, 0.1);
+        color: #555;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        max-width: 100%;
+      }
+      
+      .formmaster-status-bar.no-profile {
+        color: #999;
+        font-style: italic;
+      }
     `;
     shadow.appendChild(style);
     
@@ -160,7 +196,7 @@
     const toggleButton = document.createElement('div');
     toggleButton.className = 'formmaster-toggle';
     toggleButton.textContent = 'FM';
-    toggleButton.title = 'FormMaster Pro';
+    toggleButton.title = `FormMaster Pro v${VERSION}`; // Add version to title
     toggleButton.addEventListener('click', togglePanel);
     
     // Create panel for buttons
@@ -175,24 +211,34 @@
       { id: 'auto-fill', text: 'Auto Fill', icon: '✏️' }
     ];
     
+    // Make sure buttons are added with the correct structure
     buttons.forEach(button => {
       const btnElement = document.createElement('button');
       btnElement.className = 'formmaster-button';
       btnElement.id = `formmaster-${button.id}`;
       
-      const iconSpan = document.createElement('span');
-      iconSpan.className = 'formmaster-icon';
-      iconSpan.textContent = button.icon;
+      // Use innerHTML directly to avoid multiple nested spans causing issues
+      btnElement.innerHTML = `
+        <span class="formmaster-icon">${button.icon}</span>
+        <span class="formmaster-text">${button.text}</span>
+      `;
       
-      btnElement.appendChild(iconSpan);
-      btnElement.appendChild(document.createTextNode(button.text));
-      
-      btnElement.addEventListener('click', () => {
+      // Make sure the entire button is clickable
+      btnElement.addEventListener('click', (event) => {
+        event.preventDefault();
+        event.stopPropagation();
         handleButtonClick(button.id, btnElement);
       });
       
       panel.appendChild(btnElement);
     });
+    
+    // Add status bar to display profile info
+    const statusBar = document.createElement('div');
+    statusBar.className = 'formmaster-status-bar no-profile';
+    statusBar.id = 'formmaster-status-bar';
+    statusBar.textContent = 'No profile loaded';
+    panel.appendChild(statusBar);
     
     // Add all elements to the shadow DOM
     mainContainer.appendChild(panel);
@@ -206,6 +252,11 @@
     
     function togglePanel() {
       panel.classList.toggle('show');
+      
+      // Refresh profile info when panel is opened
+      if (panel.classList.contains('show')) {
+        loadProfileInfo();
+      }
     }
     
     function handleButtonClick(action, buttonElement) {
@@ -213,6 +264,9 @@
       if (action === 'auto-fill') {
         buttonElement.classList.add('loading');
         buttonElement.disabled = true; // Explicitly disable button
+        
+        // Store original button content for restoration later
+        buttonElement._originalHTML = buttonElement.innerHTML;
       }
       
       // Check if Chrome extension API is available
@@ -226,6 +280,17 @@
           if (action === 'auto-fill') {
             buttonElement.classList.remove('loading');
             buttonElement.disabled = false; // Explicitly re-enable button
+            
+            // Complete button reset: if we stored original HTML, restore it
+            if (buttonElement._originalHTML) {
+              buttonElement.innerHTML = buttonElement._originalHTML;
+              delete buttonElement._originalHTML;
+            }
+            
+            // Force a repaint to ensure the button is fully restored
+            buttonElement.style.display = 'none';
+            buttonElement.offsetHeight; // This forces a reflow
+            buttonElement.style.display = '';
           }
           
           if (response && response.success) {
@@ -240,6 +305,12 @@
         if (action === 'auto-fill') {
           buttonElement.classList.remove('loading');
           buttonElement.disabled = false; // Explicitly re-enable button
+          
+          // Also restore original content
+          if (buttonElement._originalHTML) {
+            buttonElement.innerHTML = buttonElement._originalHTML;
+            delete buttonElement._originalHTML;
+          }
         }
         showToast('Extension API not available. Please refresh the page.', 'error');
       }
@@ -253,6 +324,41 @@
       setTimeout(() => {
         toast.classList.remove('show');
       }, 3000);
+    }
+    
+    /**
+     * Load profile information from storage and update the status bar
+     */
+    function loadProfileInfo() {
+      if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
+        chrome.storage.local.get(['userProfile'], function(result) {
+          const statusBar = shadow.getElementById('formmaster-status-bar');
+          
+          if (result.userProfile) {
+            // Extract profile name information
+            let profileName = '';
+            
+            if (result.userProfile.source && result.userProfile.filename) {
+              // If it's a file-based profile
+              profileName = `Profile: ${result.userProfile.filename}`;
+            } else if (result.userProfile.personal && result.userProfile.personal.firstName) {
+              // If it has personal info
+              const firstName = result.userProfile.personal.firstName;
+              const lastName = result.userProfile.personal.lastName || '';
+              profileName = `Profile: ${firstName} ${lastName}`.trim();
+            } else {
+              // Generic profile info
+              profileName = 'Custom profile loaded';
+            }
+            
+            statusBar.textContent = profileName;
+            statusBar.classList.remove('no-profile');
+          } else {
+            statusBar.textContent = 'No profile loaded';
+            statusBar.classList.add('no-profile');
+          }
+        });
+      }
     }
   }
 })();
