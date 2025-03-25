@@ -120,6 +120,35 @@
       .formmaster-toast.show {
         opacity: 1;
       }
+      
+      /* Loading animation for buttons */
+      .formmaster-button.loading {
+        position: relative;
+        color: transparent;
+        pointer-events: none;
+      }
+      
+      .formmaster-button.loading::after {
+        content: '';
+        position: absolute;
+        width: 16px;
+        height: 16px;
+        top: calc(50% - 8px);
+        left: calc(50% - 8px);
+        border-radius: 50%;
+        border: 2px solid rgba(255, 255, 255, 0.3);
+        border-top-color: white;
+        animation: formmaster-spin 0.8s linear infinite;
+      }
+      
+      @keyframes formmaster-spin {
+        to { transform: rotate(360deg); }
+      }
+      
+      /* Keep the icon visible when loading */
+      .formmaster-button.loading .formmaster-icon {
+        visibility: hidden;
+      }
     `;
     shadow.appendChild(style);
     
@@ -159,7 +188,7 @@
       btnElement.appendChild(document.createTextNode(button.text));
       
       btnElement.addEventListener('click', () => {
-        handleButtonClick(button.id);
+        handleButtonClick(button.id, btnElement);
       });
       
       panel.appendChild(btnElement);
@@ -179,18 +208,38 @@
       panel.classList.toggle('show');
     }
     
-    function handleButtonClick(action) {
-      // Send message to the extension's background script
-      chrome.runtime.sendMessage({ 
-        action: action,
-        url: window.location.href
-      }, response => {
-        if (response && response.success) {
-          showToast(response.message || 'Action completed successfully');
-        } else {
-          showToast(response?.error || 'Error performing action', 'error');
+    function handleButtonClick(action, buttonElement) {
+      // Add loading state for auto-fill since it's potentially slow
+      if (action === 'auto-fill') {
+        buttonElement.classList.add('loading');
+      }
+      
+      // Check if Chrome extension API is available
+      if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.sendMessage) {
+        // Send message to the extension's background script
+        chrome.runtime.sendMessage({ 
+          action: action,
+          url: window.location.href
+        }, response => {
+          // Remove loading state regardless of success or failure
+          if (action === 'auto-fill') {
+            buttonElement.classList.remove('loading');
+          }
+          
+          if (response && response.success) {
+            showToast(response.message || 'Action completed successfully');
+          } else {
+            showToast(response?.error || 'Error performing action', 'error');
+          }
+        });
+      } else {
+        // Chrome API not available - show error and remove loading state
+        console.error('Chrome extension API not available');
+        if (action === 'auto-fill') {
+          buttonElement.classList.remove('loading');
         }
-      });
+        showToast('Extension API not available. Please refresh the page.', 'error');
+      }
     }
     
     function showToast(message, type = 'info') {
