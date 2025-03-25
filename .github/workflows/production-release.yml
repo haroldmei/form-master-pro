@@ -1,14 +1,52 @@
 name: Production Release
 
 on:
+  pull_request:
+    branches:
+      - main
   push:
     tags:
       - 'v*'  # Run when tag is pushed with pattern v*, e.g. v1.0.0
   workflow_dispatch:  # Allow manual triggering
 
 jobs:
+  check-version:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - name: Checkout current code
+        uses: actions/checkout@v3
+        
+      - name: Checkout target branch
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ github.base_ref }}
+          path: target-branch
+      
+      - name: Compare versions
+        id: compare_versions
+        run: |
+          # Extract current version from PR branch
+          current_version=$(grep -o "'[0-9]\+\.[0-9]\+\.[0-9]\+'" setup.py | tr -d "'")
+          echo "Current version: $current_version"
+          
+          # Extract previous version from target branch
+          cd target-branch
+          previous_version=$(grep -o "'[0-9]\+\.[0-9]\+\.[0-9]\+'" setup.py | tr -d "'")
+          echo "Previous version: $previous_version"
+          
+          # Compare versions
+          if [ "$(printf '%s\n' "$previous_version" "$current_version" | sort -V | head -n1)" != "$previous_version" ] || [ "$previous_version" == "$current_version" ]; then
+            echo "Error: New version must be greater than previous version"
+            exit 1
+          fi
+          
+          echo "VERSION=$current_version" >> $GITHUB_ENV
+
   build-and-publish:
     runs-on: windows-latest  # Need Windows for NSIS installer
+    needs: [check-version]
+    if: always() && (github.event_name != 'pull_request' || needs.check-version.result == 'success')
     
     steps:
       - name: Checkout code
@@ -44,12 +82,33 @@ jobs:
           cd ${{ github.workspace }}
           call build_installer.bat
       
+      - name: Bundle browser extension
+        run: |
+          # Create directory for extension files
+          mkdir -p extension-build
+          
+          # Copy extension files
+          xcopy /E /I browser-extension\* extension-build\
+          
+          # Create zip package
+          powershell Compress-Archive -Path extension-build\* -DestinationPath dist\form-master-extension-${{ steps.get_version.outputs.VERSION }}.zip
+      
+      - name: Publish to Chrome Web Store
+        uses: trmcnvn/chrome-addon@v2
+        with:
+          extension: ${{ secrets.CHROME_EXTENSION_ID }}
+          zip: dist/form-master-extension-${{ steps.get_version.outputs.VERSION }}.zip
+          client-id: ${{ secrets.CHROME_CLIENT_ID }}
+          client-secret: ${{ secrets.CHROME_CLIENT_SECRET }}
+          refresh-token: ${{ secrets.CHROME_REFRESH_TOKEN }}
+      
       - name: Create GitHub Release
         id: create_release
         uses: softprops/action-gh-release@v1
         with:
           files: |
             dist/*.exe
+            dist/*.zip
           tag_name: ${{ github.ref_name }}
           name: FormMaster ${{ steps.get_version.outputs.VERSION }}
           draft: false

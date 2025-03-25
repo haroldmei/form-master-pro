@@ -11,7 +11,7 @@
     "scripting",
     "nativeMessaging",
     "webNavigation",
-    "identity"  // Add this permission
+    "identity"
   ],
   "host_permissions": [
     "http://*/*", 
@@ -58,7 +58,6 @@
     }
   },
   
-  // If your manifest is v3, you might need this for module support
   "content_security_policy": {
     "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'"
   }

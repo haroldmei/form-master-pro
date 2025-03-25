@@ -1,13 +1,42 @@
-I'll create a comprehensive README.md file for the FormMaster project that includes both developer setup instructions and a user tutorial.
-
-### [README.md](file:///c%3A/Users/harol/personal/form-master-pro/README.md)
-
-```markdown
 # FormMaster Pro
 
-FormMaster Pro is an advanced form automation tool designed to streamline the process of filling out web forms, particularly for university applications. It combines a browser extension with a companion desktop application to provide robust form analysis and automated filling capabilities.
+[![Production Release](https://github.com/username/form-master-pro/actions/workflows/production-release.yml/badge.svg)](https://github.com/username/form-master-pro/actions/workflows/production-release.yml)
+[![Chrome Web Store](https://img.shields.io/chrome-web-store/v/YOUR_EXTENSION_ID)](https://chrome.google.com/webstore/detail/YOUR_EXTENSION_ID)
 
-![FormMaster Logo](js-src/browser-extension/images/icon128.png)
+## Transform Your Form-Filling Experience
+
+FormMaster Pro is a revolutionary tool designed to eliminate the tedious task of manual form filling. With powerful AI capabilities and cross-platform compatibility, it streamlines your workflow and saves valuable time.
+
+## Key Features
+
+### 🌐 Universal Form Compatibility
+
+FormMaster Pro intelligently adapts to virtually any form structure it encounters:
+
+- **Automatic Field Detection**: Identifies form fields regardless of their layout or design
+- **Smart Field Matching**: Maps your data to the appropriate fields based on context and patterns
+- **Form Type Recognition**: Automatically distinguishes between different types of forms (applications, registrations, surveys, etc.)
+- **Dynamic Adaptation**: Adjusts to changing form structures and variations across websites
+
+### 🧠 AI-Powered Document Processing
+
+Transform raw data into perfectly formatted form entries:
+
+- **Unstructured Document Parsing**: Extract relevant information from emails, PDFs, and text documents
+- **Structured Data Import**: Seamlessly import data from CSV, JSON, and other structured formats
+- **Intelligent Data Extraction**: Identify and extract key information from complex documents
+- **Contextual Understanding**: Comprehends the meaning behind form fields to ensure accurate data mapping
+- **Format Conversion**: Automatically reformats data to match form requirements
+
+### 💻 Cross-Platform Functionality
+
+Use FormMaster Pro anywhere Chrome is available:
+
+- **Chrome Extension**: Works on Windows, macOS, Linux, and ChromeOS
+- **Cloud Synchronization**: Access your data across all your devices
+- **Consistent Experience**: Enjoy the same powerful features regardless of operating system
+- **Workplace Integration**: Seamlessly integrate with your existing workflow tools
+- **On-the-go Access**: Fill forms efficiently even on mobile Chrome (Android)
 
 ## Features
 
@@ -64,7 +93,11 @@ FormMaster Pro is an advanced form automation tool designed to streamline the pr
 
 1. Navigate to the browser-extension directory:
    ```bash
-   cd browser-extension
+   npm install
+   npm run dev
+   npm run build
+   npm run obfuscate
+   npm run package
    ```
 
 2. Load the unpacked extension in Chrome:
@@ -93,6 +126,13 @@ FormMaster Pro is an advanced form automation tool designed to streamline the pr
 5. Click "Load unpacked" and select the extracted `browser-extension` folder
 6. Note the extension ID (visible on the extensions page)
 
+## Getting Started
+
+1. Install FormMaster Pro from the [Chrome Web Store](https://chrome.google.com/webstore/detail/YOUR_EXTENSION_ID)
+2. Pin the extension to your browser toolbar
+3. Click the FormMaster Pro icon when you encounter a form
+4. Import your data or let FormMaster Pro extract it from your documents
+5. Review and submit the automatically filled form
 
 ### Quick Start Tutorial
 
@@ -173,10 +213,7 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 - Built with Selenium WebDriver, Mammoth.js, and Electron
 - Icons from [Material Design Icons](https://material.io/resources/icons/)
-```
 
-This README.md provides comprehensive documentation for both developers wanting to work on the code and users simply wanting to install and use the FormMaster application. It includes step-by-step instructions for setting up the development environment, building the browser extension, and using the application to fill forms.
+## Learn More
 
-Made changes.
-
-Similar code found with 2 license types
+Visit our [website](https://formasterpro.example.com) for tutorials, documentation, and support.
