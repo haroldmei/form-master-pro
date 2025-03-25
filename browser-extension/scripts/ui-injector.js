@@ -212,6 +212,7 @@
       // Add loading state for auto-fill since it's potentially slow
       if (action === 'auto-fill') {
         buttonElement.classList.add('loading');
+        buttonElement.disabled = true; // Explicitly disable button
       }
       
       // Check if Chrome extension API is available
@@ -224,6 +225,7 @@
           // Remove loading state regardless of success or failure
           if (action === 'auto-fill') {
             buttonElement.classList.remove('loading');
+            buttonElement.disabled = false; // Explicitly re-enable button
           }
           
           if (response && response.success) {
@@ -237,6 +239,7 @@
         console.error('Chrome extension API not available');
         if (action === 'auto-fill') {
           buttonElement.classList.remove('loading');
+          buttonElement.disabled = false; // Explicitly re-enable button
         }
         showToast('Extension API not available. Please refresh the page.', 'error');
       }
