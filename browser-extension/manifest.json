@@ -6,10 +6,7 @@
   "permissions": [
     "storage",
     "activeTab",
-    "developerPrivate",
-    "contextMenus",
     "scripting",
-    "nativeMessaging",
     "webNavigation",
     "identity"
   ],
