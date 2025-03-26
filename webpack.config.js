@@ -25,8 +25,20 @@ module.exports = (env, argv) => {
       // Include all other JS files in the modules folder
       'modules/userProfile': './browser-extension/modules/userProfile.js',
       'modules/aiService': './browser-extension/modules/aiService.js',
+      'modules/formFiller': './browser-extension/modules/formFiller.js',
+      'modules/formProcessor': './browser-extension/modules/formProcessor.js',
+      'modules/utils': './browser-extension/modules/utils.js',
       // UI injection script
       'scripts/ui-injector': './browser-extension/scripts/ui-injector.js',
+      // Form extraction script
+      'forms/form_extract': './browser-extension/forms/form_extract.js',
+      'forms/form_radios': './browser-extension/forms/form_radios.js',
+      // files script
+      'files/docx-extractor': './browser-extension/files/docx-extractor.js',
+      // 'files/pdf-extractor': './browser-extension/files/pdf-extractor.js',
+      'auth': './browser-extension/auth.js',
+      'libs/mammoth.browser.min': './browser-extension/libs/mammoth.browser.min.js',
+      'mappings': './browser-extension/mappings.js',
     },
     output: {
       path: path.resolve(__dirname, 'dist'),
@@ -76,6 +88,10 @@ module.exports = (env, argv) => {
           },
           {
             from: './browser-extension/*.html',
+            to: '[name][ext]'
+          },
+          {
+            from: './browser-extension/*.css',
             to: '[name][ext]'
           },
           { 

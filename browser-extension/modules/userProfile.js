@@ -80,3 +80,6 @@ const userProfileManager = (() => {
     updateUserProfileField
   };
 })();
+
+// Attach to the global scope so it can be accessed in background.js
+self.userProfileManager = userProfileManager;
