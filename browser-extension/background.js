@@ -10,6 +10,8 @@ importScripts(
   'modules/utils.js'
 );
 
+// User profile is now directly accessible via self.globalUserProfile
+
 console.log("FormMasterPro extension initializing...");
 
 // Initialize auth on extension startup
@@ -21,12 +23,21 @@ auth0Service.init()
     console.error('Auth initialization error:', error);
   });
 
-// Initialize when extension loads
-userProfileManager.loadUserProfile();
-
 // Handle messages from content scripts or popup
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  // console.log("Received message:", message, "from:", sender);
+  // User profile related messages
+  if (message.action === 'getUserProfile') {
+    sendResponse({ success: true, profile: self.globalUserProfile });
+    return false;
+  }
+  
+  if (message.action === 'updateUserProfile') {
+    // Update global memory only
+    self.globalUserProfile = message.profile;
+    console.log('User profile updated in global memory');
+    sendResponse({ success: true });
+    return false;
+  }
   
   // Auth-related message handling
   if (message.type === 'auth-callback') {
@@ -107,8 +118,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
   
   if (message.action === 'settingsUpdated') {
-    // Reload settings
-    // userProfileManager.loadUserProfile();
+    // Nothing to do - profile is already in global memory
     return false;
   }
 });
@@ -251,8 +261,8 @@ async function fillFormInTab(tabId, url) {
       return { message: 'No fillable form fields detected' };
     }
     
-    // Step 4: Process the form fields to get values
-    const processedForm = await formProcessor.processForm(allFields, url);
+    // Step 4: Process the form fields to get values using global user profile
+    const processedForm = await formProcessor.processForm(allFields, url, self.globalUserProfile);
     
     if (!processedForm.success || !processedForm.fields || Object.keys(processedForm.fields).length === 0) {
       return { message: 'No fields could be mapped for filling' };
@@ -372,22 +382,20 @@ chrome.webNavigation.onCompleted.addListener(function(details) {
   // Only handle the main frame navigation (not iframes)
   if (details.frameId !== 0) return;
   
-  // Check if we have data to display in an overlay
-  chrome.storage.local.get(['userProfile'], function(result) {
-    if (result.userProfile && result.userProfile.personal && result.userProfile.personal.firstName) {
-      const firstName = result.userProfile.personal.firstName;
+  // Use global profile directly
+  if (self.globalUserProfile && self.globalUserProfile.personal && self.globalUserProfile.personal.firstName) {
+    const firstName = self.globalUserProfile.personal.firstName;
 
-      // Wait a short moment for the page to stabilize
-      setTimeout(() => {
-        // Show overlay with the loaded data or prepare for form filling
-        chrome.tabs.query({ active: true, currentWindow: true }, function(tabs) {
-          if (tabs[0]) {
-            formFiller.showPageNotification(tabs[0].id, firstName);
-          }
-        });
-      }, 1000);
-    }
-  });
+    // Wait a short moment for the page to stabilize
+    setTimeout(() => {
+      // Show overlay with the loaded data or prepare for form filling
+      chrome.tabs.query({ active: true, currentWindow: true }, function(tabs) {
+        if (tabs[0]) {
+          formFiller.showPageNotification(tabs[0].id, firstName);
+        }
+      });
+    }, 1000);
+  }
 });
 
 console.log("Background script loaded in standalone mode");

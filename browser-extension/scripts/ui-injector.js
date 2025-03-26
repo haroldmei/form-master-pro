@@ -327,24 +327,31 @@
     }
     
     /**
-     * Load profile information from storage and update the status bar
+     * Load profile information from global memory via message passing
      */
     function loadProfileInfo() {
-      if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
-        chrome.storage.local.get(['userProfile'], function(result) {
+      chrome.runtime.sendMessage({ action: 'getUserProfile' }, function(response) {
+        if (chrome.runtime.lastError) {
+          console.error('Error accessing profile:', chrome.runtime.lastError);
+          return;
+        }
+        
+        if (response && response.success && response.profile) {
+          const userProfile = response.profile;
           const statusBar = shadow.getElementById('formmaster-status-bar');
           
-          if (result.userProfile) {
+          // Update UI with profile data
+          if (userProfile) {
             // Extract profile name information
             let profileName = '';
             
-            if (result.userProfile.source && result.userProfile.filename) {
+            if (userProfile.source && userProfile.filename) {
               // If it's a file-based profile
-              profileName = `Profile: ${result.userProfile.filename}`;
-            } else if (result.userProfile.personal && result.userProfile.personal.firstName) {
+              profileName = `Profile: ${userProfile.filename}`;
+            } else if (userProfile.personal && userProfile.personal.firstName) {
               // If it has personal info
-              const firstName = result.userProfile.personal.firstName;
-              const lastName = result.userProfile.personal.lastName || '';
+              const firstName = userProfile.personal.firstName;
+              const lastName = userProfile.personal.lastName || '';
               profileName = `Profile: ${firstName} ${lastName}`.trim();
             } else {
               // Generic profile info
@@ -357,8 +364,8 @@
             statusBar.textContent = 'No profile loaded';
             statusBar.classList.add('no-profile');
           }
-        });
-      }
+        }
+      });
     }
   }
 })();

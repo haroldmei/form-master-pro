@@ -7,20 +7,25 @@ document.addEventListener('DOMContentLoaded', function() {
   document.getElementById('import-profile').addEventListener('click', importProfile);
   
   /**
-   * Load user profile from storage with error handling
+   * Load user profile from global memory with error handling
    */
   function loadUserProfile() {
-    chrome.storage.local.get(['userProfile'], function(result) {
+    chrome.runtime.sendMessage({ action: 'getUserProfile' }, function(response) {
       if (chrome.runtime.lastError) {
         console.error('Error loading profile:', chrome.runtime.lastError);
         showStatusMessage('Error loading profile: ' + chrome.runtime.lastError.message, 'error');
         return;
       }
       
-      console.log('Loaded profile from storage:', result.userProfile);
-      const userProfile = result.userProfile || {};
+      if (!response || !response.success) {
+        showStatusMessage('Failed to load profile from background', 'error');
+        return;
+      }
       
-      // Get the container where we'll display the profile data
+      console.log('Loaded profile from global memory:', response.profile);
+      const userProfile = response.profile || {};
+      
+      // Update UI with profile data
       const profileContainer = document.getElementById('profile-container');
       
       // Clear existing content
@@ -82,7 +87,7 @@ document.addEventListener('DOMContentLoaded', function() {
       try {
         const userProfile = JSON.parse(event.target.result);
         
-        // Get the container where we'll display the profile data
+        // Update UI with profile data
         const profileContainer = document.getElementById('profile-container');
         
         // Clear existing content
@@ -92,35 +97,26 @@ document.addEventListener('DOMContentLoaded', function() {
         const profileHtml = generateProfileHtml(userProfile);
         profileContainer.innerHTML = profileHtml;
         
-        // Check if the profile data is too large for Chrome storage
-        // Local storage has a higher limit (5MB per origin) than sync storage (100KB)
+        // Check profile size (just informational now, no storage limits)
         const jsonSize = new Blob([JSON.stringify(userProfile)]).size;
         if (jsonSize > 5000000) {
-          console.warn(`Profile size ${jsonSize} bytes exceeds Chrome local storage recommended limits`);
-          showStatusMessage('Profile very large. Some browsers may have issues storing it.', 'warning');
+          console.warn(`Profile size ${jsonSize} bytes is large`);
+          showStatusMessage('Large profile may impact performance', 'warning');
         }
         
-        // Save to Chrome local storage with error handling
-        chrome.storage.local.set({ userProfile }, function() {
-          if (chrome.runtime.lastError) {
-            console.error('Error saving profile:', chrome.runtime.lastError);
-            showStatusMessage('Error saving profile: ' + chrome.runtime.lastError.message, 'error');
+        // Update global memory only (no storage)
+        chrome.runtime.sendMessage({ 
+          action: 'updateUserProfile', 
+          profile: userProfile 
+        }, function(response) {
+          if (chrome.runtime.lastError || !response || !response.success) {
+            console.error('Error saving profile:', chrome.runtime.lastError || 'Background update failed');
+            showStatusMessage('Error saving profile. Please try again.', 'error');
             return;
           }
           
-          // Verify the profile was saved by reading it back
-          chrome.storage.local.get(['userProfile'], function(result) {
-            if (chrome.runtime.lastError) {
-              console.error('Error verifying profile save:', chrome.runtime.lastError);
-              return;
-            }
-            
-            console.log('Profile saved successfully:', result.userProfile);
-            showStatusMessage('Profile imported successfully!', 'success');
-            
-            // Notify background script that profile has been updated
-            chrome.runtime.sendMessage({ action: 'settingsUpdated' });
-          });
+          console.log('Profile saved successfully to global memory');
+          showStatusMessage('Profile imported successfully!', 'success');
         });
       } catch (error) {
         showStatusMessage('Error importing profile: ' + error.message, 'error');
@@ -205,35 +201,28 @@ document.addEventListener('DOMContentLoaded', function() {
   }
   
   /**
-   * Save profile to Chrome storage with verification
+   * Save profile to global memory
    */
   function saveProfile(userProfile) {
-    chrome.storage.local.set({ userProfile }, function() {
-      if (chrome.runtime.lastError) {
-        console.error('Error saving profile:', chrome.runtime.lastError);
-        showStatusMessage('Error saving profile: ' + chrome.runtime.lastError.message, 'error');
+    chrome.runtime.sendMessage({ 
+      action: 'updateUserProfile', 
+      profile: userProfile 
+    }, function(response) {
+      if (chrome.runtime.lastError || !response || !response.success) {
+        console.error('Error saving profile:', chrome.runtime.lastError || 'Background update failed');
+        showStatusMessage('Error saving profile. Please try again.', 'error');
         return;
       }
       
-      // Verify the profile was saved
-      chrome.storage.local.get(['userProfile'], function(result) {
-        if (chrome.runtime.lastError) {
-          console.error('Error verifying profile save:', chrome.runtime.lastError);
-          return;
-        }
-        
-        if (!result.userProfile) {
-          console.error('Profile verification failed: userProfile not found in storage');
-          showStatusMessage('Profile may not have saved correctly', 'warning');
-          return;
-        }
-        
-        console.log('Profile saved successfully:', result.userProfile);
-        showStatusMessage('Profile imported successfully!', 'success');
-        
-        // Notify background script that profile has been updated
-        chrome.runtime.sendMessage({ action: 'settingsUpdated' });
-      });
+      console.log('Profile saved successfully to global memory');
+      showStatusMessage('Profile imported successfully!', 'success');
+      
+      // Update UI with profile data
+      const profileContainer = document.getElementById('profile-container');
+      
+      // Generate dynamic HTML for the profile
+      const profileHtml = generateProfileHtml(userProfile);
+      profileContainer.innerHTML = profileHtml;
     });
   }
   
