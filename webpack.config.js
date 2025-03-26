@@ -123,15 +123,32 @@ module.exports = (env, argv) => {
         })
       ] : [])
     ],
+    externals: {
+      '@babel/runtime': '@babel/runtime'
+    },
     module: {
       rules: [
         {
-          test: /\.js$/,
+          test: /\.jsx?$/,
           exclude: /node_modules/,
           use: {
             loader: 'babel-loader',
             options: {
-              presets: ['@babel/preset-env']
+              presets: [
+                ['@babel/preset-env', {
+                  targets: {
+                    chrome: '58',
+                    firefox: '57',
+                    safari: '11',
+                    edge: '16'
+                  },
+                  useBuiltIns: 'usage',
+                  corejs: 3
+                }]
+              ],
+              plugins: [
+                '@babel/plugin-transform-runtime' // Add this plugin
+              ]
             }
           }
         },
