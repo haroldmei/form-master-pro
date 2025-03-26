@@ -284,7 +284,7 @@ function getRadioGroupValues(container = document.body) {
 }
 
 // Export functions in a way that works in browser context
-window.FormRadios = {
+self.FormRadios = {
   extractRadioGroups,
   getRadioElementLabel,
   getRadioGroupLabel,

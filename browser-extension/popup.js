@@ -260,7 +260,7 @@ document.addEventListener('DOMContentLoaded', function() {
           target: { tabId: tabs[0].id },
           function: () => {
             // Use the FormExtract object exposed by form_extract.js
-            const formData = window.FormExtract.extractFormControls();
+            const formData = self.FormExtract.extractFormControls();
 
             // Flatten the structure to match what displayFormFields expects
             const fields = [];
@@ -522,10 +522,10 @@ document.addEventListener('DOMContentLoaded', function() {
     const errorContainer = document.createElement('div');
     errorContainer.className = 'error-message';
     errorContainer.textContent = message;
-  
+
     // Append the error message to the body or a specific container
     document.body.appendChild(errorContainer);
-  
+
     // Automatically remove the error message after 3 seconds
     setTimeout(() => {
       errorContainer.remove();

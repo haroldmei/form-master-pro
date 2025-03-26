@@ -181,7 +181,7 @@ async function analyzeFormInTab(tabId, url) {
     const results = await chrome.scripting.executeScript({
       target: { tabId },
       function: () => {
-        return window.FormExtract.extractFormControls();
+        return self.FormExtract.extractFormControls();
       }
     });
     
@@ -226,7 +226,7 @@ async function fillFormInTab(tabId, url) {
     const results = await chrome.scripting.executeScript({
       target: { tabId },
       function: () => {
-        return window.FormExtract.extractFormControls();
+        return self.FormExtract.extractFormControls();
       }
     });
     

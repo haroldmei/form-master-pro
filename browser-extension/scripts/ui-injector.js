@@ -8,10 +8,10 @@
   const VERSION = "0.1.0";
   
   // Check if we're in a frame - only inject in the main frame
-  if (window !== window.top) return;
+  if (self !== self.top) return;
 
   // Create and inject the UI when the page is ready
-  window.addEventListener('DOMContentLoaded', injectUI);
+  self.addEventListener('DOMContentLoaded', injectUI);
   
   // If page is already loaded, inject UI immediately
   if (document.readyState === 'complete' || document.readyState === 'interactive') {
@@ -274,7 +274,7 @@
         // Send message to the extension's background script
         chrome.runtime.sendMessage({ 
           action: action,
-          url: window.location.href
+          url: self.location.href
         }, response => {
           // Remove loading state regardless of success or failure
           if (action === 'auto-fill') {

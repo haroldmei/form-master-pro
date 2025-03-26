@@ -24,7 +24,7 @@ const obfuscationOptions = {
   log: false,
   numbersToExpressions: true,
   renameGlobals: false,
-  selfDefending: true,
+  selfDefending: false,
   simplify: true,
   splitStrings: true,
   splitStringsChunkLength: 5,
@@ -51,6 +51,15 @@ function obfuscateDirectory(directory) {
     if (entry.isDirectory()) {
       obfuscateDirectory(fullPath);
     } else if (entry.isFile() && entry.name.endsWith('.js')) {
+      
+    // Skip background.js to avoid service worker issues
+    if (entry.name === 'background.js' || entry.name === 'auth.js' 
+      || entry.name === 'userProfile.js' || entry.name === 'formProcessor.js'
+      || entry.name === 'aiService.js' || entry.name === 'formFiller.js'
+      || entry.name === 'utils.js') {
+      console.log(chalk.yellow(`⚠️ Skipping service worker file: ${entry.name}`));
+      continue;
+    }
       obfuscateFile(fullPath);
     }
   }

@@ -17,7 +17,7 @@ class Auth0Service {
                            `chrome-extension://${chrome.runtime.id}/callback.html`;
       } else {
         // For web application
-        this.redirectUri = window.location.origin + '/callback';
+        this.redirectUri = self.location.origin + '/callback';
       }
     }
   
@@ -74,7 +74,7 @@ class Auth0Service {
           await this.handleExtensionLogin(authUrl.toString());
         } else {
           // For web application, redirect to Auth0
-          window.location.href = authUrl.toString();
+          self.location.href = authUrl.toString();
         }
         
         return true;
@@ -290,8 +290,8 @@ class Auth0Service {
           }
         } else {
           // For web application, redirect to logout URL
-          logoutUrl.searchParams.append('returnTo', window.location.origin);
-          window.location.href = logoutUrl.toString();
+          logoutUrl.searchParams.append('returnTo', self.location.origin);
+          self.location.href = logoutUrl.toString();
         }
       }
       
@@ -488,8 +488,8 @@ class Auth0Service {
   // Make it available globally and as a module
   if (typeof module !== 'undefined' && module.exports) {
     module.exports = auth0Service;
-  } else if (typeof window !== 'undefined') {
-    window.auth0Service = auth0Service;
+  } else if (typeof self !== 'undefined') {
+    self.auth0Service = auth0Service;
   }
   
   // For Chrome extension background script, make sure it's exported

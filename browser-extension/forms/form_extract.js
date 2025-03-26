@@ -169,12 +169,12 @@ function extractButtons(container) {
  * @returns {Array} Array of radio groups
  */
 function extractRadioGroups(container) {
-  console.log('FormExtract.extractRadioGroups called', window.FormRadios ? 'FormRadios exists' : 'FormRadios missing');
+  console.log('FormExtract.extractRadioGroups called', self.FormRadios ? 'FormRadios exists' : 'FormRadios missing');
   
   // Use FormRadios if available (from form_radios.js), otherwise fall back to internal implementation
-  if (window.FormRadios && typeof window.FormRadios.extractRadioGroups === 'function') {
+  if (self.FormRadios && typeof self.FormRadios.extractRadioGroups === 'function') {
     try {
-      const radioGroups = window.FormRadios.extractRadioGroups(container);
+      const radioGroups = self.FormRadios.extractRadioGroups(container);
       console.log('FormRadios.extractRadioGroups returned', radioGroups);
       return radioGroups;
     } catch (error) {
@@ -319,7 +319,7 @@ function createLabelMapping(controls) {
 }
 
 // Export functions in a way that works in browser context
-window.FormExtract = {
+self.FormExtract = {
   extractFormControls,
   extractFormStructure
 };
