@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Changelog - FormMasterPro</title>
+  <meta name="description" content="Version history and updates for FormMasterPro - Track the evolution of our form automation tool.">
+  <link rel="stylesheet" href="assets/styles.css">
+  <link rel="icon" type="image/png" href="assets/images/favicon.png">
+  <style>
+    .version {
+      margin-bottom: 2rem;
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 1.5rem;
+    }
+    .version:last-child {
+      border-bottom: none;
+    }
+    .version-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin-bottom: 1rem;
+    }
+    .version-number {
+      font-size: 1.4rem;
+      color: var(--primary-color);
+      font-weight: bold;
+    }
+    .release-date {
+      color: #666;
+      font-style: italic;
+    }
+    .change-category {
+      margin-bottom: 1rem;
+    }
+    .change-category h4 {
+      color: var(--secondary-color);
+      margin-bottom: 0.5rem;
+    }
+    .change-list {
+      margin-left: 1.5rem;
+      margin-bottom: 1rem;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="container header-content">
+      <a href="index.html" class="logo">FormMasterPro</a>
+      <nav>
+        <ul>
+          <li><a href="index.html">Home</a></li>
+          <li><a href="features.html">Features</a></li>
+          <li><a href="docs.html">Documentation</a></li>
+          <li><a href="about.html">About</a></li>
+          <li><a href="contact.html">Contact</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <section class="hero">
+    <div class="container">
+      <h1>Changelog</h1>
+      <p>Track the evolution of FormMasterPro with our detailed version history</p>
+    </div>
+  </section>
+
+  <section class="page-content">
+    <div class="container">
+      <div class="section">
+        <p>This changelog documents all notable changes to FormMasterPro. We follow <a href="https://semver.org/" target="_blank">Semantic Versioning</a> for our release cycle.</p>
+        
+        <div class="version">
+          <div class="version-header">
+            <span class="version-number">v1.0.0</span>
+            <span class="release-date">Expected Q1 2023</span>
+          </div>
+          <p>Initial public release with core functionality.</p>
+          
+          <div class="change-category">
+            <h4>Features:</h4>
+            <ul class="change-list">
+              <li>AI-powered form field detection</li>
+              <li>Data extraction from DOCX and JSON files</li>
+              <li>Intelligent field mapping</li>
+              <li>Form auto-fill capabilities</li>
+              <li>Save and reuse field mappings</li>
+              <li>Basic profile management</li>
+            </ul>
+          </div>
+        </div>
+        
+        <div class="version">
+          <div class="version-header">
+            <span class="version-number">v0.9.1-beta</span>
+            <span class="release-date">December 15, 2022</span>
+          </div>
+          <p>Final beta release with stability improvements and bug fixes.</p>
+          
+          <div class="change-category">
+            <h4>Improvements:</h4>
+            <ul class="change-list">
+              <li>Enhanced form field detection accuracy</li>
+              <li>Improved performance for larger documents</li>
+              <li>Better error handling and user feedback</li>
+            </ul>
+          </div>
+          
+          <div class="change-category">
+            <h4>Bug Fixes:</h4>
+            <ul class="change-list">
+              <li>Fixed issue with certain input types not being properly filled</li>
+              <li>Resolved memory leak during document processing</li>
+              <li>Fixed UI rendering issues in the extension popup</li>
+            </ul>
+          </div>
+        </div>
+        
+        <div class="version">
+          <div class="version-header">
+            <span class="version-number">v0.9.0-beta</span>
+            <span class="release-date">November 10, 2022</span>
+          </div>
+          <p>Major beta release with expanded functionality.</p>
+          
+          <div class="change-category">
+            <h4>Features:</h4>
+            <ul class="change-list">
+              <li>Added support for DOCX file format</li>
+              <li>Implemented AI-powered field mapping</li>
+              <li>Added ability to save and reuse field mappings</li>
+            </ul>
+          </div>
+          
+          <div class="change-category">
+            <h4>Improvements:</h4>
+            <ul class="change-list">
+              <li>Redesigned UI for better usability</li>
+              <li>Enhanced form analysis algorithm</li>
+            </ul>
+          </div>
+        </div>
+        
+        <div class="version">
+          <div class="version-header">
+            <span class="version-number">v0.5.0-alpha</span>
+            <span class="release-date">September 5, 2022</span>
+          </div>
+          <p>Initial alpha release with basic functionality.</p>
+          
+          <div class="change-category">
+            <h4>Features:</h4>
+            <ul class="change-list">
+              <li>Basic form field detection</li>
+              <li>Support for JSON data files</li>
+              <li>Manual field mapping</li>
+              <li>Simple form filling</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <div class="container">
+      <div class="footer-grid">
+        <div>
+          <h4>FormMasterPro</h4>
+          <p>Advanced form automation for web applications.</p>
+        </div>
+        <div>
+          <h4>Resources</h4>
+          <ul>
+            <li><a href="docs.html">Documentation</a></li>
+            <li><a href="faq.html">FAQ</a></li>
+            <li><a href="changelog.html">Changelog</a></li>
+          </ul>
+        </div>
+        <div>
+          <h4>Legal</h4>
+          <ul>
+            <li><a href="privacy.html">Privacy Policy</a></li>
+            <li><a href="terms.html">Terms of Service</a></li>
+          </ul>
+        </div>
+        <div>
+          <h4>Support</h4>
+          <ul>
+            <li><a href="report-bug.html">Report a Bug</a></li>
+            <li><a href="contact.html">Contact Us</a></li>
+          </ul>
+        </div>
+      </div>
+      <div class="copyright">
+        &copy; 2023 FormMasterPro. All rights reserved.
+      </div>
+    </div>
+  </footer>
+
+  <script src="assets/script.js"></script>
+</body>
+</html>

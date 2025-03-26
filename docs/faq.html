@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FAQ - FormMasterPro</title>
+  <meta name="description" content="Frequently Asked Questions about FormMasterPro - Find answers to common questions about installation, usage, and troubleshooting.">
+  <link rel="stylesheet" href="assets/styles.css">
+  <link rel="icon" type="image/png" href="assets/images/favicon.png">
+  <style>
+    .faq-item {
+      margin-bottom: 2rem;
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 1rem;
+    }
+    .faq-item:last-child {
+      border-bottom: none;
+    }
+    .faq-question {
+      font-weight: bold;
+      color: var(--primary-color);
+      margin-bottom: 0.5rem;
+      font-size: 1.1rem;
+    }
+    .faq-answer {
+      margin-left: 1rem;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="container header-content">
+      <a href="index.html" class="logo">FormMasterPro</a>
+      <nav>
+        <ul>
+          <li><a href="index.html">Home</a></li>
+          <li><a href="features.html">Features</a></li>
+          <li><a href="docs.html">Documentation</a></li>
+          <li><a href="about.html">About</a></li>
+          <li><a href="contact.html">Contact</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <section class="hero">
+    <div class="container">
+      <h1>Frequently Asked Questions</h1>
+      <p>Find answers to common questions about FormMasterPro</p>
+    </div>
+  </section>
+
+  <section class="page-content">
+    <div class="container">
+      <div class="section">
+        <h2>General Questions</h2>
+        
+        <div class="faq-item">
+          <p class="faq-question">What is FormMasterPro?</p>
+          <div class="faq-answer">
+            <p>FormMasterPro is an AI-powered form automation tool that helps you fill out online forms automatically using data from various document formats. It analyzes form structures, extracts relevant data from your documents, and maps that data to the appropriate form fields.</p>
+          </div>
+        </div>
+        
+        <div class="faq-item">
+          <p class="faq-question">Is FormMasterPro free to use?</p>
+          <div class="faq-answer">
+            <p>Yes, FormMasterPro is an open-source project that's free to use. You can download it from our GitHub repository and use it without any cost. We may introduce premium features in the future, but the core functionality will remain free.</p>
+          </div>
+        </div>
+        
+        <div class="faq-item">
+          <p class="faq-question">Does FormMasterPro work with all websites?</p>
+          <div class="faq-answer">
+            <p>FormMasterPro is designed to work with most standard web forms. However, some websites with complex JavaScript forms, unusual form structures, or strong anti-automation measures may not be fully compatible. We're continuously improving compatibility with different websites.</p>
+          </div>
+        </div>
+      </div>
+      
+      <div class="section">
+        <h2>Installation & Setup</h2>
+        
+        <div class="faq-item">
+          <p class="faq-question">How do I install FormMasterPro?</p>
+          <div class="faq-answer">
+            <p>To install FormMasterPro:</p>
+            <ol>
+              <li>Download the latest release from our <a href="https://github.com/haroldmei/form-master-pro/releases">GitHub Releases</a> page</li>
+              <li>Extract the ZIP file to a folder on your computer</li>
+              <li>Open Chrome and go to chrome://extensions</li>
+              <li>Enable "Developer mode" in the top-right corner</li>
+              <li>Click "Load unpacked" and select the extracted browser-extension folder</li>
+            </ol>
+          </div>
+        </div>
+        
+        <div class="faq-item">
+          <p class="faq-question">Why isn't FormMasterPro available on the Chrome Web Store?</p>
+          <div class="faq-answer">
+            <p>We're currently working on getting FormMasterPro listed on the Chrome Web Store. The approval process takes time, especially for extensions with advanced capabilities. In the meantime, you can install it manually from our GitHub releases.</p>
+          </div>
+        </div>
+        
+        <div class="faq-item">
+          <p class="faq-question">Does FormMasterPro work on browsers other than Chrome?</p>
+          <div class="faq-answer">
+            <p>FormMasterPro is designed to work on Chromium-based browsers like Chrome, Edge, and Brave. Firefox and Safari are not currently supported, but we may add support for these browsers in the future.</p>
+          </div>
+        </div>
+      </div>
+      
+      <div class="section">
+        <h2>Using FormMasterPro</h2>
+        
+        <div class="faq-item">
+          <p class="faq-question">What file formats does FormMasterPro support?</p>
+          <div class="faq-answer">
+            <p>FormMasterPro currently supports:</p>
+            <ul>
+              <li>JSON files</li>
+              <li>DOCX (Microsoft Word) documents</li>
+            </ul>
+            <p>We're working on adding support for more formats including PDF, CSV, and plain text files.</p>
+          </div>
+        </div>
+        
+        <div class="faq-item">
+          <p class="faq-question">How accurate is the form field detection?</p>
+          <div class="faq-answer">
+            <p>FormMasterPro's field detection is highly accurate for standard form elements like text inputs, dropdowns, checkboxes, and radio buttons. The AI-powered field mapping improves over time as it learns from more examples. For complex or unusual forms, you may need to manually map some fields.</p>
+          </div>
+        </div>
+        
+        <div class="faq-item">
+          <p class="faq-question">Can I save my field mappings for future use?</p>
+          <div class="faq-answer">
+            <p>Yes, FormMasterPro automatically saves your field mappings for each website you visit. When you return to the same website in the future, your previous mappings will be loaded automatically, making the process faster each time.</p>
+          </div>
+        </div>
+      </div>
+      
+      <div class="section">
+        <h2>Troubleshooting</h2>
+        
+        <div class="faq-item">
+          <p class="faq-question">FormMasterPro isn't detecting form fields correctly. What should I do?</p>
+          <div class="faq-answer">
+            <p>If form detection isn't working properly:</p>
+            <ol>
+              <li>Make sure the page has fully loaded before analyzing the form</li>
+              <li>Try refreshing the page and analyzing again</li>
+              <li>Some dynamic forms may require clicking or interacting with the form first</li>
+              <li>As a last resort, you can use the manual field mapping option</li>
+            </ol>
+          </div>
+        </div>
+        
+        <div class="faq-item">
+          <p class="faq-question">The extension is filling forms with incorrect data. How do I fix this?</p>
+          <div class="faq-answer">
+            <p>If data is being mapped incorrectly:</p>
+            <ol>
+              <li>Click on "Data Mappings" in the extension popup</li>
+              <li>Review and adjust the current field mappings</li>
+              <li>Save your custom mappings for future use</li>
+            </ol>
+          </div>
+        </div>
+        
+        <div class="faq-item">
+          <p class="faq-question">How do I report a bug or request a feature?</p>
+          <div class="faq-answer">
+            <p>You can report bugs or request features on our <a href="https://github.com/haroldmei/form-master-pro/issues">GitHub Issues page</a>. Please check our <a href="report-bug.html">bug reporting guidelines</a> for instructions on providing the information we need to address your issue.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <div class="container">
+      <div class="footer-grid">
+        <div>
+          <h4>FormMasterPro</h4>
+          <p>Advanced form automation for web applications.</p>
+        </div>
+        <div>
+          <h4>Resources</h4>
+          <ul>
+            <li><a href="docs.html">Documentation</a></li>
+            <li><a href="faq.html">FAQ</a></li>
+            <li><a href="changelog.html">Changelog</a></li>
+          </ul>
+        </div>
+        <div>
+          <h4>Legal</h4>
+          <ul>
+            <li><a href="privacy.html">Privacy Policy</a></li>
+            <li><a href="terms.html">Terms of Service</a></li>
+          </ul>
+        </div>
+        <div>
+          <h4>Support</h4>
+          <ul>
+            <li><a href="report-bug.html">Report a Bug</a></li>
+            <li><a href="contact.html">Contact Us</a></li>
+          </ul>
+        </div>
+      </div>
+      <div class="copyright">
+        &copy; 2023 FormMasterPro. All rights reserved.
+      </div>
+    </div>
+  </footer>
+
+  <script src="assets/script.js"></script>
+</body>
+</html>

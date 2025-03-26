@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Contact Us - FormMasterPro</title>
+  <meta name="description" content="Get in touch with the FormMasterPro team for support, feedback, or collaboration opportunities.">
+  <link rel="stylesheet" href="assets/styles.css">
+  <link rel="icon" type="image/png" href="assets/images/favicon.png">
+  <style>
+    .contact-form {
+      max-width: 600px;
+      margin: 0 auto;
+    }
+    .form-group {
+      margin-bottom: 20px;
+    }
+    .form-control {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid var(--border-color);
+      border-radius: 4px;
+      font-family: inherit;
+      font-size: 1rem;
+    }
+    textarea.form-control {
+      min-height: 150px;
+    }
+    .contact-methods {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 20px;
+      margin-top: 40px;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="container header-content">
+      <a href="index.html" class="logo">FormMasterPro</a>
+      <nav>
+        <ul>
+          <li><a href="index.html">Home</a></li>
+          <li><a href="features.html">Features</a></li>
+          <li><a href="docs.html">Documentation</a></li>
+          <li><a href="about.html">About</a></li>
+          <li><a href="contact.html">Contact</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <section class="hero">
+    <div class="container">
+      <h1>Contact Us</h1>
+      <p>We'd love to hear from you! Get in touch with the FormMasterPro team.</p>
+    </div>
+  </section>
+
+  <section class="page-content">
+    <div class="container">
+      <div class="section">
+        <h2>Get In Touch</h2>
+        <p>Whether you have a question about features, need help troubleshooting, want to provide feedback, or are interested in contributing to the project, we're here to help.</p>
+        
+        <div class="contact-form">
+          <form action="https://formspree.io/f/yourformid" method="POST">
+            <div class="form-group">
+              <label for="name">Name</label>
+              <input type="text" class="form-control" id="name" name="name" required>
+            </div>
+            
+            <div class="form-group">
+              <label for="email">Email</label>
+              <input type="email" class="form-control" id="email" name="email" required>
+            </div>
+            
+            <div class="form-group">
+              <label for="subject">Subject</label>
+              <select class="form-control" id="subject" name="subject">
+                <option value="general">General Question</option>
+                <option value="support">Technical Support</option>
+                <option value="feedback">Feedback</option>
+                <option value="contribute">Contribution Inquiry</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
+            
+            <div class="form-group">
+              <label for="message">Message</label>
+              <textarea class="form-control" id="message" name="message" required></textarea>
+            </div>
+            
+            <button type="submit" class="button">Send Message</button>
+          </form>
+          <p><small>This form is for demonstration purposes. For actual inquiries, please use the contact methods below.</small></p>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Contact Methods</h2>
+        <div class="contact-methods">
+          <div class="feature-card">
+            <h3>GitHub Issues</h3>
+            <p>For bug reports and feature requests, please use our GitHub Issues page.</p>
+            <a href="https://github.com/haroldmei/form-master-pro/issues" class="button" target="_blank">Open GitHub Issues</a>
+          </div>
+          
+          <div class="feature-card">
+            <h3>Email</h3>
+            <p>For general inquiries and support:</p>
+            <p><a href="mailto:support@formmasterpro.com">support@formmasterpro.com</a></p>
+          </div>
+          
+          <div class="feature-card">
+            <h3>GitHub Discussions</h3>
+            <p>Join our community discussions for Q&A, ideas, and announcements.</p>
+            <a href="https://github.com/haroldmei/form-master-pro/discussions" class="button" target="_blank">Visit Discussions</a>
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Frequently Asked Questions</h2>
+        <p>Before contacting us, you might find your answer in our <a href="faq.html">FAQ section</a>.</p>
+        
+        <p>For bug reports, please check our <a href="report-bug.html">bug reporting guidelines</a> to help us resolve issues more quickly.</p>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <div class="container">
+      <div class="footer-grid">
+        <div>
+          <h4>FormMasterPro</h4>
+          <p>Advanced form automation for web applications.</p>
+        </div>
+        <div>
+          <h4>Resources</h4>
+          <ul>
+            <li><a href="docs.html">Documentation</a></li>
+            <li><a href="faq.html">FAQ</a></li>
+            <li><a href="changelog.html">Changelog</a></li>
+          </ul>
+        </div>
+        <div>
+          <h4>Legal</h4>
+          <ul>
+            <li><a href="privacy.html">Privacy Policy</a></li>
+            <li><a href="terms.html">Terms of Service</a></li>
+          </ul>
+        </div>
+        <div>
+          <h4>Support</h4>
+          <ul>
+            <li><a href="report-bug.html">Report a Bug</a></li>
+            <li><a href="contact.html">Contact Us</a></li>
+          </ul>
+        </div>
+      </div>
+      <div class="copyright">
+        &copy; 2023 FormMasterPro. All rights reserved.
+      </div>
+    </div>
+  </footer>
+
+  <script src="assets/script.js"></script>
+</body>
+</html>

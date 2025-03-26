@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Documentation - FormMasterPro</title>
+  <meta name="description" content="Learn how to install, configure and use FormMasterPro with our comprehensive documentation.">
+  <link rel="stylesheet" href="assets/styles.css">
+  <link rel="icon" type="image/png" href="assets/images/favicon.png">
+</head>
+<body>
+  <header>
+    <div class="container header-content">
+      <a href="index.html" class="logo">FormMasterPro</a>
+      <nav>
+        <ul>
+          <li><a href="index.html">Home</a></li>
+          <li><a href="features.html">Features</a></li>
+          <li><a href="docs.html">Documentation</a></li>
+          <li><a href="about.html">About</a></li>
+          <li><a href="contact.html">Contact</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <section class="hero">
+    <div class="container">
+      <h1>Documentation</h1>
+      <p>Learn how to install, configure, and use FormMasterPro with our comprehensive documentation.</p>
+    </div>
+  </section>
+
+  <section class="page-content">
+    <div class="container">
+      <div class="section">
+        <h2 id="installation">Installation</h2>
+        <h3>Browser Extension</h3>
+        <ol>
+          <li>Download the latest release from <a href="https://github.com/haroldmei/form-master/releases">GitHub Releases</a></li>
+          <li>Extract the ZIP file to a folder on your computer</li>
+          <li>In Chrome, navigate to <code>chrome://extensions</code></li>
+          <li>Enable "Developer mode" in the top-right corner</li>
+          <li>Click "Load unpacked" and select the extracted <code>browser-extension</code> folder</li>
+          <li>The FormMasterPro icon will appear in your browser's extension toolbar</li>
+        </ol>
+
+        <h3>System Requirements</h3>
+        <ul>
+          <li><strong>Operating System:</strong> Windows 10+ (preferred), macOS, or Linux</li>
+          <li><strong>Node.js:</strong> v16.0.0 or higher (for development only)</li>
+          <li><strong>Browser:</strong> Chrome, Edge, or Brave (Chromium-based)</li>
+        </ul>
+      </div>
+
+      <div class="section">
+        <h2 id="getting-started">Getting Started</h2>
+        <h3>Basic Usage</h3>
+        <ol>
+          <li>Navigate to a webpage with a form you want to fill out</li>
+          <li>Click the FormMasterPro icon in your browser toolbar</li>
+          <li>Click "Analyze Current Form" to detect form fields</li>
+          <li>Click "Load Data File" to import your data from a file</li>
+          <li>Click "Auto Fill Form" to automatically populate the form fields</li>
+        </ol>
+
+        <h3>Supported File Formats</h3>
+        <ul>
+          <li><strong>JSON:</strong> Structured data in JavaScript Object Notation</li>
+          <li><strong>DOCX:</strong> Microsoft Word documents</li>
+        </ul>
+      </div>
+
+      <div class="section">
+        <h2 id="data-files">Creating Data Files</h2>
+        <p>FormMasterPro can import data from different file formats. Here's how to prepare them:</p>
+
+        <h3>JSON Format</h3>
+        <p>Create a JSON file with the following structure:</p>
+        <pre><code>{
+  "personal": {
+    "firstName": "John",
+    "lastName": "Doe",
+    "email": "john.doe@example.com",
+    "phone": "555-123-4567"
+  },
+  "address": {
+    "street": "123 Main St",
+    "city": "Anytown",
+    "state": "CA",
+    "zip": "12345"
+  }
+}</code></pre>
+
+        <h3>DOCX Documents</h3>
+        <p>FormMasterPro can extract data from structured DOCX documents, including:</p>
+        <ul>
+          <li>Regular paragraphs of text</li>
+          <li>Tables with labeled rows and columns</li>
+          <li>Formatted sections with headings</li>
+        </ul>
+        <p>The extension will attempt to intelligently parse the document structure and extract relevant information.</p>
+      </div>
+
+      <div class="section">
+        <h2 id="field-mapping">Field Mapping</h2>
+        <p>Sometimes, you may need to manually map data fields to form fields:</p>
+        <ol>
+          <li>Click "Data Mappings" in the extension popup</li>
+          <li>Use the mapping interface to connect your data fields with form fields</li>
+          <li>Save your mappings for future use</li>
+        </ol>
+        <p>FormMasterPro will remember your mappings for each website, making future form filling even faster.</p>
+      </div>
+
+      <div class="section">
+        <h2 id="for-developers">For Developers</h2>
+        <h3>Building the Browser Extension</h3>
+        <pre><code># Navigate to the browser-extension directory
+cd browser-extension
+
+# Install dependencies
+npm install
+
+# Development build with watch mode
+npm run dev
+
+# Production build
+npm run build
+
+# Package the extension
+npm run package</code></pre>
+
+        <h3>Extension Architecture</h3>
+        <p>The extension consists of several key components:</p>
+        <ul>
+          <li><strong>Form Analysis:</strong> Detects and categorizes form fields</li>
+          <li><strong>Document Processing:</strong> Extracts data from various file types</li>
+          <li><strong>Field Mapping:</strong> Connects data points to form fields</li>
+          <li><strong>Form Filling:</strong> Populates form fields with the mapped data</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <div class="container">
+      <div class="footer-grid">
+        <div>
+          <h4>FormMasterPro</h4>
+          <p>Advanced form automation for web applications.</p>
+        </div>
+        <div>
+          <h4>Resources</h4>
+          <ul>
+            <li><a href="docs.html">Documentation</a></li>
+            <li><a href="faq.html">FAQ</a></li>
+            <li><a href="changelog.html">Changelog</a></li>
+          </ul>
+        </div>
+        <div>
+          <h4>Legal</h4>
+          <ul>
+            <li><a href="privacy.html">Privacy Policy</a></li>
+            <li><a href="terms.html">Terms of Service</a></li>
+          </ul>
+        </div>
+        <div>
+          <h4>Support</h4>
+          <ul>
+            <li><a href="report-bug.html">Report a Bug</a></li>
+            <li><a href="contact.html">Contact Us</a></li>
+          </ul>
+        </div>
+      </div>
+      <div class="copyright">
+        &copy; 2023 FormMasterPro. All rights reserved.
+      </div>
+    </div>
+  </footer>
+
+  <script src="assets/script.js"></script>
+</body>
+</html>
