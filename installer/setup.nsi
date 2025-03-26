@@ -7,6 +7,42 @@
 !include "LogicLib.nsh"
 !include "InstallOptions.nsh" ; Include InstallOptions
 
+; Function to convert a windows path to a properly escaped registry path
+Function ConvertToRegPath
+  Exch $0 ; Path to convert
+  Push $1 ; Result
+  Push $2 ; Current char
+  Push $3 ; Index
+  
+  StrCpy $1 "" ; Initialize result
+  StrLen $3 $0 ; Get string length
+  IntOp $3 $3 - 1 ; Convert to 0-based index
+  
+  ; Loop through each character
+  loop:
+    IntCmp $3 -1 done ; Check if we've processed all characters
+    StrCpy $2 $0 1 $3 ; Get the current character
+    
+    ; If it's a backslash, replace with double backslash
+    StrCmp $2 "\" 0 +3
+    StrCpy $1 "\\$1" ; Prepend double backslash to result
+    Goto next
+    
+    ; Otherwise, just add the character
+    StrCpy $1 "$2$1" ; Prepend character to result
+    
+    next:
+    IntOp $3 $3 - 1 ; Move to previous character
+    Goto loop
+  
+  done:
+  Pop $3
+  Pop $2
+  Exch $1 ; Put result on top of stack
+  Exch
+  Pop $0 ; Restore stack
+FunctionEnd
+
 ; General Configuration
 !define PRODUCT_NAME "FormMasterPro"
 ; Version is now expected to be defined via command line: /DPRODUCT_VERSION=x.x.x
@@ -20,7 +56,7 @@
 !define PRODUCT_UNINST_ROOT_KEY "HKLM"
 
 ; Extension ID (Update this with your Chrome extension ID)
-!define EXTENSION_ID "formmaster-pro-extension"
+!define EXTENSION_ID "hhapaihohhaihcgmegaphckifiaknoao"
 
 ; Modern UI Configuration
 !define MUI_ABORTWARNING
@@ -69,18 +105,28 @@ Section "MainSection" SEC01
   ; Also copy the extension to the extension directory for registry path
   CopyFiles "$INSTDIR\extension.crx" "$INSTDIR\extension\extension.crx"
   
-  ; Create chrome_extension.reg file
+  ; Create chrome_extension.reg file with proper path formatting
   FileOpen $0 "$INSTDIR\chrome_extension.reg" w
   FileWrite $0 'Windows Registry Editor Version 5.00$\r$\n$\r$\n'
   FileWrite $0 '[HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Google\Chrome\ExtensionInstallForcelist]$\r$\n'
-  FileWrite $0 '"1"="${EXTENSION_ID};file:///$INSTDIR\extension\extension.crx"$\r$\n'
+  
+  ; Create a proper registry path with correct escaping
+  Push "$INSTDIR\extension\extension.crx"
+  Call ConvertToRegPath
+  Pop $1
+  FileWrite $0 '"1"="${EXTENSION_ID};file:///$1"$\r$\n'
   FileClose $0
   
-  ; Create edge_extension.reg file for Microsoft Edge
+  ; Create edge_extension.reg file for Microsoft Edge with proper path formatting
   FileOpen $0 "$INSTDIR\edge_extension.reg" w
   FileWrite $0 'Windows Registry Editor Version 5.00$\r$\n$\r$\n'
   FileWrite $0 '[HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\Edge\ExtensionInstallForcelist]$\r$\n'
-  FileWrite $0 '"1"="${EXTENSION_ID};file:///$INSTDIR\extension\extension.crx"$\r$\n'
+  
+  ; Use the same converted path
+  Push "$INSTDIR\extension\extension.crx"
+  Call ConvertToRegPath
+  Pop $1
+  FileWrite $0 '"1"="${EXTENSION_ID};file:///$1"$\r$\n'
   FileClose $0
   
   ; Create batch file for installation
@@ -120,7 +166,7 @@ Section "MainSection" SEC01
   CreateShortCut "$DESKTOP\FormMasterPro.lnk" "$INSTDIR\install_extension.bat" "" "$INSTDIR\extension\extension.crx" 0
   
   ; Run the install batch file (optional - uncomment if you want installer to run it automatically)
-  ; ExecWait '"$INSTDIR\install_extension.bat"'
+  ExecWait '"$INSTDIR\install_extension.bat"'
   
   ; Create uninstaller
   WriteUninstaller "$INSTDIR\uninst.exe"
