@@ -31,24 +31,38 @@ function checkExtensionPackage() {
     process.exit(1);
   }
   
-  // Look for the latest zip package
-  const files = fs.readdirSync(packageDir)
-    .filter(file => file.endsWith('.zip'))
+  // First look for CRX package
+  let files = fs.readdirSync(packageDir)
+    .filter(file => file.endsWith('.crx'))
     .sort();
   
+  // If no CRX found, look for ZIP as fallback
   if (files.length === 0) {
-    console.error(chalk.red('❌ No extension package found. Run package script first.'));
-    process.exit(1);
+    console.log(chalk.yellow('⚠️ No CRX package found, looking for ZIP package instead.'));
+    files = fs.readdirSync(packageDir)
+      .filter(file => file.endsWith('.zip'))
+      .sort();
+      
+    if (files.length === 0) {
+      console.error(chalk.red('❌ No extension package found. Run package script first.'));
+      process.exit(1);
+    }
   }
   
   // Get the latest package
   const latestPackage = path.join(packageDir, files[files.length - 1]);
+  const fileExt = path.extname(latestPackage);
   
   // Create a copy with standard name for the installer
-  const standardPackageName = path.join(packageDir, 'form-master-pro.zip');
+  const standardPackageName = path.join(packageDir, `form-master-pro${fileExt}`);
   fs.copyFileSync(latestPackage, standardPackageName);
   
-  return standardPackageName;
+  console.log(chalk.blue(`📦 Using ${fileExt.toUpperCase()} package for installer: ${path.basename(latestPackage)}`));
+  
+  return {
+    path: standardPackageName,
+    type: fileExt.substring(1)  // Remove the dot from extension
+  };
 }
 
 // Find NSIS executable
@@ -114,8 +128,14 @@ async function main() {
     console.log(chalk.blue(`📦 Found NSIS: ${nsisPath}`));
     
     // Check for extension package
-    const packagePath = checkExtensionPackage();
-    console.log(chalk.blue(`📦 Using extension package: ${packagePath}`));
+    const packageInfo = checkExtensionPackage();
+    console.log(chalk.blue(`📦 Using extension package: ${packageInfo.path} (${packageInfo.type.toUpperCase()})`));
+    
+    // Update the NSIS script if we're using a ZIP instead of CRX
+    if (packageInfo.type === 'zip') {
+      console.log(chalk.yellow('⚠️ Using ZIP package - installer is configured for CRX. This may cause issues.'));
+      console.log(chalk.yellow('   It is recommended to run the package script with CRX support.'));
+    }
     
     // Check license file
     checkLicenseFile();
@@ -130,9 +150,9 @@ async function main() {
       process.exit(1);
     }
     
-    // Build the installer - Pass version as define
+    // Build the installer - Pass version and package type as define
     console.log(chalk.blue('🔨 Building installer...'));
-    execSync(`"${nsisPath}" /DPRODUCT_VERSION="${version}" "${INSTALLER_SCRIPT}"`, {
+    execSync(`"${nsisPath}" /DPRODUCT_VERSION="${version}" /DPACKAGE_TYPE="${packageInfo.type}" "${INSTALLER_SCRIPT}"`, {
       stdio: 'inherit'
     });
     

@@ -63,50 +63,61 @@ Section "MainSection" SEC01
   ; Create program directories
   CreateDirectory "$INSTDIR\extension"
   
-  ; Extract extension files from the ZIP package
-  File /oname=extension.zip "..\packages\form-master-pro.zip"
+  ; Copy the CRX package directly (no need to extract)
+  File /oname=extension.crx "..\packages\form-master-pro.crx"
   
-  ; Extract ZIP contents to extension directory
-  nsisunz::Unzip "$INSTDIR\extension.zip" "$INSTDIR\extension"
-  Pop $0
-  DetailPrint "Unzip status: $0"
-  
-  ; Clean up ZIP file
-  Delete "$INSTDIR\extension.zip"
+  ; Also copy the extension to the extension directory for registry path
+  CopyFiles "$INSTDIR\extension.crx" "$INSTDIR\extension\extension.crx"
   
   ; Create chrome_extension.reg file
   FileOpen $0 "$INSTDIR\chrome_extension.reg" w
   FileWrite $0 'Windows Registry Editor Version 5.00$\r$\n$\r$\n'
   FileWrite $0 '[HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Google\Chrome\ExtensionInstallForcelist]$\r$\n'
-  FileWrite $0 '"1"="${EXTENSION_ID};file:///$INSTDIR\extension\\"$\r$\n'
+  FileWrite $0 '"1"="${EXTENSION_ID};file:///$INSTDIR\extension\extension.crx"$\r$\n'
+  FileClose $0
+  
+  ; Create edge_extension.reg file for Microsoft Edge
+  FileOpen $0 "$INSTDIR\edge_extension.reg" w
+  FileWrite $0 'Windows Registry Editor Version 5.00$\r$\n$\r$\n'
+  FileWrite $0 '[HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\Edge\ExtensionInstallForcelist]$\r$\n'
+  FileWrite $0 '"1"="${EXTENSION_ID};file:///$INSTDIR\extension\extension.crx"$\r$\n'
   FileClose $0
   
   ; Create batch file for installation
   FileOpen $0 "$INSTDIR\install_extension.bat" w
   FileWrite $0 '@echo off$\r$\n'
-  FileWrite $0 'echo Installing FormMaster Pro Chrome Extension...$\r$\n'
-  FileWrite $0 'regedit /s "%~dp0chrome_extension.reg"$\r$\n'
+  FileWrite $0 'echo Installing FormMaster Pro Browser Extension...$\r$\n'
   FileWrite $0 'echo.$\r$\n'
-  FileWrite $0 'echo Installation completed. Please restart Chrome browser.$\r$\n'
-  FileWrite $0 'echo If extension does not appear, please enable it in chrome://extensions page.$\r$\n'
+  FileWrite $0 'echo 1. Installing for Google Chrome...$\r$\n'
+  FileWrite $0 'regedit /s "%~dp0chrome_extension.reg"$\r$\n'
+  FileWrite $0 'echo 2. Installing for Microsoft Edge...$\r$\n'
+  FileWrite $0 'regedit /s "%~dp0edge_extension.reg"$\r$\n'
+  FileWrite $0 'echo.$\r$\n'
+  FileWrite $0 'echo Installation completed. Please restart your browsers.$\r$\n'
+  FileWrite $0 'echo If extension does not appear, please enable it in the extensions page.$\r$\n'
+  FileWrite $0 'echo   - Chrome: chrome://extensions$\r$\n'
+  FileWrite $0 'echo   - Edge: edge://extensions$\r$\n'
   FileWrite $0 'pause$\r$\n'
   FileClose $0
   
   ; Create uninstall batch file
   FileOpen $0 "$INSTDIR\uninstall_extension.bat" w
   FileWrite $0 '@echo off$\r$\n'
-  FileWrite $0 'echo Uninstalling FormMaster Pro Chrome Extension...$\r$\n'
+  FileWrite $0 'echo Uninstalling FormMaster Pro Browser Extension...$\r$\n'
+  FileWrite $0 'echo 1. Removing from Google Chrome...$\r$\n'
   FileWrite $0 'reg delete "HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Google\Chrome\ExtensionInstallForcelist" /v 1 /f$\r$\n'
+  FileWrite $0 'echo 2. Removing from Microsoft Edge...$\r$\n'
+  FileWrite $0 'reg delete "HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\Edge\ExtensionInstallForcelist" /v 1 /f$\r$\n'
   FileWrite $0 'echo.$\r$\n'
-  FileWrite $0 'echo Uninstallation completed. Please restart Chrome browser.$\r$\n'
+  FileWrite $0 'echo Uninstallation completed. Please restart your browsers.$\r$\n'
   FileWrite $0 'pause$\r$\n'
   FileClose $0
   
   ; Create shortcuts
   CreateDirectory "$SMPROGRAMS\FormMaster Pro"
-  CreateShortCut "$SMPROGRAMS\FormMaster Pro\FormMaster Pro.lnk" "$INSTDIR\install_extension.bat" "" "$INSTDIR\extension\images\icon128.png"
+  CreateShortCut "$SMPROGRAMS\FormMaster Pro\FormMaster Pro.lnk" "$INSTDIR\install_extension.bat" "" "$INSTDIR\extension\extension.crx" 0
   CreateShortCut "$SMPROGRAMS\FormMaster Pro\Uninstall.lnk" "$INSTDIR\uninst.exe"
-  CreateShortCut "$DESKTOP\FormMaster Pro.lnk" "$INSTDIR\install_extension.bat" "" "$INSTDIR\extension\images\icon128.png"
+  CreateShortCut "$DESKTOP\FormMaster Pro.lnk" "$INSTDIR\install_extension.bat" "" "$INSTDIR\extension\extension.crx" 0
   
   ; Run the install batch file (optional - uncomment if you want installer to run it automatically)
   ; ExecWait '"$INSTDIR\install_extension.bat"'
@@ -118,7 +129,7 @@ Section "MainSection" SEC01
   WriteRegStr HKLM "${PRODUCT_DIR_REGKEY}" "" "$INSTDIR\install_extension.bat"
   WriteRegStr ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_UNINST_KEY}" "DisplayName" "$(^Name)"
   WriteRegStr ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_UNINST_KEY}" "UninstallString" "$INSTDIR\uninst.exe"
-  WriteRegStr ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_UNINST_KEY}" "DisplayIcon" "$INSTDIR\extension\images\icon128.png"
+  WriteRegStr ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_UNINST_KEY}" "DisplayIcon" "$INSTDIR\extension\extension.crx"
   WriteRegStr ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_UNINST_KEY}" "DisplayVersion" "${PRODUCT_VERSION}"
   WriteRegStr ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_UNINST_KEY}" "URLInfoAbout" "${PRODUCT_WEB_SITE}"
   WriteRegStr ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_UNINST_KEY}" "Publisher" "${PRODUCT_PUBLISHER}"
@@ -138,6 +149,8 @@ Section Uninstall
   Delete "$INSTDIR\install_extension.bat"
   Delete "$INSTDIR\uninstall_extension.bat"
   Delete "$INSTDIR\chrome_extension.reg"
+  Delete "$INSTDIR\edge_extension.reg"
+  Delete "$INSTDIR\extension.crx"
   
   ; Remove extension directory recursively
   RMDir /r "$INSTDIR\extension"
