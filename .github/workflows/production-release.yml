@@ -58,7 +58,7 @@ jobs:
           files: |
             ${{ steps.get-package.outputs.package }}
             FormMaster-Setup.exe
-          name: FormMaster Pro ${{ github.ref_name }}
+          name: FormMasterPro ${{ github.ref_name }}
           draft: false
           prerelease: false
           token: ${{ secrets.GITHUB_TOKEN }}

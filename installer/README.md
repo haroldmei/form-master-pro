@@ -1,6 +1,6 @@
-# FormMaster Pro Installer
+# FormMasterPro Installer
 
-This directory contains the NSIS script files used to build the Windows installer for FormMaster Pro.
+This directory contains the NSIS script files used to build the Windows installer for FormMasterPro.
 
 ## Prerequisites
 
@@ -27,7 +27,7 @@ This will create `FormMaster-Setup.exe` in the root directory.
 
 The installer performs the following actions:
 
-1. Extracts the extension files to `%ProgramFiles%\FormMaster Pro\extension`
+1. Extracts the extension files to `%ProgramFiles%\FormMasterPro\extension`
 2. Creates a registry entry that tells Chrome to load the extension from this location
 3. Creates batch files for installing/uninstalling the registry modifications
 4. Creates shortcuts in the Start Menu and Desktop
@@ -36,7 +36,7 @@ The installer performs the following actions:
 
 If the automatic installation doesn't work:
 
-1. Open the installation directory (default: `%ProgramFiles%\FormMaster Pro`)
+1. Open the installation directory (default: `%ProgramFiles%\FormMasterPro`)
 2. Run `install_extension.bat` as administrator
 3. Restart Chrome
 

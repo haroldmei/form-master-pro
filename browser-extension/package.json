@@ -1,7 +1,7 @@
 {
   "name": "formmaster-extension",
   "version": "0.1.0",
-  "description": "FormMaster Pro - Browser extension for form automation",
+  "description": "FormMasterPro - Browser extension for form automation",
   "private": true,
   "scripts": {
     "build": "webpack --mode=production",

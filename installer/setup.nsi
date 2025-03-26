@@ -1,4 +1,4 @@
-; FormMaster Pro Extension Installer
+; FormMasterPro Extension Installer
 ; NSIS Script for creating a Windows installer
 
 ; Include Modern UI
@@ -8,7 +8,7 @@
 !include "InstallOptions.nsh" ; Include InstallOptions
 
 ; General Configuration
-!define PRODUCT_NAME "FormMaster Pro"
+!define PRODUCT_NAME "FormMasterPro"
 ; Version is now expected to be defined via command line: /DPRODUCT_VERSION=x.x.x
 !ifndef PRODUCT_VERSION
   !define PRODUCT_VERSION "0.1.0"  ; Fallback version if not provided
@@ -51,7 +51,7 @@
 ; Installer Information
 Name "${PRODUCT_NAME} ${PRODUCT_VERSION}"
 OutFile "..\FormMaster-Setup.exe"
-InstallDir "$PROGRAMFILES\FormMaster Pro"
+InstallDir "$PROGRAMFILES\FormMasterPro"
 InstallDirRegKey HKLM "${PRODUCT_DIR_REGKEY}" ""
 ShowInstDetails show
 ShowUnInstDetails show
@@ -86,7 +86,7 @@ Section "MainSection" SEC01
   ; Create batch file for installation
   FileOpen $0 "$INSTDIR\install_extension.bat" w
   FileWrite $0 '@echo off$\r$\n'
-  FileWrite $0 'echo Installing FormMaster Pro Browser Extension...$\r$\n'
+  FileWrite $0 'echo Installing FormMasterPro Browser Extension...$\r$\n'
   FileWrite $0 'echo.$\r$\n'
   FileWrite $0 'echo 1. Installing for Google Chrome...$\r$\n'
   FileWrite $0 'regedit /s "%~dp0chrome_extension.reg"$\r$\n'
@@ -103,7 +103,7 @@ Section "MainSection" SEC01
   ; Create uninstall batch file
   FileOpen $0 "$INSTDIR\uninstall_extension.bat" w
   FileWrite $0 '@echo off$\r$\n'
-  FileWrite $0 'echo Uninstalling FormMaster Pro Browser Extension...$\r$\n'
+  FileWrite $0 'echo Uninstalling FormMasterPro Browser Extension...$\r$\n'
   FileWrite $0 'echo 1. Removing from Google Chrome...$\r$\n'
   FileWrite $0 'reg delete "HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Google\Chrome\ExtensionInstallForcelist" /v 1 /f$\r$\n'
   FileWrite $0 'echo 2. Removing from Microsoft Edge...$\r$\n'
@@ -114,10 +114,10 @@ Section "MainSection" SEC01
   FileClose $0
   
   ; Create shortcuts
-  CreateDirectory "$SMPROGRAMS\FormMaster Pro"
-  CreateShortCut "$SMPROGRAMS\FormMaster Pro\FormMaster Pro.lnk" "$INSTDIR\install_extension.bat" "" "$INSTDIR\extension\extension.crx" 0
-  CreateShortCut "$SMPROGRAMS\FormMaster Pro\Uninstall.lnk" "$INSTDIR\uninst.exe"
-  CreateShortCut "$DESKTOP\FormMaster Pro.lnk" "$INSTDIR\install_extension.bat" "" "$INSTDIR\extension\extension.crx" 0
+  CreateDirectory "$SMPROGRAMS\FormMasterPro"
+  CreateShortCut "$SMPROGRAMS\FormMasterPro\FormMasterPro.lnk" "$INSTDIR\install_extension.bat" "" "$INSTDIR\extension\extension.crx" 0
+  CreateShortCut "$SMPROGRAMS\FormMasterPro\Uninstall.lnk" "$INSTDIR\uninst.exe"
+  CreateShortCut "$DESKTOP\FormMasterPro.lnk" "$INSTDIR\install_extension.bat" "" "$INSTDIR\extension\extension.crx" 0
   
   ; Run the install batch file (optional - uncomment if you want installer to run it automatically)
   ; ExecWait '"$INSTDIR\install_extension.bat"'
@@ -156,10 +156,10 @@ Section Uninstall
   RMDir /r "$INSTDIR\extension"
   
   ; Remove shortcuts and directories
-  Delete "$SMPROGRAMS\FormMaster Pro\FormMaster Pro.lnk"
-  Delete "$SMPROGRAMS\FormMaster Pro\Uninstall.lnk"
-  RMDir "$SMPROGRAMS\FormMaster Pro"
-  Delete "$DESKTOP\FormMaster Pro.lnk"
+  Delete "$SMPROGRAMS\FormMasterPro\FormMasterPro.lnk"
+  Delete "$SMPROGRAMS\FormMasterPro\Uninstall.lnk"
+  RMDir "$SMPROGRAMS\FormMasterPro"
+  Delete "$DESKTOP\FormMasterPro.lnk"
   RMDir "$INSTDIR"
   
   ; Remove registry keys
@@ -172,15 +172,15 @@ Function .onInit
   UserInfo::GetAccountType
   Pop $0
   ${If} $0 != "admin"
-    MessageBox MB_ICONSTOP "Administrator rights required to install FormMaster Pro.$\r$\nPlease run the setup as administrator."
+    MessageBox MB_ICONSTOP "Administrator rights required to install FormMasterPro.$\r$\nPlease run the setup as administrator."
     Abort
   ${EndIf}
   
   ; Initialize default installation directory
   ${If} ${RunningX64} == 1
-    StrCpy $INSTDIR "$PROGRAMFILES64\FormMaster Pro"
+    StrCpy $INSTDIR "$PROGRAMFILES64\FormMasterPro"
   ${Else}
-    StrCpy $INSTDIR "$PROGRAMFILES\FormMaster Pro"
+    StrCpy $INSTDIR "$PROGRAMFILES\FormMasterPro"
   ${EndIf}
 FunctionEnd
 

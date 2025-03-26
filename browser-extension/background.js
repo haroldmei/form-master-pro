@@ -10,7 +10,7 @@ importScripts(
   'modules/utils.js'
 );
 
-console.log("FormMaster Pro extension initializing...");
+console.log("FormMasterPro extension initializing...");
 
 // Initialize auth on extension startup
 auth0Service.init()

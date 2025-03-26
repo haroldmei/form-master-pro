@@ -1,5 +1,5 @@
 /**
- * UI Injector for FormMaster Pro
+ * UI Injector for FormMasterPro
  * This script injects the floating UI elements into the current page
  */
 
@@ -196,7 +196,7 @@
     const toggleButton = document.createElement('div');
     toggleButton.className = 'formmaster-toggle';
     toggleButton.textContent = 'FM';
-    toggleButton.title = `FormMaster Pro v${VERSION}`; // Add version to title
+    toggleButton.title = `FormMasterPro v${VERSION}`; // Add version to title
     toggleButton.addEventListener('click', togglePanel);
     
     // Create panel for buttons

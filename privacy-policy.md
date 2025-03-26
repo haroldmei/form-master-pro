@@ -1,23 +1,23 @@
-# FormMaster Pro Privacy Policy
+# FormMasterPro Privacy Policy
 
 **Last Updated:** [Current Date]
 
 ## Introduction
 
-Welcome to FormMaster Pro ("we", "our", "us"). We respect your privacy and are committed to protecting your personal data. This privacy policy explains how we collect, use, and safeguard your information when you use our browser extension.
+Welcome to FormMasterPro ("we", "our", "us"). We respect your privacy and are committed to protecting your personal data. This privacy policy explains how we collect, use, and safeguard your information when you use our browser extension.
 
 ## Data We Collect
 
 ### Data You Provide Directly
 
-FormMaster Pro is designed to help you fill out web forms. To do this, we may collect:
+FormMasterPro is designed to help you fill out web forms. To do this, we may collect:
 
 - **Profile Information**: Personal information you choose to save in your user profile such as name, address, phone number, email address, and other information typically used to fill out forms.
 - **Authentication Data**: When you log in, we receive basic profile details from the authentication provider.
 
 ### Data Collected Automatically
 
-While using FormMaster Pro, we collect:
+While using FormMasterPro, we collect:
 
 - **Form Interaction Data**: Information about the forms you interact with, including field names, types, and values.
 - **Website URLs**: URLs of pages where you use the extension.
@@ -49,7 +49,7 @@ If you use features that require server-side processing:
 
 ## Third-Party Services
 
-FormMaster Pro may use:
+FormMasterPro may use:
 
 - **Authentication Services**: For user login functionality.
 - **Form Processing Services**: For enhanced form filling capabilities.
@@ -67,7 +67,7 @@ You have the right to:
 
 ## Children's Privacy
 
-FormMaster Pro is not intended for children under 13 years of age. We do not knowingly collect personal information from children.
+FormMasterPro is not intended for children under 13 years of age. We do not knowingly collect personal information from children.
 
 ## Changes to This Policy
 
@@ -81,4 +81,4 @@ Email: [Your Contact Email]
 
 ## Consent
 
-By using FormMaster Pro, you consent to our privacy policy.
+By using FormMasterPro, you consent to our privacy policy.

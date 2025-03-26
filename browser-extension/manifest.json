@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "FormMaster Pro",
+  "name": "FormMasterPro",
   "version": "0.1.0",
   "description": "Advanced form automation for web applications",
   "permissions": [
