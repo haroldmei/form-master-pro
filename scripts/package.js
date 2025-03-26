@@ -7,11 +7,14 @@ const path = require('path');
 const AdmZip = require('adm-zip');
 const chalk = require('chalk');
 const { execSync } = require('child_process');
+const ChromeExtension = require('crx');
+const crypto = require('crypto'); // Add crypto module
 
 // Configuration
 const DIST_DIR = path.resolve(__dirname, '../dist');
 const PACKAGES_DIR = path.resolve(__dirname, '../packages');
 const MANIFEST_PATH = path.join(DIST_DIR, 'manifest.json');
+const KEY_PATH = path.resolve(__dirname, '../private.pem');
 
 // Create output directory if it doesn't exist
 if (!fs.existsSync(PACKAGES_DIR)) {
@@ -106,6 +109,82 @@ function getAllFiles(dir, arrayOfFiles = []) {
   return arrayOfFiles;
 }
 
+// Function to get or create private key
+async function getPrivateKey() {
+  try {
+    // Check if key already exists
+    if (fs.existsSync(KEY_PATH)) {
+      console.log(chalk.blue('🔑 Using existing private key'));
+      return fs.readFileSync(KEY_PATH);
+    }
+
+    // Generate a new private key using Node.js crypto
+    console.log(chalk.blue('🔑 Generating new private key'));
+    
+    const { privateKey } = crypto.generateKeyPairSync('rsa', {
+      modulusLength: 2048,
+      publicKeyEncoding: {
+        type: 'spki',
+        format: 'pem'
+      },
+      privateKeyEncoding: {
+        type: 'pkcs8',
+        format: 'pem'
+      }
+    });
+    
+    // Save the key for future use
+    fs.writeFileSync(KEY_PATH, privateKey);
+    console.log(chalk.blue(`🔑 Private key saved to ${KEY_PATH}`));
+    return privateKey;
+  } catch (error) {
+    console.error(chalk.red('❌ Error managing private key:'), error);
+    throw error;
+  }
+}
+
+// Function to create CRX package
+async function createCrxPackage() {
+  try {
+    const version = getExtensionVersion();
+    const buildId = generateBuildId();
+    const crxFileName = `form-master-pro-v${version}-${buildId}.crx`;
+    const crxFilePath = path.join(PACKAGES_DIR, crxFileName);
+    
+    console.log(chalk.blue(`📦 Creating CRX package: ${crxFileName}`));
+    
+    // Get private key
+    const privateKey = await getPrivateKey();
+    
+    // Create a new ChromeExtension instance
+    const crx = new ChromeExtension({
+      privateKey: privateKey,
+      codebase: false // Don't add codebase URL for local installation
+    });
+    
+    console.log(chalk.blue(`🔨 Loading extension from: ${DIST_DIR}`));
+    await crx.load(DIST_DIR);
+    
+    console.log(chalk.blue('🔐 Signing extension...'));
+    const buffer = await crx.pack();
+    
+    // Write the crx file
+    fs.writeFileSync(crxFilePath, buffer);
+    
+    console.log(chalk.green(`✅ CRX package created successfully: ${crxFilePath}`));
+    
+    // Get file size
+    const stats = fs.statSync(crxFilePath);
+    const fileSizeInMB = (stats.size / (1024 * 1024)).toFixed(2);
+    console.log(chalk.blue(`   Package size: ${fileSizeInMB} MB`));
+    
+    return crxFilePath;
+  } catch (error) {
+    console.error(chalk.red('❌ Error creating CRX file:'), error);
+    throw error;
+  }
+}
+
 // Main execution
 async function main() {
   try {
@@ -118,10 +197,18 @@ async function main() {
     }
     
     // Create the ZIP package
-    const packagePath = createZipPackage();
+    const zipPackagePath = createZipPackage();
     
-    console.log(chalk.green(`\n✅ Extension packaged successfully and ready for submission!`));
-    console.log(chalk.green(`📦 Package location: ${packagePath}`));
+    // Create the CRX package
+    try {
+      const crxPackagePath = await createCrxPackage();
+      console.log(chalk.green(`\n✅ Extension packaged successfully in both ZIP and CRX formats!`));
+      console.log(chalk.green(`📦 ZIP package: ${zipPackagePath}`));
+      console.log(chalk.green(`📦 CRX package: ${crxPackagePath}`));
+    } catch (error) {
+      console.log(chalk.yellow(`⚠️ CRX packaging failed, but ZIP package was created successfully.`));
+      console.log(chalk.green(`📦 ZIP package location: ${zipPackagePath}`));
+    }
     
   } catch (error) {
     console.error(chalk.red('❌ Packaging failed:'), error);
