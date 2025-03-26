@@ -177,3 +177,5 @@ const utils = (() => {
     isPatternMatch
   };
 })();
+
+self.utils = utils;

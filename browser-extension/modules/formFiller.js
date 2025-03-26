@@ -410,3 +410,5 @@ function fillFormWithData(fieldValues) {
     fillFormWithData
   };
 })();
+
+self.formFiller = formFiller;

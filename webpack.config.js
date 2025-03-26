@@ -37,7 +37,7 @@ module.exports = (env, argv) => {
       'files/docx-extractor': './browser-extension/files/docx-extractor.js',
       // 'files/pdf-extractor': './browser-extension/files/pdf-extractor.js',
       'auth': './browser-extension/auth.js',
-      'libs/mammoth.browser.min': './browser-extension/libs/mammoth.browser.min.js',
+      'libs/jszip.min': './browser-extension/libs/jszip.min.js',
       'mappings': './browser-extension/mappings.js',
     },
     output: {

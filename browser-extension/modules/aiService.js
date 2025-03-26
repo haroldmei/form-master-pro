@@ -76,3 +76,5 @@ const aiService = (() => {
     getAiSuggestions
   };
 })();
+
+self.aiService = aiService;

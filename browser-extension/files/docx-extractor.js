@@ -14,7 +14,7 @@ function loadScript(src) {
 }
 
 /**
- * Extract content from a DOCX file in a browser environment
+ * Extract content from a DOCX file in a browser environment using JSZip
  * @param {Blob} docxFile - The DOCX file as a Blob
  * @param {string} filename - The name of the file
  * @returns {Promise<Object>} Raw content from the document
@@ -23,20 +23,20 @@ async function extractDocxContent(docxFile, filename) {
   try {
     console.log('DOCX file loaded:', docxFile);
 
-    // Check if mammoth is defined and try to load it if not
-    if (typeof mammoth === 'undefined') {
-      console.log('Mammoth.js not found. Attempting to load...');
+    // Check if JSZip is defined and try to load it if not
+    if (typeof JSZip === 'undefined') {
+      console.log('JSZip not found. Attempting to load...');
       try {
-        // Try to load from various local paths first
+        // Try to load from various local paths
         const possiblePaths = [
-          './libs/mammoth.browser.min.js'
+          './libs/jszip.min.js'
         ];
         
         let loaded = false;
         for (const path of possiblePaths) {
           try {
             await loadScript(path);
-            console.log(`Mammoth.js loaded successfully from ${path}`);
+            console.log(`JSZip loaded successfully from ${path}`);
             loaded = true;
             break;
           } catch (pathError) {
@@ -46,21 +46,10 @@ async function extractDocxContent(docxFile, filename) {
         
         if (!loaded) {
           console.error('All loading attempts failed.');
-          throw new Error('Could not load Mammoth.js from any location');
+          throw new Error('Could not load JSZip from any location');
         }
       } catch (loadErr) {
-        console.error('Failed to load Mammoth.js:', loadErr);
-        console.error('CSP may be blocking external scripts. Please ensure mammoth.js is available locally.');
-        return {
-          filename: filename,
-          rawText: "",
-          paragraphs: [],
-          tables: []
-        };
-      }
-      
-      if (typeof mammoth === 'undefined') {
-        console.error('Mammoth.js is still not available after loading attempts.');
+        console.error('Failed to load JSZip:', loadErr);
         return {
           filename: filename,
           rawText: "",
@@ -70,58 +59,107 @@ async function extractDocxContent(docxFile, filename) {
       }
     }
 
-    // Extract raw text content without any filtering
-    const textResult = await mammoth.extractRawText({ arrayBuffer: await docxFile.arrayBuffer() });
-    console.log('Raw text extraction completed');
+    // Load the docx file into JSZip
+    const zip = new JSZip();
+    const docxContent = await zip.loadAsync(await docxFile.arrayBuffer());
     
-    // Also extract HTML for structure preservation (tables, etc.)
-    const htmlResult = await mammoth.convertToHtml({ arrayBuffer: await docxFile.arrayBuffer() });
-    console.log('HTML conversion completed');
-
-    // Use DOMParser to work with the HTML
+    // Get the main document.xml file
+    const documentXml = await docxContent.file("word/document.xml").async("text");
+    
+    // Parse XML
     const parser = new DOMParser();
-    const doc = parser.parseFromString(htmlResult.value, 'text/html');
-
-    // Simple content object with raw text and basic structure
+    const xmlDoc = parser.parseFromString(documentXml, "text/xml");
+    
+    // Function to extract all elements of a specific name regardless of namespace
+    function getElementsByTagName(doc, name) {
+      const elements = [];
+      const allElements = doc.getElementsByTagName('*');
+      
+      for (let i = 0; i < allElements.length; i++) {
+        const element = allElements[i];
+        const localName = element.localName || element.baseName || element.nodeName.split(':').pop();
+        
+        if (localName === name) {
+          elements.push(element);
+        }
+      }
+      
+      return elements;
+    }
+    
+    // Initialize the content structure
     const content = {
       filename: filename,
-      rawText: textResult.value, // Complete raw text of the document
-      paragraphs: [], // All paragraphs without filtering
-      tables: [] // All tables without filtering
+      rawText: "",
+      paragraphs: [],
+      tables: []
     };
-
-    // Extract all paragraphs without filtering
-    doc.querySelectorAll('p, h1, h2, h3, h4, h5, h6').forEach(para => {
-      const text = para.textContent.trim();
-      if (text) {
-        content.paragraphs.push({
-          text: text
-        });
+    
+    // Extract paragraphs
+    const paragraphs = getElementsByTagName(xmlDoc, 'p');
+    for (const paragraph of paragraphs) {
+      // Extract text from all text elements (t) within this paragraph
+      const textElements = getElementsByTagName(paragraph, 't');
+      let paragraphText = "";
+      
+      for (const textEl of textElements) {
+        paragraphText += textEl.textContent;
       }
-    });
-
-    // Extract all tables without filtering
-    doc.querySelectorAll('table').forEach((table) => {
+      
+      if (paragraphText.trim()) {
+        content.paragraphs.push({
+          text: paragraphText.trim()
+        });
+        content.rawText += paragraphText.trim() + "\n";
+      }
+    }
+    
+    // Extract tables
+    const tables = getElementsByTagName(xmlDoc, 'tbl');
+    for (const table of tables) {
       const tableData = [];
       
-      table.querySelectorAll('tr').forEach(row => {
+      // Get all rows
+      const rows = getElementsByTagName(table, 'tr');
+      for (const row of rows) {
         const rowData = [];
         
-        row.querySelectorAll('td, th').forEach(cell => {
-          rowData.push(cell.textContent.trim());
-        });
-
+        // Get all cells
+        const cells = getElementsByTagName(row, 'tc');
+        for (const cell of cells) {
+          // Get all paragraphs in the cell
+          const cellParagraphs = getElementsByTagName(cell, 'p');
+          let cellText = "";
+          
+          for (let i = 0; i < cellParagraphs.length; i++) {
+            const para = cellParagraphs[i];
+            // Extract text from all text elements in this paragraph
+            const textElements = getElementsByTagName(para, 't');
+            
+            for (const textEl of textElements) {
+              cellText += textEl.textContent;
+            }
+            
+            // Add space between paragraphs in the same cell
+            if (i < cellParagraphs.length - 1) {
+              cellText += " ";
+            }
+          }
+          
+          rowData.push(cellText.trim());
+        }
+        
         if (rowData.length > 0) {
           tableData.push(rowData);
         }
-      });
-
+      }
+      
       if (tableData.length > 0) {
         content.tables.push({
           data: tableData
         });
       }
-    });
+    }
 
     return content;
   } catch (err) {

@@ -264,3 +264,5 @@ const formProcessor = (() => {
     processForm
   };
 })();
+
+self.formProcessor = formProcessor;
