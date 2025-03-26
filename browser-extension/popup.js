@@ -516,4 +516,19 @@ document.addEventListener('DOMContentLoaded', function() {
   }
   
   initializePopup();
+
+  // Helper function to show error messages
+  function showError(message) {
+    const errorContainer = document.createElement('div');
+    errorContainer.className = 'error-message';
+    errorContainer.textContent = message;
+  
+    // Append the error message to the body or a specific container
+    document.body.appendChild(errorContainer);
+  
+    // Automatically remove the error message after 3 seconds
+    setTimeout(() => {
+      errorContainer.remove();
+    }, 3000);
+  }
 });
