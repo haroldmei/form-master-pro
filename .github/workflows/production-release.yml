@@ -25,14 +25,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
       
-      - name: Build extension
-        run: npm run build
-      
-      - name: Obfuscate code
-        run: npm run obfuscate
-      
+      # Use the combined package script from package.json instead of separate steps
       - name: Package extension
-        run: node scripts/package.js
+        run: npm run package
       
       - name: Get package name
         id: get-package
@@ -41,11 +36,25 @@ jobs:
           echo "package=$packageName" >> $env:GITHUB_OUTPUT
           echo "filename=$(Split-Path -Leaf $packageName)" >> $env:GITHUB_OUTPUT
         shell: pwsh
-        
-      - name: Build CRX package
+      
+      # Create crx file using available tools in devDependencies
+      - name: Create CRX file
         id: crx-package
         run: |
-          npm run build:crx
+          # Create directory for key if it doesn't exist
+          if (-not (Test-Path -Path "key")) {
+            New-Item -ItemType Directory -Path "key"
+          }
+          
+          # Generate private key if not exists
+          if (-not (Test-Path -Path "key/private.pem")) {
+            openssl genrsa -out key/private.pem 2048
+          }
+          
+          # Use the crx package to create the crx file
+          npx crx pack ./dist -o ./packages/form-master-pro-v${{ github.ref_name }}.crx -p key/private.pem
+          
+          # Set outputs
           $crxFile = Get-ChildItem -Path packages -Filter "form-master-pro-v*.crx" | Sort-Object -Property LastWriteTime -Descending | Select-Object -First 1 -ExpandProperty FullName
           echo "crx=$crxFile" >> $env:GITHUB_OUTPUT
           echo "crxname=$(Split-Path -Leaf $crxFile)" >> $env:GITHUB_OUTPUT
