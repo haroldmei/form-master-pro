@@ -4,7 +4,7 @@
 class Auth0Service {
     constructor() {
       this.auth0Domain = 'dev-otc3dyzfpgcr275c.au.auth0.com';
-      this.clientId = '0dviQoHfyEGnkY3VeQmDq62NeYJHFJSG';
+      this.clientId = 'gQbfiwyJzVJMO43WeEwEuzJ8mdinYH4g';
       this.audience = 'http://localhost:3000/api'; // Optional
       this.scope = 'openid profile email offline_access';
       this.isExtension = typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.id;
