@@ -12,12 +12,12 @@ jobs:
     
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3.5.3
+        uses: actions/checkout@v2
         with:
           fetch-depth: 0  # Fetch all history for git tags and commits
       
       - name: Set up Node.js
-        uses: actions/setup-node@v3.7.0
+        uses: actions/setup-node@v2
         with:
           node-version: '16'
           cache: 'npm'
@@ -51,38 +51,36 @@ jobs:
           echo "crxname=$(Split-Path -Leaf $crxFile)" >> $env:GITHUB_OUTPUT
         shell: pwsh
       
-      # Create release in separate repository using a specific version of the action
+      # Use GitHub CLI to create a release in the target repository
       - name: Create GitHub Release
         if: startsWith(github.ref, 'refs/tags/')
-        uses: ncipollo/release-action@v1.12.0
-        with:
-          artifacts: |
-            ${{ steps.get-package.outputs.package }}
-            ${{ steps.crx-package.outputs.crx }}
-          name: FormMasterPro ${{ github.ref_name }}
-          draft: false
-          prerelease: false
-          token: ${{ secrets.REPO_ACCESS_TOKEN }}
-          repo: formmasterpro
-          owner: haroldmei
+        env:
+          GH_TOKEN: ${{ secrets.REPO_ACCESS_TOKEN }}
+          PACKAGE_PATH: ${{ steps.get-package.outputs.package }}
+          CRX_PATH: ${{ steps.crx-package.outputs.crx }}
+          PACKAGE_NAME: ${{ steps.get-package.outputs.filename }}
+          CRX_NAME: ${{ steps.crx-package.outputs.crxname }}
+          TAG_NAME: ${{ github.ref_name }}
+        run: |
+          # Install GitHub CLI
+          choco install gh -y
           
-      # Upload artifacts using a specific version
-      - name: Upload extension artifact
-        uses: actions/upload-artifact@v3.1.2
-        with:
-          name: ${{ steps.get-package.outputs.filename }}
-          path: ${{ steps.get-package.outputs.package }}
-          if-no-files-found: error
-      
-      - name: Upload CRX artifact
-        uses: actions/upload-artifact@v3.1.2
-        with:
-          name: ${{ steps.crx-package.outputs.crxname }}
-          path: ${{ steps.crx-package.outputs.crx }}
-          if-no-files-found: error
+          # Create release in target repository
+          gh release create $env:TAG_NAME `
+            --repo "haroldmei/formmasterpro" `
+            --title "FormMasterPro $env:TAG_NAME" `
+            --notes "Release of FormMasterPro $env:TAG_NAME" `
+            $env:PACKAGE_PATH `
+            $env:CRX_PATH
+          
+          echo "Release created in: https://github.com/haroldmei/formmasterpro"
+          echo "Package uploaded: $env:PACKAGE_NAME"
+          echo "CRX uploaded: $env:CRX_NAME"
+        shell: pwsh
       
       - name: Package summary
         run: |
           echo "Package created: ${{ steps.get-package.outputs.filename }}"
           echo "CRX package created: ${{ steps.crx-package.outputs.crxname }}"
           echo "Release created in: https://github.com/haroldmei/formmasterpro"
+          echo "View releases at: https://github.com/haroldmei/formmasterpro/releases"
