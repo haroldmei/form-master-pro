@@ -8,7 +8,7 @@ on:
 
 jobs:
   build-and-package:
-    runs-on: windows-latest  # Changed to Windows for NSIS
+    runs-on: windows-latest
     
     steps:
       - name: Checkout code
@@ -41,27 +41,31 @@ jobs:
           echo "package=$packageName" >> $env:GITHUB_OUTPUT
           echo "filename=$(Split-Path -Leaf $packageName)" >> $env:GITHUB_OUTPUT
         shell: pwsh
-      
-      - name: Install NSIS
+        
+      - name: Build CRX package
+        id: crx-package
         run: |
-          choco install nsis -y --version=3.08
-          refreshenv
+          npm run build:crx
+          $crxFile = Get-ChildItem -Path packages -Filter "form-master-pro-v*.crx" | Sort-Object -Property LastWriteTime -Descending | Select-Object -First 1 -ExpandProperty FullName
+          echo "crx=$crxFile" >> $env:GITHUB_OUTPUT
+          echo "crxname=$(Split-Path -Leaf $crxFile)" >> $env:GITHUB_OUTPUT
+        shell: pwsh
       
-      - name: Build Windows installer
-        run: npm run build:installer
+      # We're skipping the NSIS installer build since we don't need it for the release
       
-      - name: Create GitHub Release
+      - name: Create GitHub Release in different repo
         id: create_release
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v1
         with:
           files: |
             ${{ steps.get-package.outputs.package }}
-            FormMaster-Setup.exe
+            ${{ steps.crx-package.outputs.crx }}
           name: FormMasterPro ${{ github.ref_name }}
           draft: false
           prerelease: false
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.REPO_ACCESS_TOKEN }}
+          repository: haroldmei/formmasterpro
       
       - name: Upload extension artifact
         uses: actions/upload-artifact@v3
@@ -70,18 +74,15 @@ jobs:
           path: ${{ steps.get-package.outputs.package }}
           if-no-files-found: error
       
-      - name: Upload installer artifact
+      - name: Upload CRX artifact
         uses: actions/upload-artifact@v3
         with:
-          name: FormMaster-Setup.exe
-          path: FormMaster-Setup.exe
+          name: ${{ steps.crx-package.outputs.crxname }}
+          path: ${{ steps.crx-package.outputs.crx }}
           if-no-files-found: error
       
       - name: Package summary
         run: |
           echo "Package created: ${{ steps.get-package.outputs.filename }}"
-          echo "Installer created: FormMaster-Setup.exe"
-          echo "To publish to Chrome Web Store:"
-          echo "1. Download the extension artifact from this workflow run"
-          echo "2. Visit https://chrome.google.com/webstore/devconsole/"
-          echo "3. Upload the ZIP file to update your extension"
+          echo "CRX package created: ${{ steps.crx-package.outputs.crxname }}"
+          echo "Release created in: https://github.com/haroldmei/formmasterpro"
