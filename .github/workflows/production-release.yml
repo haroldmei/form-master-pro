@@ -12,12 +12,12 @@ jobs:
     
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v3.5.3
         with:
           fetch-depth: 0  # Fetch all history for git tags and commits
       
       - name: Set up Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v3.7.0
         with:
           node-version: '16'
           cache: 'npm'
@@ -51,31 +51,31 @@ jobs:
           echo "crxname=$(Split-Path -Leaf $crxFile)" >> $env:GITHUB_OUTPUT
         shell: pwsh
       
-      # We're skipping the NSIS installer build since we don't need it for the release
-      
-      - name: Create GitHub Release in different repo
-        id: create_release
+      # Create release in separate repository using a specific version of the action
+      - name: Create GitHub Release
         if: startsWith(github.ref, 'refs/tags/')
-        uses: softprops/action-gh-release@v1
+        uses: ncipollo/release-action@v1.12.0
         with:
-          files: |
+          artifacts: |
             ${{ steps.get-package.outputs.package }}
             ${{ steps.crx-package.outputs.crx }}
           name: FormMasterPro ${{ github.ref_name }}
           draft: false
           prerelease: false
           token: ${{ secrets.REPO_ACCESS_TOKEN }}
-          repository: haroldmei/formmasterpro
-      
+          repo: formmasterpro
+          owner: haroldmei
+          
+      # Upload artifacts using a specific version
       - name: Upload extension artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v3.1.2
         with:
           name: ${{ steps.get-package.outputs.filename }}
           path: ${{ steps.get-package.outputs.package }}
           if-no-files-found: error
       
       - name: Upload CRX artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v3.1.2
         with:
           name: ${{ steps.crx-package.outputs.crxname }}
           path: ${{ steps.crx-package.outputs.crx }}
