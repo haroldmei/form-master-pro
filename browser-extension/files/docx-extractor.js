@@ -51,10 +51,8 @@ async function extractDocxContent(docxFile, filename) {
       } catch (loadErr) {
         console.error('Failed to load JSZip:', loadErr);
         return {
-          filename: filename,
-          rawText: "",
-          paragraphs: [],
-          tables: []
+          strings: [],
+          filename: filename
         };
       }
     }
@@ -87,15 +85,10 @@ async function extractDocxContent(docxFile, filename) {
       return elements;
     }
     
-    // Initialize the content structure
-    const content = {
-      filename: filename,
-      rawText: "",
-      paragraphs: [],
-      tables: []
-    };
+    // Initialize the content structure - simplified to just a list of strings
+    const extractedStrings = [];
     
-    // Extract paragraphs
+    // Extract paragraphs with filtering for important content
     const paragraphs = getElementsByTagName(xmlDoc, 'p');
     for (const paragraph of paragraphs) {
       // Extract text from all text elements (t) within this paragraph
@@ -106,24 +99,22 @@ async function extractDocxContent(docxFile, filename) {
         paragraphText += textEl.textContent;
       }
       
-      if (paragraphText.trim()) {
-        content.paragraphs.push({
-          text: paragraphText.trim()
-        });
-        content.rawText += paragraphText.trim() + "\n";
+      // Only include paragraph if it contains significant content
+      if (paragraphText.trim() && isImportantContent(paragraphText)) {
+        // Remove spaces and line breaks
+        const cleanText = removeAllWhitespace(paragraphText.trim());
+        if (cleanText) {
+          extractedStrings.push(cleanText);
+        }
       }
     }
     
-    // Extract tables
+    // Extract tables with filtering for important content (still as strings)
     const tables = getElementsByTagName(xmlDoc, 'tbl');
     for (const table of tables) {
-      const tableData = [];
-      
       // Get all rows
       const rows = getElementsByTagName(table, 'tr');
       for (const row of rows) {
-        const rowData = [];
-        
         // Get all cells
         const cells = getElementsByTagName(row, 'tc');
         for (const cell of cells) {
@@ -131,46 +122,93 @@ async function extractDocxContent(docxFile, filename) {
           const cellParagraphs = getElementsByTagName(cell, 'p');
           let cellText = "";
           
-          for (let i = 0; i < cellParagraphs.length; i++) {
-            const para = cellParagraphs[i];
+          for (const para of cellParagraphs) {
             // Extract text from all text elements in this paragraph
             const textElements = getElementsByTagName(para, 't');
             
             for (const textEl of textElements) {
               cellText += textEl.textContent;
             }
-            
-            // Add space between paragraphs in the same cell
-            if (i < cellParagraphs.length - 1) {
-              cellText += " ";
-            }
           }
           
-          rowData.push(cellText.trim());
+          if (cellText.trim() && isImportantContent(cellText)) {
+            // Remove spaces and line breaks
+            const cleanText = removeAllWhitespace(cellText.trim());
+            if (cleanText) {
+              extractedStrings.push(cleanText);
+            }
+          }
         }
-        
-        if (rowData.length > 0) {
-          tableData.push(rowData);
-        }
-      }
-      
-      if (tableData.length > 0) {
-        content.tables.push({
-          data: tableData
-        });
       }
     }
-
-    return content;
+    
+    // Return in a format compatible with profile.js expectations
+    return {
+      filename: filename,
+      rawText: extractedStrings.join(''),
+      paragraphs: extractedStrings.map(text => ({ text })),
+      tables: [],
+      // Also include the new format for future use
+      strings: extractedStrings
+    };
   } catch (err) {
     console.error(`Error extracting content: ${err.message}`, err);
     return {
       filename: filename,
       rawText: "",
       paragraphs: [],
-      tables: []
+      tables: [],
+      strings: []
     };
   }
+}
+
+/**
+ * Determine if content is important enough to include
+ * @param {string} text - The text to check
+ * @returns {boolean} - Whether the content is important
+ */
+function isImportantContent(text) {
+  if (!text || text.length === 0) return false;
+  
+  // Skip very short text that isn't likely to be important
+  if (text.length <= 1) return false;
+  
+  // Patterns that indicate unimportant content
+  const unimportantPatterns = [
+    /^page\s+\d+(\s+of\s+\d+)?$/i,             // Page numbers
+    /^confidential$/i,                          // Confidentiality markers
+    /^draft$/i,                                 // Draft markers
+    /^internal use only$/i,                     // Internal use markers
+    /^(created|modified|updated) (by|on|at)/i,  // Document metadata
+    /^document ID:/i,                           // Document IDs
+    /^version:/i,                               // Version information
+    /^copyright/i,                              // Copyright text
+    /^all rights reserved$/i,                   // Rights reserved text
+    /^last (updated|modified):/i,               // Last updated info
+    /^do not (copy|distribute|share)$/i,        // Distribution restrictions
+  ];
+  
+  // Check if text matches any unimportant pattern
+  for (const pattern of unimportantPatterns) {
+    if (pattern.test(text.trim())) {
+      return false;
+    }
+  }
+  
+  return true;
+}
+
+/**
+ * Remove all whitespace including spaces and line breaks from text
+ * @param {string} text - The text to process
+ * @returns {string} - Text with all whitespace removed
+ */
+function removeAllWhitespace(text) {
+  if (!text) return "";
+  
+  // Remove all spaces, tabs, line breaks, and other whitespace characters
+  return text.replace(/\s/g, '');
 }
 
 export { // ES module export

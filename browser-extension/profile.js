@@ -146,15 +146,21 @@ document.addEventListener('DOMContentLoaded', function() {
         const docxContent = await extractDocxContent(file, file.name);
         console.log('Extracted DOCX content:', JSON.stringify(docxContent));
         
+        // Check if docxContent has the expected structure
+        if (!docxContent) {
+          throw new Error('DOCX extraction returned empty result');
+        }
+        
         // Create a user profile structure from the DOCX content
         const userProfile = {
           source: 'docx',
           filename: file.name,
           extractedContent: docxContent,
-          // Create a simple representation for display
+          // Create a simple representation for display - safely handle both old and new formats
           docxData: {
-            paragraphs: docxContent.paragraphs.map(p => p.text),
-            tables: docxContent.tables
+            paragraphs: Array.isArray(docxContent.paragraphs) ? docxContent.paragraphs.map(p => p.text || p) : 
+                       Array.isArray(docxContent.strings) ? docxContent.strings : [],
+            tables: Array.isArray(docxContent.tables) ? docxContent.tables : []
           }
         };
         
@@ -168,8 +174,11 @@ document.addEventListener('DOMContentLoaded', function() {
             source: 'docx',
             filename: file.name,
             docxData: {
-              paragraphs: docxContent.paragraphs.map(p => p.text).slice(0, 50), // Keep more paragraphs than before
-              tables: docxContent.tables.slice(0, 5) // Keep more tables than before
+              // Safely handle both old and new formats
+              paragraphs: Array.isArray(userProfile.docxData.paragraphs) ? 
+                         userProfile.docxData.paragraphs.slice(0, 50) : [],
+              tables: Array.isArray(userProfile.docxData.tables) ? 
+                     userProfile.docxData.tables.slice(0, 5) : []
             }
           };
           
