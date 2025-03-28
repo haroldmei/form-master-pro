@@ -38,17 +38,14 @@
       "js": [
         "content.js",
         "libs/jszip.min.js",
-        "scripts/ui-injector.js"
+        "ui-injector.js"
       ],
       "run_at": "document_start"
     }
   ],
   "web_accessible_resources": [
     {
-      "resources": [
-        "files/*.js",
-        "libs/*.js"
-      ],
+      "resources": ["libs/jszip.min.js"],
       "matches": [
         "<all_urls>"
       ]

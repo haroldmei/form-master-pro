@@ -20,7 +20,6 @@ module.exports = (env, argv) => {
       options: './browser-extension/options.js',
       formAnalysis: './browser-extension/formAnalysis.js',
       callback: './browser-extension/callback.js',
-      'file-selector': './browser-extension/file-selector.js',
       // Include all other JS files in the modules folder
       'modules/userProfile': './browser-extension/modules/userProfile.js',
       'modules/aiService': './browser-extension/modules/aiService.js',
@@ -28,12 +27,12 @@ module.exports = (env, argv) => {
       'modules/formProcessor': './browser-extension/modules/formProcessor.js',
       'modules/utils': './browser-extension/modules/utils.js',
       // UI injection script
-      'scripts/ui-injector': './browser-extension/scripts/ui-injector.js',
+      'ui-injector': './browser-extension/ui-injector.js',
       // Form extraction script
       'forms/form_extract': './browser-extension/forms/form_extract.js',
       'forms/form_radios': './browser-extension/forms/form_radios.js',
       // files script
-      'files/docx-extractor': './browser-extension/files/docx-extractor.js',
+      // 'files/docx-extractor': './browser-extension/files/docx-extractor.js',
       // 'files/pdf-extractor': './browser-extension/files/pdf-extractor.js',
       'auth': './browser-extension/auth.js',
       'libs/jszip.min': './browser-extension/libs/jszip.min.js',
@@ -42,6 +41,7 @@ module.exports = (env, argv) => {
     output: {
       path: path.resolve(__dirname, 'dist'),
       filename: '[name].js',
+      publicPath: '',
     },
     optimization: {
       minimize: isProduction,

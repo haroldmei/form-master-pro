@@ -16,7 +16,7 @@ const chalk = require('chalk');
 // File paths
 const MAIN_PACKAGE_JSON = path.resolve(__dirname, '../package.json');
 const EXTENSION_PACKAGE_JSON = path.resolve(__dirname, '../browser-extension/package.json');
-const UI_INJECTOR_JS = path.resolve(__dirname, '../browser-extension/scripts/ui-injector.js');
+const UI_INJECTOR_JS = path.resolve(__dirname, '../browser-extension/ui-injector.js');
 const MANIFEST_JSON = path.resolve(__dirname, '../browser-extension/manifest.json');
 
 // Read command-line arguments
@@ -159,7 +159,7 @@ async function main() {
         
         // Stage the changed files
         console.log(chalk.blue('📝 Staging version changes in git...'));
-        execSync('git add package.json browser-extension/package.json browser-extension/scripts/ui-injector.js browser-extension/manifest.json', { stdio: 'ignore' });
+        execSync('git add package.json browser-extension/package.json browser-extension/ui-injector.js browser-extension/manifest.json', { stdio: 'ignore' });
         
         // Commit the changes
         console.log(chalk.blue(`📝 Committing version bump to ${newVersion}...`));
