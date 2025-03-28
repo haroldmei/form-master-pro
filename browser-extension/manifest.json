@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "FormMasterPro",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "description": "Advanced form automation for web applications",
   "permissions": [
     "storage",
@@ -47,6 +47,14 @@
     {
       "resources": [
         "libs/jszip.min.js"
+      ],
+      "matches": [
+        "<all_urls>"
+      ]
+    },
+    {
+      "resources": [
+        "package.json"
       ],
       "matches": [
         "<all_urls>"
