@@ -91,9 +91,20 @@ const aiService = (() => {
           url: url
         })
       });
-      
+
       if (!response.ok) {
-        throw new Error(`FromMasterPro API error: ${response.status} ${response.statusText}`);
+        const errorData = await response.json();
+        if (response.status === 403 && errorData.error === 'email_not_verified') {
+          throw {
+            status: response.status,
+            message: errorData.message || 'Email verification required',
+            error: errorData.error,
+            isVerificationError: true
+          };
+        }
+        else{
+          throw new Error(`FromMasterPro API error: ${response.status} ${response.statusText}`);
+        }
       }
       
       const responseData = await response.json();
