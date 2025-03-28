@@ -5,7 +5,7 @@
 
 (function() {
   // Version information - should match manifest.json
-  const VERSION = "0.1.2";
+  const VERSION = "0.1.3";
   
   // Check if we're in a frame - only inject in the main frame
   if (self !== self.top) return;
