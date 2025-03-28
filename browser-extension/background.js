@@ -264,7 +264,12 @@ async function fillFormInTab(tabId, url) {
     // Step 4: Process the form fields to get values using global user profile
     const processedForm = await formProcessor.processForm(allFields, url, self.globalUserProfile);
     
-    if (!processedForm.success || !processedForm.fields || Object.keys(processedForm.fields).length === 0) {
+    // Check for auth errors
+    if (!processedForm.success) {
+      return { message: processedForm.error || 'Error processing form' };
+    }
+    
+    if (!processedForm.fields || Object.keys(processedForm.fields).length === 0) {
       return { message: 'No fields could be mapped for filling' };
     }
     

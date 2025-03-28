@@ -326,7 +326,7 @@ class Auth0Service {
       const authState = await this.getAuthState();
       
       if (!authState || !authState.accessToken) {
-        throw new Error('No access token available');
+        throw new Error('No access token available, please login first');
       }
       
       const userInfoUrl = `https://${this.auth0Domain}/userinfo`;
@@ -358,7 +358,7 @@ class Auth0Service {
       const authState = await this.getAuthState();
       
       if (!authState || !authState.accessToken) {
-        throw new Error('No access token available');
+        throw new Error('No access token available, please login first');
       }
       
       if (this.isTokenExpired(authState.expiresAt)) {

@@ -60,6 +60,7 @@ const formProcessor = (() => {
           }
         } catch (apiError) {
           console.error("Error getting AI suggestions:", apiError);
+          return { success: false, error: apiError.message };
         }
       }
       

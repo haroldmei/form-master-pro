@@ -93,17 +93,17 @@ const aiService = (() => {
       });
       
       if (!response.ok) {
-        throw new Error(`Bargain4me API error: ${response.status} ${response.statusText}`);
+        throw new Error(`FromMasterPro API error: ${response.status} ${response.statusText}`);
       }
       
       const responseData = await response.json();
-      console.log("Bargain4me API response:", responseData);
+      console.log("FromMasterPro API response:", responseData);
       
       // Extract the content from the response
       // Adjust based on the actual response structure from bargain4me.com API
       const content = responseData.reply;
       if (!content) {
-        throw new Error("Invalid response format from Bargain4me API");
+        throw new Error("Invalid response format from FromMasterPro API");
       }
       
       // Parse the JSON content
@@ -117,12 +117,12 @@ const aiService = (() => {
       try {
         return JSON.parse(jsonContent);
       } catch (parseError) {
-        console.error("Error parsing Bargain4me response as JSON:", parseError);
+        console.error("Error parsing FromMasterPro response as JSON:", parseError);
         console.log("Response content:", content);
         return {};
       }
     } catch (error) {
-      console.error("Error calling Bargain4me API:", error);
+      console.error("Error calling FromMasterPro API:", error);
       throw error;
     }
   }
