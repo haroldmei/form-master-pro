@@ -1,13 +1,12 @@
 {
   "manifest_version": 3,
   "name": "FormMasterPro",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "description": "Advanced form automation for web applications",
   "permissions": [
     "storage",
     "activeTab",
     "scripting",
-    "webNavigation",
     "identity"
   ],
   "host_permissions": [
