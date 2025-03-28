@@ -92,13 +92,14 @@ const aiService = (() => {
         })
       });
 
+      const responseData = await response.json();
+      console.log("FromMasterPro API response:", responseData);
       if (!response.ok) {
-        const errorData = await response.json();
-        if (response.status === 403 && errorData.error === 'email_not_verified') {
+        if (response.status === 403 && responseData.error === 'email_not_verified') {
           throw {
             status: response.status,
-            message: errorData.message || 'Email verification required',
-            error: errorData.error,
+            message: responseData.message || 'Email verification required',
+            error: responseData.error,
             isVerificationError: true
           };
         }
@@ -106,9 +107,6 @@ const aiService = (() => {
           throw new Error(`FromMasterPro API error: ${response.status} ${response.statusText}`);
         }
       }
-      
-      const responseData = await response.json();
-      console.log("FromMasterPro API response:", responseData);
       
       // Extract the content from the response
       // Adjust based on the actual response structure from bargain4me.com API
