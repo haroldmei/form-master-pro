@@ -47,7 +47,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
   // Set up event listeners
   addSafeEventListener('analyze-form', 'click', analyzeCurrentForm);
-  addSafeEventListener('load-data', 'click', loadProfileData);
   addSafeEventListener('data-mappings', 'click', openDataMappings);
   addSafeEventListener('auto-fill', 'click', autoFillForm);
   addSafeEventListener('open-options', 'click', openOptions);
@@ -420,13 +419,6 @@ document.addEventListener('DOMContentLoaded', function() {
     // No need to add inline styles here anymore since we've defined them in the HTML
     
     formAnalysisPanel.classList.remove('hidden');
-  }
-  
-  // Function to load user profile data
-  function loadProfileData() {
-    // In standalone mode, open the profile editor
-    chrome.tabs.create({url: 'profile.html'});
-    showToast('Opening profile editor');
   }
   
   // Function to open data mappings page

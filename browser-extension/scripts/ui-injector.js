@@ -260,6 +260,57 @@
     }
     
     function handleButtonClick(action, buttonElement) {
+      // Special handling for load-data action - directly open file dialog
+      if (action === 'load-data') {
+        // Create a file input element
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = '.json,.docx'; // Accept both JSON and DOCX files
+        
+        // Handle file selection
+        input.onchange = async e => {
+          const file = e.target.files[0];
+          if (!file) return;
+          
+          // Show loading state
+          buttonElement.classList.add('loading');
+          buttonElement.disabled = true;
+          buttonElement._originalHTML = buttonElement.innerHTML;
+          
+          try {
+            const fileExtension = file.name.split('.').pop().toLowerCase();
+            
+            if (fileExtension === 'json') {
+              // Process JSON file
+              await processJsonFile(file);
+            } else if (fileExtension === 'docx') {
+              // Process DOCX file
+              await processDocxFile(file);
+            } else {
+              showToast('Unsupported file type. Please use JSON or DOCX files.', 'error');
+            }
+            
+            // Refresh profile info
+            loadProfileInfo();
+          } catch (error) {
+            showToast(`Error processing file: ${error.message}`, 'error');
+            console.error('File processing error:', error);
+          } finally {
+            // Reset button state
+            buttonElement.classList.remove('loading');
+            buttonElement.disabled = false;
+            if (buttonElement._originalHTML) {
+              buttonElement.innerHTML = buttonElement._originalHTML;
+              delete buttonElement._originalHTML;
+            }
+          }
+        };
+        
+        // Trigger the file dialog
+        input.click();
+        return; // Exit the function early
+      }
+      
       // Add loading state for auto-fill since it's potentially slow
       if (action === 'auto-fill') {
         buttonElement.classList.add('loading');
@@ -286,11 +337,6 @@
               buttonElement.innerHTML = buttonElement._originalHTML;
               delete buttonElement._originalHTML;
             }
-            
-            // Force a repaint to ensure the button is fully restored
-            buttonElement.style.display = 'none';
-            buttonElement.offsetHeight; // This forces a reflow
-            buttonElement.style.display = '';
           }
           
           if (response && response.success) {
@@ -316,6 +362,147 @@
       }
     }
     
+    /**
+     * Process JSON file
+     */
+    function processJsonFile(file) {
+      const reader = new FileReader();
+      reader.onload = event => {
+        try {
+          const userProfile = JSON.parse(event.target.result);
+
+          // Update UI with profile data
+          const profileContainer = document.getElementById('profile-container');
+
+          // Clear existing content
+          profileContainer.innerHTML = '';
+
+          // Generate dynamic HTML for the profile
+          const profileHtml = generateProfileHtml(userProfile);
+          profileContainer.innerHTML = profileHtml;
+
+          // Check profile size (just informational now, no storage limits)
+          const jsonSize = new Blob([JSON.stringify(userProfile)]).size;
+          if (jsonSize > 5000000) {
+            console.warn(`Profile size ${jsonSize} bytes is large`);
+            //showStatusMessage('Large profile may impact performance', 'warning');
+          }
+
+          // Update global memory only (no storage)
+          chrome.runtime.sendMessage({ 
+            action: 'updateUserProfile', 
+            profile: userProfile 
+          }, function(response) {
+            if (chrome.runtime.lastError || !response || !response.success) {
+              console.error('Error saving profile:', chrome.runtime.lastError || 'Background update failed');
+              //showStatusMessage('Error saving profile. Please try again.', 'error');
+              return;
+            }
+
+            console.log('Profile saved successfully to global memory');
+            //showStatusMessage('Profile imported successfully!', 'success');
+          });
+        } catch (error) {
+          //showStatusMessage('Error importing profile: ' + error.message, 'error');
+          console.error('JSON parsing error:', error);
+        }
+      };
+
+      reader.onerror = () => {
+        //showStatusMessage('Error reading file', 'error');
+        console.error('FileReader error:', reader.error);
+      };
+
+      reader.readAsText(file);
+    }
+
+    /**
+     * Process DOCX file
+     */
+    async function processDocxFile(file) {
+      try {
+        // Load the docx-extractor.js module
+        try {
+          const extractorModule = await import('../files/docx-extractor.js');
+          const { extractDocxContent } = extractorModule;
+
+          // Extract content from DOCX
+          const docxContent = await extractDocxContent(file, file.name);
+          console.log('Extracted DOCX content:', JSON.stringify(docxContent));
+
+          // Check if docxContent has the expected structure
+          if (!docxContent) {
+            throw new Error('DOCX extraction returned empty result');
+          }
+
+          // Create a user profile structure from the DOCX content
+          const userProfile = {
+            source: 'docx',
+            filename: file.name,
+            extractedContent: docxContent,
+            // Create a simple representation for display - safely handle both old and new formats
+            docxData: {
+              paragraphs: Array.isArray(docxContent.paragraphs) ? docxContent.paragraphs.map(p => p.text || p) : 
+                         Array.isArray(docxContent.strings) ? docxContent.strings : [],
+              tables: Array.isArray(docxContent.tables) ? docxContent.tables : []
+            }
+          };
+
+          // Check if the profile data is too large for Chrome storage
+          const jsonSize = new Blob([JSON.stringify(userProfile)]).size;
+          if (jsonSize > 5000000) { // Local storage recommended limit is 5MB
+            console.warn(`Profile size ${jsonSize} bytes exceeds Chrome local storage recommended limits`);
+
+            // Create a simplified version of the profile for storage
+            const simplifiedProfile = {
+              source: 'docx',
+              filename: file.name,
+              docxData: {
+                // Safely handle both old and new formats
+                paragraphs: Array.isArray(userProfile.docxData.paragraphs) ? 
+                           userProfile.docxData.paragraphs.slice(0, 50) : [],
+                tables: Array.isArray(userProfile.docxData.tables) ? 
+                       userProfile.docxData.tables.slice(0, 5) : []
+              }
+            };
+
+            //showStatusMessage('Profile too large. Saving simplified version.', 'warning');
+
+            // Save the simplified profile
+            saveProfile(simplifiedProfile);
+          } else {
+            // Save the full profile
+            saveProfile(userProfile);
+          }
+        } catch (moduleError) {
+          console.error("Error loading DOCX extractor module:", moduleError);
+          throw new Error(`Could not load DOCX extractor: ${moduleError.message}`);
+        }
+      } catch (error) {
+        throw new Error(`Error processing DOCX: ${error.message}`);
+      }
+    }
+  
+    
+    /**
+     * Save profile to global memory
+     */
+    function saveProfile(userProfile) {
+      chrome.runtime.sendMessage({ 
+        action: 'updateUserProfile', 
+        profile: userProfile 
+      }, function(response) {
+        if (chrome.runtime.lastError || !response || !response.success) {
+          console.error('Error saving profile:', chrome.runtime.lastError || 'Background update failed');
+          //showStatusMessage('Error saving profile. Please try again.', 'error');
+          return;
+        }
+
+        console.log('Profile saved successfully to global memory');
+        //showStatusMessage('Profile imported successfully!', 'success');
+      });
+    }
+
     function showToast(message, type = 'info') {
       toast.textContent = message;
       toast.className = `formmaster-toast ${type}`;

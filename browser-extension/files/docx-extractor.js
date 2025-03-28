@@ -35,7 +35,7 @@ async function extractDocxContent(docxFile, filename) {
         let loaded = false;
         for (const path of possiblePaths) {
           try {
-            await loadScript(path);
+            await loadScript(chrome.runtime.getURL(path));
             console.log(`JSZip loaded successfully from ${path}`);
             loaded = true;
             break;

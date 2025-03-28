@@ -37,6 +37,7 @@
       ],
       "js": [
         "content.js",
+        "libs/jszip.min.js", 
         "scripts/ui-injector.js"
       ],
       "run_at": "document_start"

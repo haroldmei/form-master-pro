@@ -18,7 +18,6 @@ module.exports = (env, argv) => {
       // UI scripts
       popup: './browser-extension/popup.js',
       options: './browser-extension/options.js',
-      profile: './browser-extension/profile.js',
       formAnalysis: './browser-extension/formAnalysis.js',
       callback: './browser-extension/callback.js',
       'file-selector': './browser-extension/file-selector.js',

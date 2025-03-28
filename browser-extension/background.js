@@ -158,12 +158,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         .catch(err => sendResponse({ success: false, error: err.message }));
       return true; // Keep the message channel open for async response
       
-    case 'load-data':
-      // Open the profile page in a new tab
-      chrome.tabs.create({ url: 'profile.html' });
-      sendResponse({ success: true, message: 'Opening profile editor' });
-      break;
-      
     case 'data-mappings':
       // Open the mappings page in a new tab
       chrome.tabs.create({ url: 'mappings.html' });
