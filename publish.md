@@ -1,20 +1,21 @@
-### activeTab:
-My extension uses `chrome.scripting.executeScript` to inject scripts into the active tab (e.g., for form analysis and filling). This functionality requires the `activeTab` permission is also used to decide whether or not the extension can be activated to provide better user experience for my extension.
+activeTab
+FormMaster Pro uses chrome.scripting.executeScript to inject scripts into the active tab for analyzing and filling forms. The activeTab permission allows the extension to run only when needed, ensuring a seamless user experience without unnecessary background activity.
 
-### host_permissions:
-The main feature of my extension is to interact with web pages to carry out tasks like form analysis and form filling. host_permissions is required for this purpose other wise the extension would be useless.
+host_permissions
+This extension interacts with web pages to analyze and fill forms dynamically. The host_permissions permission is essential for enabling these core functionalities, as the extension needs access to form structures on different websites. Without this permission, the extension would not function as intended.
 
-### storage:
-My extension makes use of chrome.storage to save user's content that will be used in multiple pages in the form filling process, it also makes use of storages to collect the form structure to be used to map content. The 'storage' permission is required for my extension.
+storage
+FormMaster Pro utilizes chrome.storage to securely store user-auth status data needed for form filling across multiple pages. It also saves form structures for accurate data mapping. The storage permission is required to maintain user preferences and streamline the form-filling process.
 
-### scripting
-My extension uses `chrome.scripting.executeScript` for injecting scripts, which requires the `scripting` permission. Removing it would break features like form analysis and filling, which rely on dynamic script injection.
+scripting
+The extension injects scripts using chrome.scripting.executeScript to analyze forms and autofill fields in real time. The scripting permission is necessary to execute these functions dynamically and provide an automated experience. Removing it would break essential features.
 
-### remote code
-Remote code is used to integrate ai backend end, manage user subscription and plans, and provide users feature enhancements as the system matures. More importantly, the remote code is essential to provide customers improved user experience in that there will be no tedious configurations needed for customers on their end.
+remote code
+Remote code execution is required to integrate with the AI-powered backend, manage user subscriptions, and enable advanced features as the extension evolves. This eliminates the need for complex user configurations, ensuring a smooth and hassle-free experience.
 
-### webNavigation
-My extension is currently using chrome.webNavigation API to manage document content and form field mapping, which will be a new tab page listing all information for user's review. It's essential for an improved user experience, hence the webNavigation permission is needed.
+webNavigation
+FormMaster Pro uses the chrome.webNavigation API to track page loading events and manage form field mapping. This enables features like a summary page where users can review form data before submission, enhancing usability and accuracy.
 
-### identity
-My extension needs to authenticate users and manage user's subscription, which will use google account social authentication. The `identity` permission is hence needed to manage users and in the future provide ways add support for different subscription types.
+identity
+To authenticate users and manage subscriptions, FormMaster Pro supports Google account-based login. The identity permission allows secure user authentication and future support for multiple subscription tiers.
+

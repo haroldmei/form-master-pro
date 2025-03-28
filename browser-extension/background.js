@@ -377,24 +377,24 @@ async function fillFormInTab(tabId, url) {
 }
 
 // Add page load event listener
-chrome.webNavigation.onCompleted.addListener(function(details) {
-  // Only handle the main frame navigation (not iframes)
-  if (details.frameId !== 0) return;
-  
-  // Use global profile directly
-  if (self.globalUserProfile && self.globalUserProfile.personal && self.globalUserProfile.personal.firstName) {
-    const firstName = self.globalUserProfile.personal.firstName;
+//chrome.webNavigation.onCompleted.addListener(function(details) {
+//  // Only handle the main frame navigation (not iframes)
+//  if (details.frameId !== 0) return;
+//  
+//  // Use global profile directly
+//  if (self.globalUserProfile && self.globalUserProfile.personal && self.globalUserProfile.personal.firstName) {
+//    const firstName = self.globalUserProfile.personal.firstName;//
 
-    // Wait a short moment for the page to stabilize
-    setTimeout(() => {
-      // Show overlay with the loaded data or prepare for form filling
-      chrome.tabs.query({ active: true, currentWindow: true }, function(tabs) {
-        if (tabs[0]) {
-          formFiller.showPageNotification(tabs[0].id, firstName);
-        }
-      });
-    }, 1000);
-  }
-});
+//    // Wait a short moment for the page to stabilize
+//    setTimeout(() => {
+//      // Show overlay with the loaded data or prepare for form filling
+//      chrome.tabs.query({ active: true, currentWindow: true }, function(tabs) {
+//        if (tabs[0]) {
+//          formFiller.showPageNotification(tabs[0].id, firstName);
+//        }
+//      });
+//    }, 1000);
+//  }
+//});
 
 console.log("Background script loaded in standalone mode");
