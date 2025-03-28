@@ -18,6 +18,7 @@ const MAIN_PACKAGE_JSON = path.resolve(__dirname, '../package.json');
 const EXTENSION_PACKAGE_JSON = path.resolve(__dirname, '../browser-extension/package.json');
 const UI_INJECTOR_JS = path.resolve(__dirname, '../browser-extension/ui-injector.js');
 const MANIFEST_JSON = path.resolve(__dirname, '../browser-extension/manifest.json');
+const POPUP_HTML = path.resolve(__dirname, '../browser-extension/popup.html');
 
 // Read command-line arguments
 const args = process.argv.slice(2);
@@ -118,6 +119,32 @@ function updateUiInjector(newVersion) {
   }
 }
 
+// Function to update version in popup.html
+function updatePopupHtml(newVersion) {
+  try {
+    if (!fs.existsSync(POPUP_HTML)) {
+      console.log(chalk.yellow(`⚠️ File not found: ${POPUP_HTML}, skipping.`));
+      return false;
+    }
+
+    let content = fs.readFileSync(POPUP_HTML, 'utf8');
+    const versionPattern = /(<span class="version">v)([^<]+)(<\/span>)/;
+    
+    if (versionPattern.test(content)) {
+      content = content.replace(versionPattern, `$1${newVersion}$3`);
+      fs.writeFileSync(POPUP_HTML, content);
+      console.log(chalk.green(`✅ Updated version in popup.html to ${newVersion}`));
+      return true;
+    } else {
+      console.error(chalk.red('❌ Could not find version span in popup.html'));
+      return false;
+    }
+  } catch (error) {
+    console.error(chalk.red('❌ Error updating version in popup.html:'), error.message);
+    return false;
+  }
+}
+
 // Function to update version in setup.nsi
 function updateNsisScript(newVersion) {
   // Note: We don't need to update the NSIS script directly as it takes version from command line parameters
@@ -151,6 +178,9 @@ async function main() {
     // Update manifest.json
     success &= updateManifestJson(newVersion);
     
+    // Update popup.html
+    success &= updatePopupHtml(newVersion);
+    
     // Attempt to commit changes if everything succeeded
     if (success) {
       try {
@@ -159,7 +189,7 @@ async function main() {
         
         // Stage the changed files
         console.log(chalk.blue('📝 Staging version changes in git...'));
-        execSync('git add package.json browser-extension/package.json browser-extension/ui-injector.js browser-extension/manifest.json', { stdio: 'ignore' });
+        execSync('git add package.json browser-extension/package.json browser-extension/ui-injector.js browser-extension/manifest.json browser-extension/popup.html', { stdio: 'ignore' });
         
         // Commit the changes
         console.log(chalk.blue(`📝 Committing version bump to ${newVersion}...`));
