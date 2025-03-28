@@ -10,7 +10,8 @@
     "zip": "node scripts/zip-extension.js",
     "version:patch": "cd .. && npm run version:patch",
     "version:minor": "cd .. && npm run version:minor",
-    "version:major": "cd .. && npm run version:major"
+    "version:major": "cd .. && npm run version:major",
+    "version:set": "cd .. && npm run version:set"
   },
   "keywords": [
     "browser-extension",

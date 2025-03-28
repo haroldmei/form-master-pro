@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "FormMasterPro",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Advanced form automation for web applications",
   "permissions": [
     "storage",
@@ -11,7 +11,7 @@
     "identity"
   ],
   "host_permissions": [
-    "http://*/*", 
+    "http://*/*",
     "https://*/*"
   ],
   "action": {
@@ -32,20 +32,27 @@
   },
   "content_scripts": [
     {
-      "matches": ["<all_urls>"],
-      "js": ["content.js", "scripts/ui-injector.js"],
+      "matches": [
+        "<all_urls>"
+      ],
+      "js": [
+        "content.js",
+        "scripts/ui-injector.js"
+      ],
       "run_at": "document_start"
     }
   ],
-  
-  "web_accessible_resources": [{
-    "resources": [
-      "files/*.js",
-      "libs/*.js"
-    ],
-    "matches": ["<all_urls>"]
-  }],
-  
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "files/*.js",
+        "libs/*.js"
+      ],
+      "matches": [
+        "<all_urls>"
+      ]
+    }
+  ],
   "options_page": "options.html",
   "minimum_chrome_version": "88",
   "browser_specific_settings": {
@@ -54,7 +61,6 @@
       "strict_min_version": "89.0"
     }
   },
-  
   "content_security_policy": {
     "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'"
   }
