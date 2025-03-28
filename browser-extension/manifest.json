@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "FormMasterPro",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "description": "Advanced form automation for web applications",
   "permissions": [
     "storage",
@@ -37,7 +37,7 @@
       ],
       "js": [
         "content.js",
-        "libs/jszip.min.js", 
+        "libs/jszip.min.js",
         "scripts/ui-injector.js"
       ],
       "run_at": "document_start"
