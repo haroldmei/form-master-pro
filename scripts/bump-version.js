@@ -17,6 +17,7 @@ const chalk = require('chalk');
 const MAIN_PACKAGE_JSON = path.resolve(__dirname, '../package.json');
 const EXTENSION_PACKAGE_JSON = path.resolve(__dirname, '../browser-extension/package.json');
 const UI_INJECTOR_JS = path.resolve(__dirname, '../browser-extension/scripts/ui-injector.js');
+const MANIFEST_JSON = path.resolve(__dirname, '../browser-extension/manifest.json');
 
 // Read command-line arguments
 const args = process.argv.slice(2);
@@ -56,6 +57,11 @@ function getNewVersion(currentVersion, bumpType) {
 // Function to update version in package.json files
 function updatePackageJson(filePath, newVersion) {
   try {
+    if (!fs.existsSync(filePath)) {
+      console.log(chalk.yellow(`⚠️ File not found: ${filePath}, skipping.`));
+      return false;
+    }
+
     const packageJson = JSON.parse(fs.readFileSync(filePath, 'utf8'));
     packageJson.version = newVersion;
     fs.writeFileSync(filePath, JSON.stringify(packageJson, null, 2) + '\n');
@@ -67,9 +73,33 @@ function updatePackageJson(filePath, newVersion) {
   }
 }
 
+// Function to update version in manifest.json
+function updateManifestJson(newVersion) {
+  try {
+    if (!fs.existsSync(MANIFEST_JSON)) {
+      console.log(chalk.yellow(`⚠️ File not found: ${MANIFEST_JSON}, skipping.`));
+      return false;
+    }
+
+    const manifest = JSON.parse(fs.readFileSync(MANIFEST_JSON, 'utf8'));
+    manifest.version = newVersion;
+    fs.writeFileSync(MANIFEST_JSON, JSON.stringify(manifest, null, 2) + '\n');
+    console.log(chalk.green(`✅ Updated version in manifest.json to ${newVersion}`));
+    return true;
+  } catch (error) {
+    console.error(chalk.red('❌ Error updating version in manifest.json:'), error.message);
+    return false;
+  }
+}
+
 // Function to update version in ui-injector.js
 function updateUiInjector(newVersion) {
   try {
+    if (!fs.existsSync(UI_INJECTOR_JS)) {
+      console.log(chalk.yellow(`⚠️ File not found: ${UI_INJECTOR_JS}, skipping.`));
+      return false;
+    }
+
     let content = fs.readFileSync(UI_INJECTOR_JS, 'utf8');
     const versionPattern = /(const\s+VERSION\s*=\s*["|'])([^"']+)(["|'])/;
     
@@ -86,6 +116,13 @@ function updateUiInjector(newVersion) {
     console.error(chalk.red('❌ Error updating version in ui-injector.js:'), error.message);
     return false;
   }
+}
+
+// Function to update version in setup.nsi
+function updateNsisScript(newVersion) {
+  // Note: We don't need to update the NSIS script directly as it takes version from command line parameters
+  console.log(chalk.blue(`ℹ️ NSIS script uses version from command line parameters, no direct update needed.`));
+  return true;
 }
 
 // Main execution
@@ -105,19 +142,14 @@ async function main() {
     // Update main package.json
     success &= updatePackageJson(MAIN_PACKAGE_JSON, newVersion);
     
-    // Update extension package.json if it exists
-    if (fs.existsSync(EXTENSION_PACKAGE_JSON)) {
-      success &= updatePackageJson(EXTENSION_PACKAGE_JSON, newVersion);
-    } else {
-      console.log(chalk.yellow('⚠️ Extension package.json not found, skipping.'));
-    }
+    // Update extension package.json
+    success &= updatePackageJson(EXTENSION_PACKAGE_JSON, newVersion);
     
-    // Update UI injector script if it exists
-    if (fs.existsSync(UI_INJECTOR_JS)) {
-      success &= updateUiInjector(newVersion);
-    } else {
-      console.log(chalk.yellow('⚠️ UI injector script not found, skipping.'));
-    }
+    // Update UI injector script
+    success &= updateUiInjector(newVersion);
+
+    // Update manifest.json
+    success &= updateManifestJson(newVersion);
     
     // Attempt to commit changes if everything succeeded
     if (success) {
@@ -127,7 +159,7 @@ async function main() {
         
         // Stage the changed files
         console.log(chalk.blue('📝 Staging version changes in git...'));
-        execSync('git add package.json browser-extension/package.json browser-extension/scripts/ui-injector.js', { stdio: 'ignore' });
+        execSync('git add package.json browser-extension/package.json browser-extension/scripts/ui-injector.js browser-extension/manifest.json', { stdio: 'ignore' });
         
         // Commit the changes
         console.log(chalk.blue(`📝 Committing version bump to ${newVersion}...`));
