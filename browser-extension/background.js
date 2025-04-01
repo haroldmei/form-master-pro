@@ -99,6 +99,12 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         .then(() => sendResponse({ success: true }))
         .catch(error => sendResponse({ success: false, error: error.message }));
       return true;
+      
+    case 'checkSubscription':
+      checkSubscriptionStatus()
+        .then(result => sendResponse(result))
+        .catch(error => sendResponse({ success: false, error: error.message, isSubscribed: false }));
+      return true;
   }
   
   // Email verification related actions
@@ -450,6 +456,81 @@ async function fillFormInTab(tabId, url) {
   } catch (error) {
     console.error('Error in fillFormInTab:', error);
     return { message: `Error: ${error.message}` };
+  }
+}
+
+// Check subscription status
+async function checkSubscriptionStatus() {
+  try {
+    // First check if user is authenticated
+    const isAuthenticated = await auth0Service.isAuthenticated();
+    if (!isAuthenticated) {
+      return { success: false, error: 'User not authenticated', isSubscribed: false };
+    }
+    
+    // Get the access token
+    const token = await auth0Service.getAccessToken();
+    if (!token) {
+      return { success: false, error: 'Could not retrieve access token', isSubscribed: false };
+    }
+    
+    // Call the subscription status API
+    const response = await fetch('https://bargain4me.com/api/auth/subscription-status', {
+    //const response = await fetch('http://localhost:3001/api/auth/subscription-status', {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      console.error('Subscription status API error:', errorData);
+      return { 
+        success: false, 
+        error: errorData.message || `API error: ${response.status}`, 
+        isSubscribed: false 
+      };
+    }
+    
+    const subscriptionData = await response.json();
+    const subscription = subscriptionData.subscription || subscriptionData;
+    console.log('Subscription data:', subscription);
+    
+    // Extract expiry date from response - handle different API response formats
+    let expiresAt = null;
+    if (subscription.expiresAt) {
+      // ISO date string format: "2025-04-15T07:53:59.000Z"
+      expiresAt = subscription.expiresAt; // Use directly, no conversion needed
+    } else if (subscription.current_period_end) {
+      // Handle numeric timestamp if that's what the API returns
+      if (typeof subscription.current_period_end === 'number') {
+        // If it's a Unix timestamp, convert to ISO string
+        expiresAt = new Date(subscription.current_period_end * 1000).toISOString();
+      } else {
+        // If it's already a string, use as is
+        expiresAt = subscription.current_period_end;
+      }
+    } else if (subscription.trial_end) {
+      // Same logic for trial_end
+      if (typeof subscription.trial_end === 'number') {
+        expiresAt = new Date(subscription.trial_end * 1000).toISOString();
+      } else {
+        expiresAt = subscription.trial_end;
+      }
+    }
+    
+    return { 
+      success: true, 
+      isSubscribed: subscription.status === 'active' || subscription.status === 'trialing',
+      plan: subscription.plan_name || subscription.plan || 'free',
+      expiresAt: expiresAt,
+      subscriptionData: subscription
+    };
+  } catch (error) {
+    console.error('Error checking subscription status:', error);
+    return { success: false, error: error.message, isSubscribed: false };
   }
 }
 

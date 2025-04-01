@@ -546,17 +546,54 @@ document.addEventListener('DOMContentLoaded', function() {
         subscriptionStatus.textContent = 'Active';
         subscriptionStatus.className = 'subscription-badge subscription-active';
         subscriptionLink.classList.add('hidden');
+        
+        // Display expiry date if available
+        const expiryElem = document.getElementById('subscription-expiry');
+        if (expiryElem && response.expiresAt) {
+          try {
+            // Parse ISO date string directly - no need to multiply by 1000
+            const expiryDate = new Date(response.expiresAt);
+            
+            // Format the date in a user-friendly way
+            const options = { year: 'numeric', month: 'short', day: 'numeric' };
+            const formattedDate = expiryDate.toLocaleDateString(undefined, options);
+            
+            expiryElem.textContent = `Expires: ${formattedDate}`;
+            expiryElem.classList.remove('hidden');
+            
+            // Highlight expiry in red if less than 7 days away
+            const daysUntilExpiry = Math.ceil((expiryDate - new Date()) / (1000 * 60 * 60 * 24));
+            if (daysUntilExpiry <= 7) {
+              expiryElem.style.color = '#dc3545';
+            }
+          } catch (e) {
+            console.error('Error formatting expiry date:', e, response.expiresAt);
+            expiryElem.classList.add('hidden');
+          }
+        }
       } else {
         // User does not have an active subscription
         subscriptionStatus.textContent = 'Free';
         subscriptionStatus.className = 'subscription-badge subscription-inactive';
         subscriptionLink.classList.remove('hidden');
+        
+        // Hide expiry element for free users
+        const expiryElem = document.getElementById('subscription-expiry');
+        if (expiryElem) {
+          expiryElem.classList.add('hidden');
+        }
       }
     } catch (error) {
       console.error('Error checking subscription status:', error);
       subscriptionStatus.textContent = 'Unknown';
       subscriptionStatus.className = 'subscription-badge subscription-inactive';
       subscriptionLink.classList.remove('hidden');
+      
+      // Hide expiry element on error
+      const expiryElem = document.getElementById('subscription-expiry');
+      if (expiryElem) {
+        expiryElem.classList.add('hidden');
+      }
     }
   }
 });
