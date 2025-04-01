@@ -406,16 +406,6 @@
         try {
           const userProfile = JSON.parse(event.target.result);
 
-          // Update UI with profile data
-          const profileContainer = document.getElementById('profile-container');
-
-          // Clear existing content
-          profileContainer.innerHTML = '';
-
-          // Generate dynamic HTML for the profile
-          const profileHtml = generateProfileHtml(userProfile);
-          profileContainer.innerHTML = profileHtml;
-
           // Check profile size (just informational now, no storage limits)
           const jsonSize = new Blob([JSON.stringify(userProfile)]).size;
           if (jsonSize > 5000000) {
