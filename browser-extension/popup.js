@@ -51,7 +51,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
   // Add verification-related event listeners
   if (resendVerificationBtn) resendVerificationBtn.addEventListener('click', resendVerificationEmail);
-  if (checkVerificationBtn) checkVerificationBtn.addEventListener('click', checkEmailVerification);
+  if (checkVerificationBtn) checkVerificationBtn.addEventListener('click', relogin); // Check verification status on button click
 
   // Listen for auth state changes from background script
   chrome.runtime.onMessage.addListener((message) => {
@@ -105,6 +105,12 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   }
   
+
+  async function relogin(){
+    logout();
+    login();
+  }
+
   // Check authentication state
   async function checkAuthState() {
     try {
@@ -187,7 +193,7 @@ document.addEventListener('DOMContentLoaded', function() {
       }
     }
     
-    // Hide/show verification alert based on verification status
+    // Only show verification alert if the user is logged in but not verified
     if (verificationAlert) {
       verificationAlert.style.display = verified ? 'none' : 'block';
     }
@@ -197,6 +203,11 @@ document.addEventListener('DOMContentLoaded', function() {
   function showUnauthenticatedUI() {
     if (loggedOutView) loggedOutView.classList.remove('hidden');
     if (loggedInView) loggedInView.classList.add('hidden');
+    
+    // Always hide verification alert for logged out users
+    if (verificationAlert) {
+      verificationAlert.style.display = 'none';
+    }
     
     // Disable buttons that require authentication
     enableFormFeatures(false);
@@ -252,13 +263,15 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   }
   
-  // Show verification alert
+  // Show verification alert (only for authenticated but unverified users)
   function showVerificationAlert() {
+    // This function is now redundant as the alert visibility is managed in showAuthenticatedUI
+    // Keeping it for compatibility with existing code
     if (verificationAlert) {
       verificationAlert.style.display = 'block';
     }
   }
-  
+
   // Enable/disable form features based on auth state and verification
   function enableFormFeatures(enabled) {
     // Update to handle all form-related buttons
