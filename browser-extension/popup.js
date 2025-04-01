@@ -24,14 +24,9 @@ document.addEventListener('DOMContentLoaded', function() {
   const loggedInView = document.getElementById('logged-in-view');
   const userName = document.getElementById('user-name');
   const userPicture = document.getElementById('user-picture');
-  
 
   // Button elements
   const analyzeFormBtn = document.getElementById('analyze-form');
-  const loadDataBtn = document.getElementById('load-data');
-  const dataMappingsBtn = document.getElementById('data-mappings');
-  const autoFillBtn = document.getElementById('auto-fill');
-  const openOptionsBtn = document.getElementById('open-options');
   
   // Form analysis panel
   const formAnalysisPanel = document.getElementById('form-analysis');
@@ -47,14 +42,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
   // Set up event listeners
   addSafeEventListener('analyze-form', 'click', analyzeCurrentForm);
-  addSafeEventListener('data-mappings', 'click', openDataMappings);
-  addSafeEventListener('auto-fill', 'click', autoFillForm);
-  addSafeEventListener('open-options', 'click', openOptions);
-  
-  // Remove redundant event listeners for elements that don't exist
-  // addSafeEventListener('fill-form-btn', 'click', fillCurrentForm);
-  // addSafeEventListener('settings-btn', 'click', openSettings);
-  
+
   // Listen for auth state changes from background script
   chrome.runtime.onMessage.addListener((message) => {
     if (message.type === 'auth-state-changed') {
@@ -185,63 +173,6 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
   
-  // Function to analyze the current form
-  function analyzeCurrentForm2() {
-    analyzeFormBtn.disabled = true;
-    analyzeFormBtn.textContent = 'Analyzing...';
-    
-    chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
-      chrome.scripting.executeScript({
-        target: { tabId: tabs[0].id },
-        function: scanFormFields
-      }, results => {
-        if (results && results[0] && results[0].result) {
-          displayFormFields(results[0].result);
-          autoFillBtn.disabled = false;
-        } else {
-          fieldsContainer.innerHTML = '<p class="error">No form detected or error analyzing form.</p>';
-          formAnalysisPanel.classList.remove('hidden');
-        }
-        
-        analyzeFormBtn.disabled = false;
-        analyzeFormBtn.textContent = 'Analyze Current Form';
-      });
-    });
-  }
-  
-  // Function to scan form fields
-  function scanFormFields() {
-    const fields = [];
-    
-    // Get all input elements
-    const inputs = document.querySelectorAll('input, select, textarea');
-    
-    inputs.forEach(input => {
-      // Skip hidden, submit, button, and other non-data fields
-      if (['submit', 'button', 'image', 'reset', 'file'].includes(input.type)) {
-        return;
-      }
-      
-      const fieldInfo = {
-        type: input.type || 'text',
-        id: input.id || '',
-        name: input.name || '',
-        placeholder: input.placeholder || '',
-        className: input.className || '',
-        value: input.value || ''
-      };
-      
-      // Get label text if available
-      const labelElement = document.querySelector(`label[for="${input.id}"]`);
-      if (labelElement) {
-        fieldInfo.label = labelElement.textContent.trim();
-      }
-      
-      fields.push(fieldInfo);
-    });
-    
-    return fields;
-  }
 
   // Function to analyze the current form
   function analyzeCurrentForm() {
@@ -421,38 +352,6 @@ document.addEventListener('DOMContentLoaded', function() {
     formAnalysisPanel.classList.remove('hidden');
   }
   
-  // Function to open data mappings page
-  function openDataMappings() {
-    chrome.tabs.create({url: 'mappings.html'});
-  }
-  
-  // Function to trigger auto-fill
-  function autoFillForm() {
-    autoFillBtn.disabled = true;
-    autoFillBtn.textContent = 'Filling...';
-    
-    chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
-      chrome.runtime.sendMessage({ 
-        action: 'fillForm', 
-        tabId: tabs[0].id,
-        url: tabs[0].url
-      }, response => {
-        if (response && response.success) {
-          showToast('Form filled successfully');
-        } else {
-          showToast('Error filling form: ' + (response?.error || 'Unknown error'), 'error');
-        }
-        
-        autoFillBtn.disabled = false;
-        autoFillBtn.textContent = 'Auto Fill Form';
-      });
-    });
-  }
-  
-  // Function to open options page
-  function openOptions() {
-    chrome.runtime.openOptionsPage();
-  }
   
   // Helper function to show toast messages
   function showToast(message, type = 'info') {
@@ -471,36 +370,6 @@ document.addEventListener('DOMContentLoaded', function() {
     }, 10);
   }
   
-  /**
-   * Fill the current form with data
-   */
-  function fillCurrentForm() {
-    // This function is now only used internally, not connected to a DOM element
-    chrome.tabs.query({ active: true, currentWindow: true }, tabs => {
-      const tab = tabs[0];
-      if (!tab) return;
-      
-      chrome.runtime.sendMessage({ 
-        action: 'fillForm', 
-        tabId: tab.id,
-        url: tab.url
-      }, response => {
-        if (response && response.success) {
-          showToast('Form filled successfully');
-        } else {
-          showToast('Error filling form: ' + (response?.error || 'Unknown error'), 'error');
-        }
-      });
-    });
-  }
-  
-  /**
-   * Open the extension settings page
-   */
-  function openSettings() {
-    // This function is now only used internally, not connected to a DOM element
-    chrome.runtime.openOptionsPage();
-  }
   
   // Initialize your popup interface
   function initializePopup() {
