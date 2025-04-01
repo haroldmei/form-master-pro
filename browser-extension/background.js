@@ -23,8 +23,15 @@ auth0Service.init()
     console.error('Auth initialization error:', error);
   });
 
-// Handle messages from content scripts or popup
+// Consolidated message listener for all extension communications
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  const tabId = sender.tab?.id;
+  const isFromContentScript = !!sender.tab;
+  
+  if (isFromContentScript) {
+    console.log("Received message from content script:", message, "from tab:", tabId);
+  }
+  
   // User profile related messages
   if (message.action === 'getUserProfile') {
     sendResponse({ success: true, profile: self.globalUserProfile });
@@ -67,29 +74,43 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
   
-  if (message.action === 'checkAuth') {
-    auth0Service.isAuthenticated()
-      .then(isAuthenticated => sendResponse({ isAuthenticated }))
-      .catch(error => sendResponse({ error: error.message }));
-    return true;
+  // Auth service actions
+  switch (message.action) {
+    case 'checkAuth':
+      auth0Service.isAuthenticated()
+        .then(isAuthenticated => sendResponse({ isAuthenticated }))
+        .catch(error => sendResponse({ error: error.message }));
+      return true;
+      
+    case 'getToken':
+      auth0Service.getAccessToken()
+        .then(token => sendResponse({ token }))
+        .catch(error => sendResponse({ error: error.message }));
+      return true;
+      
+    case 'login':
+      auth0Service.login()
+        .then(result => sendResponse({ success: true }))
+        .catch(error => sendResponse({ success: false, error: error.message }));
+      return true;
+      
+    case 'logout':
+      auth0Service.logout()
+        .then(() => sendResponse({ success: true }))
+        .catch(error => sendResponse({ success: false, error: error.message }));
+      return true;
   }
   
-  if (message.action === 'getToken') {
-    auth0Service.getAccessToken()
-      .then(token => sendResponse({ token }))
-      .catch(error => sendResponse({ error: error.message }));
-    return true;
-  }
-  
-  if (message.action === 'login') {
-    auth0Service.login()
-      .then(result => sendResponse({ success: true }))
+  // Email verification related actions
+  if (message.action === 'checkEmailVerification') {
+    checkEmailVerification()
+      .then(isVerified => sendResponse({ success: true, isVerified }))
       .catch(error => sendResponse({ success: false, error: error.message }));
     return true;
   }
   
-  if (message.action === 'logout') {
-    auth0Service.logout()
+  if (message.action === 'resendVerificationEmail') {
+    resendVerificationEmail()
       .then(() => sendResponse({ success: true }))
       .catch(error => sendResponse({ success: false, error: error.message }));
     return true;
@@ -121,60 +142,110 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     // Nothing to do - profile is already in global memory
     return false;
   }
-});
-
-// Handle messages from the injected UI
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  const tabId = sender.tab?.id;
-  console.log("Received message from injected UI:", message, "from tab:", tabId);
-
-  //if (!tabId) {
-  //  sendResponse({ success: false, error: 'Invalid tab' });
-  //  return;
-  //}
   
-  switch (message.action) {
-    case 'analyze-form':
-      analyzeFormInTab(tabId, message.url)
-        .then(result => {
-          // Save the form analysis data temporarily
-          chrome.storage.local.set({
-            formAnalysisData: {
-              url: message.url,
-              timestamp: new Date().toISOString(),
-              data: result.data
-            }
-          }, () => {
-            // Open the form analysis page in a new tab
-            chrome.tabs.create({ url: 'formAnalysis.html' });
-            
-            // Send response to the original message
-            sendResponse({ 
-              success: true, 
-              message: 'Opening form analysis in new tab'
-            });
+  // UI injected action handling
+  if (message.action === 'analyze-form') {
+    analyzeFormInTab(tabId, message.url)
+      .then(result => {
+        // Save the form analysis data temporarily
+        chrome.storage.local.set({
+          formAnalysisData: {
+            url: message.url,
+            timestamp: new Date().toISOString(),
+            data: result.data
+          }
+        }, () => {
+          // Open the form analysis page in a new tab
+          chrome.tabs.create({ url: 'formAnalysis.html' });
+          
+          // Send response to the original message
+          sendResponse({ 
+            success: true, 
+            message: 'Opening form analysis in new tab'
           });
-        })
-        .catch(err => sendResponse({ success: false, error: err.message }));
-      return true; // Keep the message channel open for async response
-      
-    case 'data-mappings':
-      // Open the mappings page in a new tab
-      chrome.tabs.create({ url: 'mappings.html' });
-      sendResponse({ success: true, message: 'Opening field mappings' });
-      break;
-      
-    case 'auto-fill':
-      fillFormInTab(tabId, message.url)
-        .then(result => sendResponse({ success: true, ...result }))
-        .catch(err => sendResponse({ success: false, error: err.message }));
-      return true; // Keep the message channel open for async response
+        });
+      })
+      .catch(err => sendResponse({ success: false, error: err.message }));
+    return true;
   }
+  
+  if (message.action === 'data-mappings') {
+    // Open the mappings page in a new tab
+    chrome.tabs.create({ url: 'mappings.html' });
+    sendResponse({ success: true, message: 'Opening field mappings' });
+    return false;
+  }
+  
+  if (message.action === 'auto-fill') {
+    fillFormInTab(tabId, message.url)
+      .then(result => sendResponse({ success: true, ...result }))
+      .catch(err => sendResponse({ success: false, error: err.message }));
+    return true;
+  }
+  
+  // If we reach here, the message wasn't handled
+  console.warn('Unhandled message:', message);
+  sendResponse({ success: false, error: 'Unhandled message type or action' });
+  return false;
 });
+
+// Check email verification status
+async function checkEmailVerification() {
+  try {
+    // First check if user is authenticated
+    const isAuthenticated = await auth0Service.isAuthenticated();
+    if (!isAuthenticated) {
+      return false;
+    }
+    
+    // Use the auth0Service to check email verification status
+    return await auth0Service.isEmailVerified();
+  } catch (error) {
+    console.error('Error checking email verification:', error);
+    return false;
+  }
+}
+
+// Resend verification email
+async function resendVerificationEmail() {
+  try {
+    const token = await auth0Service.getAccessToken();
+    const userInfo = await auth0Service.getUserInfo();
+    
+    // Call Auth0 Management API to resend verification email
+    const response = await fetch(`https://${auth0Service.auth0Domain}/api/v2/jobs/verification-email`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        user_id: userInfo.sub,
+        client_id: auth0Service.clientId
+      })
+    });
+    
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.message || 'Failed to send verification email');
+    }
+    
+    return true;
+  } catch (error) {
+    console.error('Error sending verification email:', error);
+    throw error;
+  }
+}
 
 // Analyze form in the current tab
 async function analyzeFormInTab(tabId, url) {
   try {
+    // First check if email is verified
+    const isVerified = await checkEmailVerification();
+    if (!isVerified) {
+      return { message: 'Email verification required to use this feature', requiresVerification: true };
+    }
+    
     // Inject the form extraction scripts
     await chrome.scripting.executeScript({
       target: { tabId },
@@ -218,6 +289,12 @@ function countFormFields(formData) {
 // Fill form in the current tab
 async function fillFormInTab(tabId, url) {
   try {
+    // First check if email is verified
+    const isVerified = await checkEmailVerification();
+    if (!isVerified) {
+      return { message: 'Email verification required to use this feature', requiresVerification: true };
+    }
+    
     console.log(`Filling form in tab ${tabId} for URL: ${url}`);
     
     // Step 1: First inject the form extraction scripts to analyze the form
@@ -375,26 +452,5 @@ async function fillFormInTab(tabId, url) {
     return { message: `Error: ${error.message}` };
   }
 }
-
-// Add page load event listener
-//chrome.webNavigation.onCompleted.addListener(function(details) {
-//  // Only handle the main frame navigation (not iframes)
-//  if (details.frameId !== 0) return;
-//  
-//  // Use global profile directly
-//  if (self.globalUserProfile && self.globalUserProfile.personal && self.globalUserProfile.personal.firstName) {
-//    const firstName = self.globalUserProfile.personal.firstName;//
-
-//    // Wait a short moment for the page to stabilize
-//    setTimeout(() => {
-//      // Show overlay with the loaded data or prepare for form filling
-//      chrome.tabs.query({ active: true, currentWindow: true }, function(tabs) {
-//        if (tabs[0]) {
-//          formFiller.showPageNotification(tabs[0].id, firstName);
-//        }
-//      });
-//    }, 1000);
-//  }
-//});
 
 console.log("Background script loaded in standalone mode");

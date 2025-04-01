@@ -33,6 +33,12 @@ document.addEventListener('DOMContentLoaded', function() {
   const fieldCount = document.getElementById('field-count');
   const fieldsContainer = document.getElementById('fields-container');
   
+  // Email verification elements
+  const verificationAlert = document.getElementById('verification-alert');
+  const resendVerificationBtn = document.getElementById('resend-verification');
+  const checkVerificationBtn = document.getElementById('check-verification');
+  const verificationBadge = document.getElementById('verification-badge');
+  
   // Check authentication state on popup open
   checkAuthState();
   
@@ -42,6 +48,10 @@ document.addEventListener('DOMContentLoaded', function() {
 
   // Set up event listeners
   addSafeEventListener('analyze-form', 'click', analyzeCurrentForm);
+
+  // Add verification-related event listeners
+  if (resendVerificationBtn) resendVerificationBtn.addEventListener('click', resendVerificationEmail);
+  if (checkVerificationBtn) checkVerificationBtn.addEventListener('click', checkEmailVerification);
 
   // Listen for auth state changes from background script
   chrome.runtime.onMessage.addListener((message) => {
@@ -101,8 +111,19 @@ document.addEventListener('DOMContentLoaded', function() {
       const response = await chrome.runtime.sendMessage({ action: 'checkAuth' });
       
       if (response && response.isAuthenticated) {
-        showAuthenticatedUI();
-        loadUserProfile();
+        // User is authenticated, but we need to check email verification
+        const isVerified = await checkEmailVerification(false); // false means don't show messages
+        
+        if (isVerified) {
+          // Fully authenticated and verified
+          showAuthenticatedUI(true);
+          loadUserProfile();
+        } else {
+          // Authenticated but not verified
+          showAuthenticatedUI(false);
+          loadUserProfile();
+          showVerificationAlert();
+        }
       } else {
         showUnauthenticatedUI();
       }
@@ -148,12 +169,28 @@ document.addEventListener('DOMContentLoaded', function() {
   }
   
   // Show authenticated UI
-  function showAuthenticatedUI() {
+  function showAuthenticatedUI(verified = true) {
     if (loggedOutView) loggedOutView.classList.add('hidden');
     if (loggedInView) loggedInView.classList.remove('hidden');
     
-    // Enable buttons that require authentication
-    enableFormFeatures(true);
+    // Only enable form features if the user is verified
+    enableFormFeatures(verified);
+    
+    // Set verification badge
+    if (verificationBadge) {
+      if (verified) {
+        verificationBadge.textContent = 'Verified';
+        verificationBadge.className = 'user-badge badge-verified';
+      } else {
+        verificationBadge.textContent = 'Unverified';
+        verificationBadge.className = 'user-badge badge-unverified';
+      }
+    }
+    
+    // Hide/show verification alert based on verification status
+    if (verificationAlert) {
+      verificationAlert.style.display = verified ? 'none' : 'block';
+    }
   }
   
   // Show unauthenticated UI
@@ -165,11 +202,78 @@ document.addEventListener('DOMContentLoaded', function() {
     enableFormFeatures(false);
   }
   
-  // Enable/disable form features based on auth state
+  // Check email verification status
+  async function checkEmailVerification(showMessages = true) {
+    try {
+      const response = await chrome.runtime.sendMessage({ action: 'checkEmailVerification' });
+      
+      if (response && response.success) {
+        const isVerified = response.isVerified === true;
+        
+        if (isVerified && showMessages) {
+          showToast('Email verified successfully!', 'success');
+          showAuthenticatedUI(true);
+        } else if (showMessages) {
+          showToast('Email is not verified yet', 'warning');
+        }
+        
+        return isVerified;
+      }
+      
+      return false;
+    } catch (error) {
+      console.error('Error checking verification status:', error);
+      if (showMessages) {
+        showToast('Error checking verification status', 'error');
+      }
+      return false;
+    }
+  }
+  
+  // Resend verification email
+  async function resendVerificationEmail() {
+    try {
+      resendVerificationBtn.disabled = true;
+      resendVerificationBtn.textContent = 'Sending...';
+      
+      const response = await chrome.runtime.sendMessage({ action: 'resendVerificationEmail' });
+      
+      if (response && response.success) {
+        showToast('Verification email sent!', 'success');
+      } else {
+        showToast(response?.error || 'Error sending verification email', 'error');
+      }
+    } catch (error) {
+      console.error('Error sending verification email:', error);
+      showToast('Error sending verification email', 'error');
+    } finally {
+      resendVerificationBtn.disabled = false;
+      resendVerificationBtn.textContent = 'Resend Email';
+    }
+  }
+  
+  // Show verification alert
+  function showVerificationAlert() {
+    if (verificationAlert) {
+      verificationAlert.style.display = 'block';
+    }
+  }
+  
+  // Enable/disable form features based on auth state and verification
   function enableFormFeatures(enabled) {
-    const buttons = []; //[analyzeFormButton, loadDataButton, dataMappingsButton, autoFillButton];
+    // Update to handle all form-related buttons
+    if (analyzeFormBtn) analyzeFormBtn.disabled = !enabled;
+    
+    // Add any other buttons that require authentication
+    const buttons = [analyzeFormBtn]; // Add other form buttons here
+    
     buttons.forEach(button => {
-      if (button) button.disabled = !enabled;
+      if (button) {
+        button.disabled = !enabled;
+        if (!enabled && button.title) {
+          button.title = 'Email verification required';
+        }
+      }
     });
   }
   

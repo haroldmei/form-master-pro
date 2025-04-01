@@ -226,6 +226,54 @@
     header img {
       margin-right: 10px;
     }
+
+    /* Email verification related styles */
+    .verification-alert {
+      background-color: #fff3cd;
+      border: 1px solid #ffeeba;
+      color: #856404;
+      padding: 10px;
+      border-radius: 4px;
+      margin-bottom: 15px;
+      font-size: 13px;
+      display: none; /* Hidden by default */
+    }
+    
+    .verification-actions {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 8px;
+    }
+    
+    .verification-btn {
+      padding: 4px 8px;
+      font-size: 12px;
+      flex: 1;
+      margin-right: 5px;
+    }
+    
+    .verification-btn:last-child {
+      margin-right: 0;
+    }
+    
+    /* User badge styles */
+    .user-badge {
+      font-size: 11px;
+      padding: 2px 6px;
+      border-radius: 10px;
+      margin-left: 5px;
+      vertical-align: middle;
+    }
+    
+    .badge-verified {
+      background-color: #d4edda;
+      color: #155724;
+    }
+    
+    .badge-unverified {
+      background-color: #f8d7da;
+      color: #721c24;
+    }
   </style>
 </head>
 <body>
@@ -245,8 +293,18 @@
         <div class="user-info">
           <img id="user-picture" class="avatar" alt="Profile" src="images/icon48.png">
           <span id="user-name">User</span>
+          <span id="verification-badge" class="user-badge"></span>
         </div>
         <button id="logout-button" class="text-btn">Log Out</button>
+      </div>
+    </div>
+    
+    <!-- Email Verification Alert -->
+    <div id="verification-alert" class="verification-alert">
+      <div>Your email is not verified. Please verify your email to use all features.</div>
+      <div class="verification-actions">
+        <button id="resend-verification" class="verification-btn primary-btn">Resend Email</button>
+        <button id="check-verification" class="verification-btn secondary-btn">Check Status</button>
       </div>
     </div>
     

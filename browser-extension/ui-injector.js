@@ -262,104 +262,139 @@
     function handleButtonClick(action, buttonElement) {
       // Special handling for load-data action - directly open file dialog
       if (action === 'load-data') {
-        // Create a file input element
-        const input = document.createElement('input');
-        input.type = 'file';
-        input.accept = '.json,.docx'; // Accept both JSON and DOCX files
-        
-        // Handle file selection
-        input.onchange = async e => {
-          const file = e.target.files[0];
-          if (!file) return;
-          
-          // Show loading state
-          buttonElement.classList.add('loading');
-          buttonElement.disabled = true;
-          buttonElement._originalHTML = buttonElement.innerHTML;
-          
-          try {
-            const fileExtension = file.name.split('.').pop().toLowerCase();
-            
-            if (fileExtension === 'json') {
-              // Process JSON file
-              await processJsonFile(file);
-            } else if (fileExtension === 'docx') {
-              // Process DOCX file
-              await processDocxFile(file);
-            } else {
-              showToast('Unsupported file type. Please use JSON or DOCX files.', 'error');
-            }
-            
-            // Refresh profile info
-            loadProfileInfo();
-          } catch (error) {
-            showToast(`Error processing file: ${error.message}`, 'error');
-            console.error('File processing error:', error);
-          } finally {
-            // Reset button state
-            buttonElement.classList.remove('loading');
-            buttonElement.disabled = false;
-            if (buttonElement._originalHTML) {
-              buttonElement.innerHTML = buttonElement._originalHTML;
-              delete buttonElement._originalHTML;
-            }
+        // First check email verification
+        chrome.runtime.sendMessage({ action: 'checkEmailVerification' }, function(response) {
+          if (!response || !response.isVerified) {
+            showToast('Email verification required to use this feature', 'error');
+            return;
           }
-        };
-        
-        // Trigger the file dialog
-        input.click();
+          
+          // Create a file input element
+          const input = document.createElement('input');
+          input.type = 'file';
+          input.accept = '.json,.docx'; // Accept both JSON and DOCX files
+          
+          // Handle file selection
+          input.onchange = async e => {
+            const file = e.target.files[0];
+            if (!file) return;
+            
+            // Show loading state
+            buttonElement.classList.add('loading');
+            buttonElement.disabled = true;
+            buttonElement._originalHTML = buttonElement.innerHTML;
+            
+            try {
+              const fileExtension = file.name.split('.').pop().toLowerCase();
+              
+              if (fileExtension === 'json') {
+                // Process JSON file
+                await processJsonFile(file);
+              } else if (fileExtension === 'docx') {
+                // Process DOCX file
+                await processDocxFile(file);
+              } else {
+                showToast('Unsupported file type. Please use JSON or DOCX files.', 'error');
+              }
+              
+              // Refresh profile info
+              loadProfileInfo();
+            } catch (error) {
+              showToast(`Error processing file: ${error.message}`, 'error');
+              console.error('File processing error:', error);
+            } finally {
+              // Reset button state
+              buttonElement.classList.remove('loading');
+              buttonElement.disabled = false;
+              if (buttonElement._originalHTML) {
+                buttonElement.innerHTML = buttonElement._originalHTML;
+                delete buttonElement._originalHTML;
+              }
+            }
+          };
+          
+          // Trigger the file dialog
+          input.click();
+        });
         return; // Exit the function early
       }
       
       // Add loading state for auto-fill since it's potentially slow
       if (action === 'auto-fill') {
-        buttonElement.classList.add('loading');
-        buttonElement.disabled = true; // Explicitly disable button
-        
-        // Store original button content for restoration later
-        buttonElement._originalHTML = buttonElement.innerHTML;
-      }
-      
-      // Check if Chrome extension API is available
-      if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.sendMessage) {
-        // Send message to the extension's background script
-        chrome.runtime.sendMessage({ 
-          action: action,
-          url: self.location.href
-        }, response => {
-          // Remove loading state regardless of success or failure
-          if (action === 'auto-fill') {
+        // First check email verification
+        chrome.runtime.sendMessage({ action: 'checkEmailVerification' }, function(response) {
+          if (!response || !response.isVerified) {
+            showToast('Email verification required to use this feature', 'error');
+            return;
+          }
+          
+          buttonElement.classList.add('loading');
+          buttonElement.disabled = true; // Explicitly disable button
+          
+          // Store original button content for restoration later
+          buttonElement._originalHTML = buttonElement.innerHTML;
+          
+          // Check if Chrome extension API is available
+          if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.sendMessage) {
+            // Send message to the extension's background script
+            chrome.runtime.sendMessage({ 
+              action: action,
+              url: self.location.href
+            }, response => {
+              // Remove loading state regardless of success or failure
+              buttonElement.classList.remove('loading');
+              buttonElement.disabled = false; // Explicitly re-enable button
+              
+              // Complete button reset: if we stored original HTML, restore it
+              if (buttonElement._originalHTML) {
+                buttonElement.innerHTML = buttonElement._originalHTML;
+                delete buttonElement._originalHTML;
+              }
+              
+              if (response && response.success) {
+                showToast(response.message || 'Action completed successfully');
+              } else if (response && response.requiresVerification) {
+                showToast('Email verification required to use this feature', 'error');
+              } else {
+                showToast(response?.error || 'Error performing action', 'error');
+              }
+            });
+          } else {
+            // Chrome API not available - show error and remove loading state
+            console.error('Chrome extension API not available');
             buttonElement.classList.remove('loading');
             buttonElement.disabled = false; // Explicitly re-enable button
             
-            // Complete button reset: if we stored original HTML, restore it
+            // Also restore original content
             if (buttonElement._originalHTML) {
               buttonElement.innerHTML = buttonElement._originalHTML;
               delete buttonElement._originalHTML;
             }
+            showToast('Extension API not available. Please refresh the page.', 'error');
           }
-          
+        });
+        return;
+      }
+      
+      // For all other actions, check verification first
+      chrome.runtime.sendMessage({ action: 'checkEmailVerification' }, function(response) {
+        if (!response || !response.isVerified) {
+          showToast('Email verification required to use this feature', 'error');
+          return;
+        }
+        
+        // The rest of the original function for other actions
+        chrome.runtime.sendMessage({ 
+          action: action,
+          url: self.location.href
+        }, response => {
           if (response && response.success) {
             showToast(response.message || 'Action completed successfully');
           } else {
             showToast(response?.error || 'Error performing action', 'error');
           }
         });
-      } else {
-        // Chrome API not available - show error and remove loading state
-        console.error('Chrome extension API not available');
-        if (action === 'auto-fill') {
-          buttonElement.classList.remove('loading');
-          buttonElement.disabled = false; // Explicitly re-enable button
-          
-          // Also restore original content
-          if (buttonElement._originalHTML) {
-            buttonElement.innerHTML = buttonElement._originalHTML;
-            delete buttonElement._originalHTML;
-          }
-        }
-        showToast('Extension API not available. Please refresh the page.', 'error');
-      }
+      });
     }
     
     /**
