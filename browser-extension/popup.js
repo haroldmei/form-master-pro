@@ -39,8 +39,15 @@ document.addEventListener('DOMContentLoaded', function() {
   const checkVerificationBtn = document.getElementById('check-verification');
   const verificationBadge = document.getElementById('verification-badge');
   
+  // Subscription elements
+  const subscriptionStatus = document.getElementById('subscription-status');
+  const subscriptionLink = document.getElementById('subscription-link');
+  
   // Check authentication state on popup open
   checkAuthState();
+  
+  // Check subscription status on popup open
+  checkSubscriptionStatus();
   
   // Add auth button listeners
   if (loginButton) loginButton.addEventListener('click', login);
@@ -124,18 +131,24 @@ document.addEventListener('DOMContentLoaded', function() {
           // Fully authenticated and verified
           showAuthenticatedUI(true);
           loadUserProfile();
+          checkSubscriptionStatus(); // Check subscription when user is authenticated
         } else {
           // Authenticated but not verified
           showAuthenticatedUI(false);
           loadUserProfile();
           showVerificationAlert();
+          checkSubscriptionStatus(); // Check subscription when user is authenticated but not verified
         }
       } else {
         showUnauthenticatedUI();
+        // Hide subscription information when not logged in
+        if (subscriptionStatus) subscriptionStatus.parentElement.parentElement.classList.add('hidden');
       }
     } catch (error) {
       console.error('Error checking auth state:', error);
       showUnauthenticatedUI();
+      // Hide subscription information on error
+      if (subscriptionStatus) subscriptionStatus.parentElement.parentElement.classList.add('hidden');
     }
   }
   
@@ -197,6 +210,12 @@ document.addEventListener('DOMContentLoaded', function() {
     if (verificationAlert) {
       verificationAlert.style.display = verified ? 'none' : 'block';
     }
+
+    // Show subscription container for authenticated users
+    const subscriptionContainer = document.getElementById('subscription-container');
+    if (subscriptionContainer) {
+      subscriptionContainer.classList.remove('hidden');
+    }
   }
   
   // Show unauthenticated UI
@@ -211,6 +230,12 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Disable buttons that require authentication
     enableFormFeatures(false);
+
+    // Hide subscription container for unauthenticated users
+    const subscriptionContainer = document.getElementById('subscription-container');
+    if (subscriptionContainer) {
+      subscriptionContainer.classList.add('hidden');
+    }
   }
   
   // Check email verification status
@@ -508,5 +533,30 @@ document.addEventListener('DOMContentLoaded', function() {
     setTimeout(() => {
       errorContainer.remove();
     }, 3000);
+  }
+
+  // Check subscription status
+  async function checkSubscriptionStatus() {
+    try {
+      // This would typically call the background script to get subscription info from your server
+      const response = await chrome.runtime.sendMessage({ action: 'checkSubscription' });
+      
+      if (response && response.isSubscribed) {
+        // User has an active subscription
+        subscriptionStatus.textContent = 'Active';
+        subscriptionStatus.className = 'subscription-badge subscription-active';
+        subscriptionLink.classList.add('hidden');
+      } else {
+        // User does not have an active subscription
+        subscriptionStatus.textContent = 'Free';
+        subscriptionStatus.className = 'subscription-badge subscription-inactive';
+        subscriptionLink.classList.remove('hidden');
+      }
+    } catch (error) {
+      console.error('Error checking subscription status:', error);
+      subscriptionStatus.textContent = 'Unknown';
+      subscriptionStatus.className = 'subscription-badge subscription-inactive';
+      subscriptionLink.classList.remove('hidden');
+    }
   }
 });

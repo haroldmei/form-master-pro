@@ -274,6 +274,40 @@
       background-color: #f8d7da;
       color: #721c24;
     }
+
+    /* Subscription status styles */
+    #subscription-container {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 10px;
+      background-color: #f8f9fa;
+      border-radius: 4px;
+      margin-bottom: 15px;
+    }
+    
+    .subscription-badge {
+      font-size: 12px;
+      font-weight: bold;
+      padding: 3px 8px;
+      border-radius: 12px;
+    }
+    
+    .subscription-active {
+      background-color: #d4edda;
+      color: #155724;
+    }
+    
+    .subscription-inactive {
+      background-color: #f8d7da;
+      color: #721c24;
+    }
+    
+    #subscription-link {
+      color: #0066cc;
+      text-decoration: underline;
+      cursor: pointer;
+    }
   </style>
 </head>
 <body>
@@ -297,6 +331,15 @@
         </div>
         <button id="logout-button" class="text-btn">Log Out</button>
       </div>
+    </div>
+    
+    <!-- Subscription Status -->
+    <div id="subscription-container" class="panel">
+      <div>
+        <span>Subscription: </span>
+        <span id="subscription-status" class="subscription-badge subscription-inactive">Checking...</span>
+      </div>
+      <a id="subscription-link" href="https://subscribe.formmasterpro.com" target="_blank" class="hidden">Upgrade</a>
     </div>
     
     <!-- Email Verification Alert -->
