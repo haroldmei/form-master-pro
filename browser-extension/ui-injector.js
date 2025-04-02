@@ -42,11 +42,19 @@
     toggleButton.className = 'formmaster-toggle';
     toggleButton.textContent = 'FM';
     toggleButton.title = `FormMasterPro v${VERSION}`;
-    toggleButton.addEventListener('click', togglePanel);
+    
+    // Replace click event with hover events
+    toggleButton.addEventListener('mouseenter', showPanel);
     
     // Create panel for buttons
     const panel = document.createElement('div');
     panel.className = 'formmaster-panel';
+    
+    // Add mouse enter/leave events to keep panel open when hovering
+    panel.addEventListener('mouseenter', () => {
+      clearTimeout(panel.hideTimeout);
+    });
+    panel.addEventListener('mouseleave', hidePanel);
     
     // Add panel header
     const panelHeader = document.createElement('div');
@@ -135,21 +143,33 @@
       shadowRoot.appendChild(link);
     }
     
-    function togglePanel() {
-      panel.classList.toggle('show');
+    // Replace toggle function with show/hide functions
+    function showPanel() {
+      panel.classList.add('show');
+      toggleButton.classList.add('active');
+      loadProfileInfo();
       
-      // Add highlight animation to make the panel noticeable
-      if (panel.classList.contains('show')) {
-        toggleButton.classList.add('active');
-        loadProfileInfo();
-        
-        // Reset animation for panel border glow
-        panel.style.animation = 'none';
-        panel.offsetHeight; // Trigger reflow
-        panel.style.animation = null;
-      } else {
+      // Reset animation for panel border glow
+      panel.style.animation = 'none';
+      panel.offsetHeight; // Trigger reflow
+      panel.style.animation = null;
+      
+      // Clear any existing hide timeout when showing the panel
+      clearTimeout(panel.hideTimeout);
+      
+      // Add mouseleave event to the toggle button
+      toggleButton.addEventListener('mouseleave', function() {
+        // Set a small delay before hiding to allow mouse movement to the panel
+        panel.hideTimeout = setTimeout(hidePanel, 300);
+      });
+    }
+    
+    function hidePanel() {
+      // Add a small delay to allow moving between elements
+      panel.hideTimeout = setTimeout(() => {
+        panel.classList.remove('show');
         toggleButton.classList.remove('active');
-      }
+      }, 300);
     }
     
     function handleButtonClick(action, buttonElement) {

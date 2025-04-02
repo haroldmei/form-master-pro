@@ -87,12 +87,16 @@
   display: none;
   flex-direction: column;
   width: 240px;
-  margin-bottom: 10px;
   animation: formmaster-fadeIn 0.3s ease-out;
   border: 2px solid rgba(255, 255, 255, 0.8);
   overflow: hidden;
   position: relative;
   backdrop-filter: none;
+  /* Reposition the panel to appear above the toggle button */
+  position: absolute;
+  bottom: 58px; /* Height of button (48px) + margin (10px) */
+  left: 0;
+  margin-bottom: 0; /* Remove margin as we're using absolute positioning */
 }
 
 .formmaster-panel.show {
