@@ -167,6 +167,9 @@
           input.type = 'file';
           input.accept = '.pdf,.docx'; // Accept both PDF and DOCX files
           
+          // Store original HTML before showing loading state
+          const originalHTML = buttonElement.innerHTML;
+          
           // Handle file selection
           input.onchange = async e => {
             const file = e.target.files[0];
@@ -175,7 +178,6 @@
             // Show loading state
             buttonElement.classList.add('loading');
             buttonElement.disabled = true;
-            buttonElement._originalHTML = buttonElement.innerHTML;
             
             try {
               const fileExtension = file.name.split('.').pop().toLowerCase();
@@ -198,13 +200,10 @@
               showToast(`Error processing file: ${error.message}`, 'error');
               console.error('File processing error:', error);
             } finally {
-              // Reset button state
+              // Reset button state using the stored original HTML
               buttonElement.classList.remove('loading');
               buttonElement.disabled = false;
-              if (buttonElement._originalHTML) {
-                buttonElement.innerHTML = buttonElement._originalHTML;
-                delete buttonElement._originalHTML;
-              }
+              buttonElement.innerHTML = originalHTML;
             }
           };
           
@@ -223,11 +222,11 @@
             return;
           }
           
-          buttonElement.classList.add('loading');
-          buttonElement.disabled = true; // Explicitly disable button
+          // Store original HTML before applying loading state
+          const originalHTML = buttonElement.innerHTML;
           
-          // Store original button content for restoration later
-          buttonElement._originalHTML = buttonElement.innerHTML;
+          buttonElement.classList.add('loading');
+          buttonElement.disabled = true;
           
           // Check if Chrome extension API is available
           if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.sendMessage) {
@@ -238,13 +237,10 @@
             }, response => {
               // Remove loading state regardless of success or failure
               buttonElement.classList.remove('loading');
-              buttonElement.disabled = false; // Explicitly re-enable button
+              buttonElement.disabled = false;
               
-              // Complete button reset: if we stored original HTML, restore it
-              if (buttonElement._originalHTML) {
-                buttonElement.innerHTML = buttonElement._originalHTML;
-                delete buttonElement._originalHTML;
-              }
+              // Restore original HTML
+              buttonElement.innerHTML = originalHTML;
               
               if (response && response.success) {
                 showToast(response.message || 'Action completed successfully', 'success');
@@ -258,13 +254,11 @@
             // Chrome API not available - show error and remove loading state
             console.error('Chrome extension API not available');
             buttonElement.classList.remove('loading');
-            buttonElement.disabled = false; // Explicitly re-enable button
+            buttonElement.disabled = false;
             
-            // Also restore original content
-            if (buttonElement._originalHTML) {
-              buttonElement.innerHTML = buttonElement._originalHTML;
-              delete buttonElement._originalHTML;
-            }
+            // Restore original HTML
+            buttonElement.innerHTML = originalHTML;
+            
             showToast('Extension API not available. Please refresh the page.', 'error');
           }
         });
@@ -301,6 +295,11 @@
             
             // Convert ArrayBuffer to base64 string before sending
             const base64 = arrayBufferToBase64(arrayBuffer);
+            
+            // Set a timeout to handle potential message timeout errors
+            const timeoutId = setTimeout(() => {
+              reject(new Error('Request timed out - background process may be busy'));
+            }, 30000); // 30-second timeout
                     
             // Send as base64 string which survives message passing
             chrome.runtime.sendMessage({ 
@@ -310,8 +309,19 @@
               fileName: file.name,
               size: arrayBuffer.byteLength
             }, (response) => {
-              if (chrome.runtime.lastError || !response || !response.success) {
-                reject(new Error(chrome.runtime.lastError?.message || response?.error || 'Failed to process PDF file'));
+              // Clear the timeout since we received a response
+              clearTimeout(timeoutId);
+              
+              // Check for errors with the Chrome runtime first
+              if (chrome.runtime.lastError) {
+                console.error('Chrome runtime error:', chrome.runtime.lastError);
+                reject(new Error(chrome.runtime.lastError.message || 'Chrome runtime error'));
+                return;
+              }
+              
+              // Now check the response content
+              if (!response || !response.success) {
+                reject(new Error(response?.error || 'Failed to process PDF file'));
               } else {
                 resolve(response);
               }

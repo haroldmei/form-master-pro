@@ -58,18 +58,19 @@
   justify-content: center;
   align-items: center;
   cursor: pointer;
-  box-shadow: var(--shadow-strong);
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.9), var(--shadow-strong);
   transition: var(--transition);
   margin-bottom: 10px;
   font-weight: bold;
   font-size: 16px;
   user-select: none;
-  border: 2px solid rgba(255, 255, 255, 0.9);
+  border: 3px solid rgba(255, 255, 255, 0.9);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
 }
 
 .formmaster-toggle:hover {
   transform: translateY(-2px);
-  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.9), 0 8px 16px rgba(0, 0, 0, 0.3);
   background: linear-gradient(135deg, var(--primary-light), var(--primary));
   animation: formmaster-pulse 1s infinite;
 }
@@ -79,18 +80,19 @@
 }
 
 .formmaster-panel {
-  background: var(--panel-background);
+  background: rgba(255, 255, 255, 0.97);
   border-radius: var(--border-radius);
   padding: 16px;
-  box-shadow: var(--shadow-strong);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.5), 0 0 15px rgba(0, 0, 0, 0.3);
   display: none;
   flex-direction: column;
   width: 240px;
   margin-bottom: 10px;
   animation: formmaster-fadeIn 0.3s ease-out;
-  border: 1px solid rgba(66, 133, 244, 0.3);
+  border: 2px solid rgba(255, 255, 255, 0.8);
   overflow: hidden;
   position: relative;
+  backdrop-filter: none;
 }
 
 .formmaster-panel.show {
@@ -115,7 +117,7 @@
 .formmaster-button {
   background: var(--primary);
   color: var(--text-light);
-  border: none;
+  border: 1px solid rgba(255, 255, 255, 0.3);
   border-radius: var(--border-radius-sm);
   padding: 10px 12px;
   margin: 5px 0;
@@ -130,12 +132,15 @@
   position: relative;
   z-index: 1;
   overflow: visible;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .formmaster-button:hover {
   background: var(--primary-light);
   transform: translateY(-1px);
-  box-shadow: var(--shadow-sm);
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.15);
+  border-color: rgba(255, 255, 255, 0.5);
 }
 
 .formmaster-button:active {
@@ -194,7 +199,7 @@
 /* Loading animation for buttons */
 .formmaster-button.loading {
   position: relative;
-  color: transparent;
+  opacity: 0.6;
   pointer-events: none;
 }
 
@@ -212,7 +217,8 @@
 }
 
 .formmaster-button.loading .formmaster-icon {
-  visibility: hidden;
+  opacity: 0.5;
+  visibility: visible;
 }
 
 /* Status bar styles */
@@ -223,7 +229,8 @@
   color: var(--text-dark);
   font-size: 13px;
   border-radius: var(--border-radius-sm);
-  background: rgba(240, 247, 255, 0.7);
+  background: rgba(240, 247, 255, 0.9);
+  border: 1px solid rgba(200, 220, 255, 0.6);
 }
 
 .formmaster-status-bar.no-profile {

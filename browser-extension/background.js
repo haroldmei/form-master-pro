@@ -219,9 +219,25 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       }
       
       // Now process with the correct data format
-      processPDF(bytes, message.fileName);
+      processPDF(bytes, message.fileName)
+        .then(result => sendResponse(result))
+        .catch(error => {
+          console.error('Error processing PDF:', error);
+          sendResponse({
+            success: false,
+            error: error.message || 'Failed to process PDF file'
+          });
+        });
     } else {
-      processPDF(message.pdfData, message.fileName);
+      processPDF(message.pdfData, message.fileName)
+        .then(result => sendResponse(result))
+        .catch(error => {
+          console.error('Error processing PDF:', error);
+          sendResponse({
+            success: false,
+            error: error.message || 'Failed to process PDF file'
+          });
+        });
     }
     return true;
   }
