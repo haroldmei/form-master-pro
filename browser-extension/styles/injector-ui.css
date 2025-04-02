@@ -90,13 +90,22 @@
   animation: formmaster-fadeIn 0.3s ease-out;
   border: 2px solid rgba(255, 255, 255, 0.8);
   overflow: hidden;
-  position: relative;
-  backdrop-filter: none;
-  /* Reposition the panel to appear above the toggle button */
   position: absolute;
   bottom: 58px; /* Height of button (48px) + margin (10px) */
   left: 0;
   margin-bottom: 0; /* Remove margin as we're using absolute positioning */
+  z-index: 10001; /* Ensure panel appears above other elements */
+}
+
+/* Add a pseudo-element to create a connection area between panel and toggle */
+.formmaster-panel::after {
+  content: '';
+  position: absolute;
+  bottom: -10px;
+  left: 10px;
+  width: 28px;
+  height: 10px;
+  background: transparent; /* Invisible connector area */
 }
 
 .formmaster-panel.show {

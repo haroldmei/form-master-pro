@@ -43,6 +43,9 @@
     toggleButton.textContent = 'FM';
     toggleButton.title = `FormMasterPro v${VERSION}`;
     
+    // Track if we've already added the mouseleave handler to avoid duplicates
+    let mouseLeaveHandlerAdded = false;
+    
     // Replace click event with hover events
     toggleButton.addEventListener('mouseenter', showPanel);
     
@@ -157,19 +160,35 @@
       // Clear any existing hide timeout when showing the panel
       clearTimeout(panel.hideTimeout);
       
-      // Add mouseleave event to the toggle button
-      toggleButton.addEventListener('mouseleave', function() {
-        // Set a small delay before hiding to allow mouse movement to the panel
-        panel.hideTimeout = setTimeout(hidePanel, 300);
-      });
+      // Only add the mouseleave handler once to prevent multiple bindings
+      if (!mouseLeaveHandlerAdded) {
+        toggleButton.addEventListener('mouseleave', function(e) {
+          // Check if the mouse is moving toward the panel
+          const toElement = e.relatedTarget;
+          if (toElement && (toElement === panel || panel.contains(toElement))) {
+            // Mouse moved directly to the panel, no need to set timeout
+            return;
+          }
+          
+          // Set a delay before hiding to allow mouse movement to the panel
+          panel.hideTimeout = setTimeout(hidePanel, 400); // Increased delay for smoother experience
+        });
+        mouseLeaveHandlerAdded = true;
+      }
     }
     
     function hidePanel() {
       // Add a small delay to allow moving between elements
       panel.hideTimeout = setTimeout(() => {
-        panel.classList.remove('show');
-        toggleButton.classList.remove('active');
-      }, 300);
+        // Check if mouse is over panel or toggle before hiding
+        const isMouseOverPanel = panel.matches(':hover');
+        const isMouseOverToggle = toggleButton.matches(':hover');
+        
+        if (!isMouseOverPanel && !isMouseOverToggle) {
+          panel.classList.remove('show');
+          toggleButton.classList.remove('active');
+        }
+      }, 400); // Increased delay for smoother experience
     }
     
     function handleButtonClick(action, buttonElement) {
