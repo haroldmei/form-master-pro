@@ -92,6 +92,10 @@ module.exports = (env, argv) => {
         patterns: [
           // Copy manifest and static assets
           // Add this to copy pre-built PDF.js files from node_modules
+          {
+            from: './browser-extension/styles/injector-ui.css',
+            to: 'styles/injector-ui.css'
+          },
           { 
             from: 'node_modules/pdfjs-dist/build/pdf.min.mjs',
             to: 'libs/pdf.min.js' 

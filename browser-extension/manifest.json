@@ -45,6 +45,7 @@
   "web_accessible_resources": [
     {
       "resources": [
+        "styles/injector-ui.css",
         "lib/*"
       ],
       "matches": [
