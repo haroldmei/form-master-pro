@@ -21,6 +21,16 @@ function packageExtension() {
     fs.mkdirSync(packagesDir, { recursive: true });
   }
   
+  // Copy LICENSE file to dist directory
+  const licensePath = path.resolve(__dirname, '../LICENSE');
+  if (fs.existsSync(licensePath)) {
+    const licenseDestPath = path.resolve(distPath, 'LICENSE');
+    fs.copyFileSync(licensePath, licenseDestPath);
+    console.log('LICENSE file copied to distribution directory');
+  } else {
+    console.warn('LICENSE file not found in project root');
+  }
+  
   // Recursively add files to the zip with maximum compression
   function addFilesToZip(directory, zipFolder = '') {
     const files = fs.readdirSync(directory, { withFileTypes: true });
@@ -33,9 +43,6 @@ function packageExtension() {
         addFilesToZip(filePath, zipPath);
       } else {
         // Add file to zip with maximum compression
-        // The second parameter is zipFolder, third is archivePath (null = use original name)
-        // Fourth parameter is comment (null = no comment)
-        // Note: adm-zip automatically uses maximum compression by default
         outputZip.addLocalFile(filePath, zipFolder);
       }
     }
@@ -43,14 +50,6 @@ function packageExtension() {
   
   // Add all files from dist directory
   addFilesToZip(distPath);
-  
-  // Set compression level using correct method
-  // Note: adm-zip automatically uses DEFLATED method with maximum compression
-  // The following code is no longer needed:
-  // outputZip.getEntries().forEach(entry => {
-  //   entry.header.method = AdmZip.constants.DEFLATED;
-  //   entry.header.compressionLevel = 9;
-  // });
   
   // Write the zip file with maximum compression
   outputZip.writeZip(outputPath);

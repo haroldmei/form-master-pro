@@ -25,8 +25,8 @@
     "automation",
     "formmaster"
   ],
-  "author": "FormMaster Team",
-  "license": "MIT",
+  "author": "FormMasterPro Team",
+  "license": "PROPRIETARY",
   "devDependencies": {
     "@babel/core": "^7.22.5",
     "@babel/plugin-transform-runtime": "^7.22.15",

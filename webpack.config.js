@@ -135,7 +135,11 @@ module.exports = (env, argv) => {
       new CleanWebpackPlugin(),
       new CopyPlugin({
         patterns: [
-          // Copy manifest and static assets
+          // Copy LICENSE file to ensure it's included in the build
+          { 
+            from: './LICENSE',
+            to: '.'
+          },
           // Add this to copy pre-built PDF.js files from node_modules
           {
             from: './browser-extension/styles/injector-ui.css',
