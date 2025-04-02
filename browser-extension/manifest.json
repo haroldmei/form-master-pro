@@ -45,7 +45,7 @@
   "web_accessible_resources": [
     {
       "resources": [
-        "libs/jszip.min.js"
+        "lib/*"
       ],
       "matches": [
         "<all_urls>"

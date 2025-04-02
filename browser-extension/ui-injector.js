@@ -272,7 +272,7 @@
           // Create a file input element
           const input = document.createElement('input');
           input.type = 'file';
-          input.accept = '.json,.docx'; // Accept both JSON and DOCX files
+          input.accept = '.pdf,.docx'; // Accept both JSON and DOCX files
           
           // Handle file selection
           input.onchange = async e => {
@@ -287,9 +287,9 @@
             try {
               const fileExtension = file.name.split('.').pop().toLowerCase();
               
-              if (fileExtension === 'json') {
+              if (fileExtension === 'pdf') {
                 // Process JSON file
-                await processJsonFile(file);
+                await processPDFFile(file);
               } else if (fileExtension === 'docx') {
                 // Process DOCX file
                 await processDocxFile(file);
@@ -376,7 +376,6 @@
         return;
       }
       
-      // For all other actions, check verification first
       chrome.runtime.sendMessage({ action: 'checkEmailVerification' }, function(response) {
         if (!response || !response.isVerified) {
           showToast('Email verification required to use this feature', 'error');
@@ -397,39 +396,35 @@
       });
     }
     
-    /**
-     * Process JSON file
-     */
-    function processJsonFile(file) {
+    function processPDFFile(file) {
       const reader = new FileReader();
       reader.onload = event => {
         try {
-          const userProfile = JSON.parse(event.target.result);
+          const reader = new FileReader();
+          reader.onload = function(event) {
+            const arrayBuffer = event.target.result;
+            
+            // Convert ArrayBuffer to base64 string before sending
+            const base64 = arrayBufferToBase64(arrayBuffer);
+                    
+            // Send as base64 string which survives message passing
+            chrome.runtime.sendMessage({ 
+              action: 'processPDF', 
+              pdfData: base64,
+              isBase64: true,
+              fileName: file.name,
+              size: arrayBuffer.byteLength
+            });
+          };
+          reader.onerror = function(error) {
+            showStatus('Error reading file!', true);
+            console.error('Error reading file:', error);
+          };
+          reader.readAsArrayBuffer(file);
 
-          // Check profile size (just informational now, no storage limits)
-          const jsonSize = new Blob([JSON.stringify(userProfile)]).size;
-          if (jsonSize > 5000000) {
-            console.warn(`Profile size ${jsonSize} bytes is large`);
-            //showStatusMessage('Large profile may impact performance', 'warning');
-          }
-
-          // Update global memory only (no storage)
-          chrome.runtime.sendMessage({ 
-            action: 'updateUserProfile', 
-            profile: userProfile 
-          }, function(response) {
-            if (chrome.runtime.lastError || !response || !response.success) {
-              console.error('Error saving profile:', chrome.runtime.lastError || 'Background update failed');
-              //showStatusMessage('Error saving profile. Please try again.', 'error');
-              return;
-            }
-
-            console.log('Profile saved successfully to global memory');
-            //showStatusMessage('Profile imported successfully!', 'success');
-          });
         } catch (error) {
           //showStatusMessage('Error importing profile: ' + error.message, 'error');
-          console.error('JSON parsing error:', error);
+          console.error('PDF parsing error:', error);
         }
       };
 
@@ -441,9 +436,15 @@
       reader.readAsText(file);
     }
 
-    /**
-     * Process DOCX file
-     */
+    function arrayBufferToBase64(buffer) {
+      let binary = '';
+      const bytes = new Uint8Array(buffer);
+      for (let i = 0; i < bytes.byteLength; i++) {
+        binary += String.fromCharCode(bytes[i]);
+      }
+      return window.btoa(binary);
+    }
+
     async function processDocxFile(file) {
       try {
         // Load the docx-extractor.js module
@@ -488,8 +489,6 @@
               }
             };
 
-            //showStatusMessage('Profile too large. Saving simplified version.', 'warning');
-
             // Save the simplified profile
             saveProfile(simplifiedProfile);
           } else {
@@ -504,11 +503,7 @@
         throw new Error(`Error processing DOCX: ${error.message}`);
       }
     }
-  
-    
-    /**
-     * Save profile to global memory
-     */
+
     function saveProfile(userProfile) {
       chrome.runtime.sendMessage({ 
         action: 'updateUserProfile', 
@@ -535,9 +530,6 @@
       }, 3000);
     }
     
-    /**
-     * Load profile information from global memory via message passing
-     */
     function loadProfileInfo() {
       chrome.runtime.sendMessage({ action: 'getUserProfile' }, function(response) {
         if (chrome.runtime.lastError) {
@@ -577,11 +569,6 @@
       });
     }
 
-    /**
-     * Dynamically load a script
-     * @param {string} src - The script source URL
-     * @returns {Promise} - Resolves when the script is loaded
-     */
     function loadScript(src) {
       return new Promise((resolve, reject) => {
         const script = document.createElement('script');
@@ -592,12 +579,6 @@
       });
     }
     
-    /**
-     * Extract content from a DOCX file in a browser environment using JSZip
-     * @param {Blob} docxFile - The DOCX file as a Blob
-     * @param {string} filename - The name of the file
-     * @returns {Promise<Object>} Raw content from the document
-     */
     async function extractDocxContent(docxFile, filename) {
       try {
         console.log('DOCX file loaded:', docxFile);
@@ -742,11 +723,6 @@
       }
     }
     
-    /**
-     * Determine if content is important enough to include
-     * @param {string} text - The text to check
-     * @returns {boolean} - Whether the content is important
-     */
     function isImportantContent(text) {
       if (!text || text.length === 0) return false;
       
@@ -778,11 +754,6 @@
       return true;
     }
     
-    /**
-     * Remove all whitespace including spaces and line breaks from text
-     * @param {string} text - The text to process
-     * @returns {string} - Text with all whitespace removed
-     */
     function removeAllWhitespace(text) {
       if (!text) return "";
       

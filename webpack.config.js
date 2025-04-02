@@ -1,4 +1,5 @@
 const path = require('path');
+const webpack = require('webpack'); // Add this import
 const CopyPlugin = require('copy-webpack-plugin');
 const TerserPlugin = require('terser-webpack-plugin');
 const { CleanWebpackPlugin } = require('clean-webpack-plugin');
@@ -31,11 +32,10 @@ module.exports = (env, argv) => {
       // Form extraction script
       'forms/form_extract': './browser-extension/forms/form_extract.js',
       'forms/form_radios': './browser-extension/forms/form_radios.js',
-      // files script
-      // 'files/docx-extractor': './browser-extension/files/docx-extractor.js',
-      // 'files/pdf-extractor': './browser-extension/files/pdf-extractor.js',
       'auth': './browser-extension/auth.js',
       'libs/jszip.min': './browser-extension/libs/jszip.min.js',
+      'libs/pdf.min': './browser-extension/libs/pdf.min.js',
+      'libs/pdf.worker.min': './browser-extension/libs/pdf.worker.min.js',
       'mappings': './browser-extension/mappings.js',
     },
     output: {
@@ -67,11 +67,40 @@ module.exports = (env, argv) => {
         }),
       ],
     },
+    resolve: {
+      fallback: {
+        // Provide empty mocks for Node.js modules that PDF.js tries to use
+        "fs": false,
+        "path": false,
+        "zlib": false,
+        "stream": false,
+        "http": false,
+        "https": false,
+        "url": false,
+        "crypto": false,
+        "canvas": false
+      }
+    },
     plugins: [
+      // Add this to provide necessary browser polyfills
+      new webpack.ProvidePlugin({
+        process: 'process/browser',
+        Buffer: ['buffer', 'Buffer'],
+      }),
       new CleanWebpackPlugin(),
       new CopyPlugin({
         patterns: [
           // Copy manifest and static assets
+          // Add this to copy pre-built PDF.js files from node_modules
+          { 
+            from: 'node_modules/pdfjs-dist/build/pdf.min.mjs',
+            to: 'libs/pdf.min.js' 
+          },
+          { 
+            from: 'node_modules/pdfjs-dist/build/pdf.worker.min.mjs',
+            to: 'libs/pdf.worker.min.js' 
+          },
+          // Your other copy patterns...
           { 
             from: './browser-extension/manifest.json',
             to: '.'

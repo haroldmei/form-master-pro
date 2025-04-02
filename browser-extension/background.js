@@ -7,10 +7,10 @@ importScripts(
   'modules/formProcessor.js',
   'modules/aiService.js',
   'modules/formFiller.js',
-  'modules/utils.js'
+  'modules/utils.js',
+  'libs/pdf.min.js',
+  'libs/pdf.worker.min.js'
 );
-
-// User profile is now directly accessible via self.globalUserProfile
 
 console.log("FormMasterPro extension initializing...");
 
@@ -23,6 +23,16 @@ auth0Service.init()
     console.error('Auth initialization error:', error);
   });
 
+  // Configure PDF.js to use the imported worker
+if (typeof pdfjsLib !== 'undefined') {
+  // After importing the worker script directly, no need for a separate worker
+  pdfjsLib.GlobalWorkerOptions.disableWorker = true;
+  console.log('PDF.js configured with direct worker import');
+} else {
+  console.error('Failed to load PDF.js library');
+}
+
+
 // Consolidated message listener for all extension communications
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   const tabId = sender.tab?.id;
@@ -32,7 +42,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     console.log("Received message from content script:", message, "from tab:", tabId);
   }
   
-  // User profile related messages
   if (message.action === 'getUserProfile') {
     sendResponse({ success: true, profile: self.globalUserProfile });
     return false;
@@ -46,7 +55,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return false;
   }
   
-  // Auth-related message handling
   if (message.type === 'auth-callback') {
     // Handle successful authentication callback
     const expiresAt = Date.now() + (parseInt(message.expiresIn) * 1000);
@@ -74,7 +82,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
   
-  // Auth service actions
   switch (message.action) {
     case 'checkAuth':
       auth0Service.isAuthenticated()
@@ -101,13 +108,27 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       return true;
       
     case 'checkSubscription':
-      checkSubscriptionStatus()
-        .then(result => sendResponse(result))
-        .catch(error => sendResponse({ success: false, error: error.message, isSubscribed: false }));
+      // First check if we have recent subscription data in storage
+      chrome.storage.local.get(['subscriptionData'], async (result) => {
+        if (result.subscriptionData && 
+            result.subscriptionData.timestamp && 
+            (Date.now() - result.subscriptionData.timestamp < 24 * 60 * 60 * 1000)) {
+          // Use cached data if less than 24 hours old
+          console.log('Using cached subscription data');
+          sendResponse(result.subscriptionData.data);
+        } else {
+          // Otherwise fetch fresh data from the server
+          try {
+            const freshData = await checkSubscriptionStatus();
+            sendResponse(freshData);
+          } catch (error) {
+            sendResponse({ success: false, error: error.message, isSubscribed: false });
+          }
+        }
+      });
       return true;
   }
   
-  // Email verification related actions
   if (message.action === 'checkEmailVerification') {
     checkEmailVerification()
       .then(isVerified => sendResponse({ success: true, isVerified }))
@@ -122,7 +143,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
   
-  // Extension functionality messages
   if (message.action === 'checkCompanionConnection') {
     // We're now in standalone mode, always "connected"
     sendResponse({ connected: true, standalone: true });
@@ -149,7 +169,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return false;
   }
   
-  // UI injected action handling
   if (message.action === 'analyze-form') {
     analyzeFormInTab(tabId, message.url)
       .then(result => {
@@ -189,6 +208,23 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
   
+  if (message.action === 'processPDF') {
+    if (message.isBase64) {
+      // Convert back to Uint8Array
+      const binaryString = atob(message.pdfData);
+      const len = binaryString.length;
+      const bytes = new Uint8Array(len);
+      for (let i = 0; i < len; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+      }
+      
+      // Now process with the correct data format
+      processPDF(bytes, message.fileName);
+    } else {
+      processPDF(message.pdfData, message.fileName);
+    }
+    return true;
+  }
   // If we reach here, the message wasn't handled
   console.warn('Unhandled message:', message);
   sendResponse({ success: false, error: 'Unhandled message type or action' });
@@ -521,16 +557,65 @@ async function checkSubscriptionStatus() {
       }
     }
     
-    return { 
+    const result = { 
       success: true, 
       isSubscribed: subscription.status === 'active' || subscription.status === 'trialing',
       plan: subscription.plan_name || subscription.plan || 'free',
       expiresAt: expiresAt,
       subscriptionData: subscription
     };
+    
+    // Store subscription data in local storage with timestamp
+    chrome.storage.local.set({
+      subscriptionData: {
+        timestamp: Date.now(),
+        data: result
+      }
+    });
+    
+    return result;
   } catch (error) {
     console.error('Error checking subscription status:', error);
     return { success: false, error: error.message, isSubscribed: false };
+  }
+}
+
+// Process the PDF file
+async function processPDF(pdfData, fileName) {
+  try {
+    console.log(`Processing PDF: ${fileName}`);
+    
+    // Use PDF.js to load the document and extract text
+    console.log('Loading PDF with PDF.js...');
+    const loadingTask = pdfjsLib.getDocument({data: pdfData});
+    const pdfDocument = await loadingTask.promise;
+    console.log(`PDF loaded. Number of pages: ${pdfDocument.numPages}`);
+    
+    // Extract text from all pages
+    let textContent = '';
+    for (let i = 1; i <= pdfDocument.numPages; i++) {
+      console.log(`Processing page ${i}/${pdfDocument.numPages}`);
+      const page = await pdfDocument.getPage(i);
+      const content = await page.getTextContent();
+      const pageText = content.items.map(item => item.str).join(' ');
+      textContent += `Page ${i}:\n${pageText}\n\n`;
+    }
+    
+    console.log('Text extraction complete. Sample:', textContent.substring(0, 100) + '...');
+
+    // Create a user profile structure from the DOCX content
+    const userProfile = {
+      source: 'pdf',
+      filename: fileName,
+      extractedContent: textContent,
+      size: textContent.length,
+      timeLoaded: new Date().toISOString()
+    };
+
+    self.globalUserProfile = userProfile;
+    
+  } catch (error) {
+    console.error('Error processing PDF:', error);
   }
 }
 
