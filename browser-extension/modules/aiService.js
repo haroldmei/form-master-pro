@@ -77,6 +77,7 @@ const aiService = (() => {
       // Format processed profile data for the prompt
       const profileJson = JSON.stringify(processedProfile);
       console.log("User profile JSON:", profileJson.length, "bytes (optimized from original)");
+      console.log("User profile JSON:", profileJson);
       
       // Make the API call to bargain4me.com
       const response = await fetch(`https://bargain4me.com/api/formmaster`, {

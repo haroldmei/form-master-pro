@@ -161,6 +161,13 @@ document.addEventListener('DOMContentLoaded', function() {
       if (userInfo) {
         if (userName) userName.textContent = userInfo.name || userInfo.email || 'User';
         if (userPicture && userInfo.picture) userPicture.src = userInfo.picture;
+        
+        // Update subscription link with email parameter if available
+        const subscriptionLink = document.getElementById('subscription-link');
+        if (subscriptionLink && userInfo.email) {
+          const baseUrl = 'https://subscribe.formmasterpro.com/';
+          subscriptionLink.href = `${baseUrl}?email=${encodeURIComponent(userInfo.email)}`;
+        }
       }
     } catch (error) {
       console.error('Error loading user profile:', error);
