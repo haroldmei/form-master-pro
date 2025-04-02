@@ -54,7 +54,7 @@ document.addEventListener('DOMContentLoaded', function() {
   if (logoutButton) logoutButton.addEventListener('click', logout);
 
   // Set up event listeners
-  addSafeEventListener('analyze-form', 'click', analyzeCurrentForm);
+  // addSafeEventListener('analyze-form', 'click', analyzeCurrentForm);
 
   // Add verification-related event listeners
   if (resendVerificationBtn) resendVerificationBtn.addEventListener('click', resendVerificationEmail);
