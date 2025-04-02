@@ -8,7 +8,7 @@
     "build": "webpack --mode=production",
     "build:dev": "webpack --mode=development",
     "obfuscate": "node scripts/obfuscate.js",
-    "package": "npm run build && node scripts/package.js",
+    "package": "npm run build:prod && node scripts/package-extension.js",
     "package:dev": "npm run build:dev && node scripts/package.js",
     "build:installer": "node scripts/build-installer.js",
     "package:full": "npm run package && npm run build:installer",
@@ -16,7 +16,8 @@
     "version:patch": "node scripts/bump-version.js patch",
     "version:minor": "node scripts/bump-version.js minor",
     "version:major": "node scripts/bump-version.js major",
-    "version:set": "node scripts/bump-version.js"
+    "version:set": "node scripts/bump-version.js",
+    "build:prod": "webpack --mode=production --env production"
   },
   "keywords": [
     "browser-extension",
@@ -38,6 +39,7 @@
     "copy-webpack-plugin": "^11.0.0",
     "crx": "5.0.1",
     "css-loader": "^6.8.1",
+    "css-minimizer-webpack-plugin": "^5.0.1",
     "eslint": "^8.43.0",
     "file-loader": "^6.2.0",
     "html-webpack-plugin": "^5.5.3",
