@@ -225,6 +225,24 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     }
     return true;
   }
+
+  if (message.action === 'formatFileSize') {
+    if (typeof message.size === 'number') {
+      sendResponse({ success: true, formattedSize: formatFileSize(message.size) });
+    } else {
+      sendResponse({ success: false, error: 'Invalid file size provided' });
+    }
+    return false;
+  }
+
+  if (message.action === 'loadProfileInfo') {
+    sendResponse({ 
+      success: true, 
+      profile: self.globalUserProfile 
+    });
+    return false;
+  }
+  
   // If we reach here, the message wasn't handled
   console.warn('Unhandled message:', message);
   sendResponse({ success: false, error: 'Unhandled message type or action' });
@@ -603,7 +621,7 @@ async function processPDF(pdfData, fileName) {
     
     console.log('Text extraction complete. Sample:', textContent.substring(0, 100) + '...');
 
-    // Create a user profile structure from the DOCX content
+    // Create a user profile structure from the PDF content
     const userProfile = {
       source: 'pdf',
       filename: fileName,
@@ -614,9 +632,28 @@ async function processPDF(pdfData, fileName) {
 
     self.globalUserProfile = userProfile;
     
+    return {
+      success: true,
+      message: `Processed PDF: ${fileName}`,
+      profile: userProfile
+    };
   } catch (error) {
     console.error('Error processing PDF:', error);
+    return {
+      success: false,
+      error: error.message || 'Failed to process PDF file'
+    };
   }
+}
+
+// Format file size in a human-readable format
+function formatFileSize(bytes) {
+  if (!bytes || bytes === 0) return '0 B';
+  
+  const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(1024));
+  
+  return parseFloat((bytes / Math.pow(1024, i)).toFixed(2)) + ' ' + sizes[i];
 }
 
 console.log("Background script loaded in standalone mode");
