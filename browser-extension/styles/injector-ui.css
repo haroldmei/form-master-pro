@@ -52,8 +52,8 @@
   width: 48px;
   height: 48px;
   border-radius: 24px;
-  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
-  color: var(--text-light);
+  background: #4285f4; /* Fixed blue color for toggle button */
+  color: #ffffff;
   display: flex;
   justify-content: center;
   align-items: center;
@@ -71,7 +71,7 @@
 .formmaster-toggle:hover {
   transform: translateY(-2px);
   box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.9), 0 8px 16px rgba(0, 0, 0, 0.3);
-  background: linear-gradient(135deg, var(--primary-light), var(--primary));
+  background: #5c9aff; /* Fixed lighter blue on hover */
   animation: formmaster-pulse 1s infinite;
 }
 
@@ -115,7 +115,7 @@
 }
 
 .formmaster-button {
-  background: var(--primary);
+  background: #4285f4; /* Fixed blue color instead of var(--primary) */
   color: var(--text-light);
   border: 1px solid rgba(255, 255, 255, 0.3);
   border-radius: var(--border-radius-sm);
@@ -137,7 +137,7 @@
 }
 
 .formmaster-button:hover {
-  background: var(--primary-light);
+  background: #5c9aff; /* Fixed lighter blue color instead of var(--primary-light) */
   transform: translateY(-1px);
   box-shadow: 0 3px 8px rgba(0, 0, 0, 0.15);
   border-color: rgba(255, 255, 255, 0.5);
@@ -225,16 +225,16 @@
 .formmaster-status-bar {
   padding: 12px;
   margin-top: 8px;
-  border-top: 1px solid rgba(66, 133, 244, 0.2);
-  color: var(--text-dark);
+  border-top: 1px solid #c8dcff; /* Fixed color for border */
+  color: #3c4043; /* Fixed darker text color for better contrast */
   font-size: 13px;
   border-radius: var(--border-radius-sm);
-  background: rgba(240, 247, 255, 0.9);
-  border: 1px solid rgba(200, 220, 255, 0.6);
+  background: #ecf3fe; /* Fixed light blue background */
+  border: 1px solid #c8dcff; /* Fixed border color */
 }
 
 .formmaster-status-bar.no-profile {
-  color: var(--text-muted);
+  color: #5f6368; /* Fixed muted text color */
   font-style: italic;
 }
 
@@ -263,20 +263,20 @@
   align-items: center;
   margin-bottom: 12px;
   padding-bottom: 8px;
-  border-bottom: 1px solid rgba(66, 133, 244, 0.2);
+  border-bottom: 1px solid #c8dcff; /* Fixed border color */
 }
 
 .panel-title {
   font-size: 14px;
   font-weight: 600;
-  color: var(--primary-dark);
+  color: #1a73e8; /* Fixed blue color for title */
   text-shadow: 0 1px 0 rgba(255, 255, 255, 0.5);
 }
 
 .panel-version {
   font-size: 10px;
-  color: var(--text-muted);
+  color: #5f6368; /* Fixed color */
   padding: 2px 6px;
-  background: var(--background-hover);
+  background: #f1f3f4; /* Fixed background color */
   border-radius: 10px;
 }
