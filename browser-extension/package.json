@@ -1,13 +1,17 @@
 {
   "name": "formmaster-extension",
-  "version": "0.1.0",
-  "description": "FormMaster Pro - Browser extension for form automation",
+  "version": "0.1.13",
+  "description": "FormMasterPro - Browser extension for form automation",
   "private": true,
   "scripts": {
     "build": "webpack --mode=production",
     "dev": "webpack --mode=development --watch",
     "lint": "eslint .",
-    "zip": "node scripts/zip-extension.js"
+    "zip": "node scripts/zip-extension.js",
+    "version:patch": "cd .. && npm run version:patch",
+    "version:minor": "cd .. && npm run version:minor",
+    "version:major": "cd .. && npm run version:major",
+    "version:set": "cd .. && npm run version:set"
   },
   "keywords": [
     "browser-extension",
@@ -15,7 +19,7 @@
     "automation",
     "formmaster"
   ],
-  "author": "FormMaster Team",
+  "author": "FormMasterPro Team",
   "license": "MIT",
   "devDependencies": {
     "@types/chrome": "^0.0.242",

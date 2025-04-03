@@ -4,7 +4,7 @@
 class Auth0Service {
     constructor() {
       this.auth0Domain = 'dev-otc3dyzfpgcr275c.au.auth0.com';
-      this.clientId = '0dviQoHfyEGnkY3VeQmDq62NeYJHFJSG';
+      this.clientId = 'gQbfiwyJzVJMO43WeEwEuzJ8mdinYH4g';
       this.audience = 'http://localhost:3000/api'; // Optional
       this.scope = 'openid profile email offline_access';
       this.isExtension = typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.id;
@@ -17,7 +17,7 @@ class Auth0Service {
                            `chrome-extension://${chrome.runtime.id}/callback.html`;
       } else {
         // For web application
-        this.redirectUri = window.location.origin + '/callback';
+        this.redirectUri = self.location.origin + '/callback';
       }
     }
   
@@ -74,7 +74,7 @@ class Auth0Service {
           await this.handleExtensionLogin(authUrl.toString());
         } else {
           // For web application, redirect to Auth0
-          window.location.href = authUrl.toString();
+          self.location.href = authUrl.toString();
         }
         
         return true;
@@ -165,12 +165,17 @@ class Auth0Service {
       // Calculate token expiration
       const expiresAt = Date.now() + (tokenResponse.expires_in * 1000);
       
-      // Store auth state
+      // Extract email verification status from ID token
+      const emailVerified = this.extractEmailVerified(tokenResponse.id_token);
+      
+      // Store auth state with email verification status
       const authState = {
         accessToken: tokenResponse.access_token,
         idToken: tokenResponse.id_token,
         refreshToken: tokenResponse.refresh_token,
-        expiresAt
+        expiresAt,
+        emailVerified,
+        lastChecked: Date.now()
       };
       
       await this.setAuthState(authState);
@@ -179,6 +184,55 @@ class Auth0Service {
       await this.clearAuthParams();
       
       return true;
+    }
+    
+    /**
+     * Extract email verification status from ID token
+     */
+    extractEmailVerified(idToken) {
+      try {
+        const payload = JSON.parse(atob(idToken.split('.')[1]));
+        return payload.email_verified === true;
+      } catch (error) {
+        console.error('Error extracting email verification status:', error);
+        return false;
+      }
+    }
+    
+    /**
+     * Check if email is verified
+     */
+    async isEmailVerified() {
+      const authState = await this.getAuthState();
+      
+      if (!authState) {
+        return false;
+      }
+      
+      // If we have the status cached and it was checked recently, use that
+      if (authState.emailVerified !== undefined && 
+          authState.lastChecked && 
+          Date.now() - authState.lastChecked < 5 * 60 * 1000) { // 5 minutes cache
+        return authState.emailVerified;
+      }
+      
+      // Otherwise, check from the user profile
+      try {
+        const userProfile = await this.getUserProfile();
+        const emailVerified = userProfile.email_verified === true;
+        
+        // Update the cached value
+        await this.setAuthState({
+          ...authState,
+          emailVerified,
+          lastChecked: Date.now()
+        });
+        
+        return emailVerified;
+      } catch (error) {
+        console.error('Error checking email verification:', error);
+        return false;
+      }
     }
     
     /**
@@ -237,12 +291,20 @@ class Auth0Service {
         // Calculate new expiration time
         const expiresAt = Date.now() + (tokenResponse.expires_in * 1000);
         
+        // Extract email verification status from ID token if available
+        let emailVerified = undefined;
+        if (tokenResponse.id_token) {
+          emailVerified = this.extractEmailVerified(tokenResponse.id_token);
+        }
+        
         // Store updated tokens
         const authState = {
           accessToken: tokenResponse.access_token,
           idToken: tokenResponse.id_token,
           refreshToken: tokenResponse.refresh_token || refreshToken,
-          expiresAt
+          expiresAt,
+          emailVerified,
+          lastChecked: Date.now()
         };
         
         await this.setAuthState(authState);
@@ -290,8 +352,8 @@ class Auth0Service {
           }
         } else {
           // For web application, redirect to logout URL
-          logoutUrl.searchParams.append('returnTo', window.location.origin);
-          window.location.href = logoutUrl.toString();
+          logoutUrl.searchParams.append('returnTo', self.location.origin);
+          self.location.href = logoutUrl.toString();
         }
       }
       
@@ -326,7 +388,7 @@ class Auth0Service {
       const authState = await this.getAuthState();
       
       if (!authState || !authState.accessToken) {
-        throw new Error('No access token available');
+        throw new Error('No access token available, please login first');
       }
       
       const userInfoUrl = `https://${this.auth0Domain}/userinfo`;
@@ -358,7 +420,7 @@ class Auth0Service {
       const authState = await this.getAuthState();
       
       if (!authState || !authState.accessToken) {
-        throw new Error('No access token available');
+        throw new Error('No access token available, please login first');
       }
       
       if (this.isTokenExpired(authState.expiresAt)) {
@@ -488,8 +550,8 @@ class Auth0Service {
   // Make it available globally and as a module
   if (typeof module !== 'undefined' && module.exports) {
     module.exports = auth0Service;
-  } else if (typeof window !== 'undefined') {
-    window.auth0Service = auth0Service;
+  } else if (typeof self !== 'undefined') {
+    self.auth0Service = auth0Service;
   }
   
   // For Chrome extension background script, make sure it's exported

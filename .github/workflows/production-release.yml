@@ -2,58 +2,114 @@ name: Production Release
 
 on:
   push:
+    branches:
+      - main
     tags:
-      - 'v*'  # Run when tag is pushed with pattern v*, e.g. v1.0.0
+      - 'v*.*.*'  # Run when version tags are pushed
   workflow_dispatch:  # Allow manual triggering
 
 jobs:
-  build-and-publish:
-    runs-on: windows-latest  # Need Windows for NSIS installer
+  build-and-package:
+    runs-on: windows-latest
     
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
-      
-      - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/checkout@v2
         with:
-          python-version: '3.11'
+          fetch-depth: 0  # Fetch all history for git tags and commits
+      
+      - name: Set up Node.js
+        uses: actions/setup-node@v2
+        with:
+          node-version: '16'
+          cache: 'npm'
       
       - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install build twine setuptools wheel
+        run: npm ci
       
-      - name: Extract version
-        id: get_version
-        run: |
-          $version = '0.1.27'  # Replace with your version extraction logic
-          echo "VERSION=$version" >> $env:GITHUB_OUTPUT
+      # Use the combined package script from package.json instead of separate steps
+      - name: Package extension
+        run: npm run package
       
-      - name: Build Python package
+      - name: Get package name
+        id: get-package
         run: |
-          python -m build
+          $packageName = Get-ChildItem -Path packages -Filter "form-master-pro-v*.zip" | Sort-Object -Property LastWriteTime -Descending | Select-Object -First 1 -ExpandProperty FullName
+          echo "package=$packageName" >> $env:GITHUB_OUTPUT
+          echo "filename=$(Split-Path -Leaf $packageName)" >> $env:GITHUB_OUTPUT
+        shell: pwsh
       
-      - name: Install NSIS
+      # Create crx file using available tools in devDependencies
+      - name: Create CRX file
+        id: crx-package
         run: |
-          choco install nsis -y
+          # Create directory for key if it doesn't exist
+          if (-not (Test-Path -Path "key")) {
+            New-Item -ItemType Directory -Path "key"
+          }
+          
+          # Generate private key if not exists
+          if (-not (Test-Path -Path "key/private.pem")) {
+            openssl genrsa -out key/private.pem 2048
+          }
+          
+          # Determine version from tag or generate from current date if on main branch
+          $version = if ($env:GITHUB_REF.StartsWith('refs/tags/')) {
+            $env:GITHUB_REF_NAME
+          } else {
+            "dev-$(Get-Date -Format 'yyyyMMdd-HHmm')"
+          }
+          
+          # Use the crx package to create the crx file
+          npx crx pack ./dist -o ./packages/form-master-pro-$version.crx -p key/private.pem
+          
+          # Set outputs
+          $crxFile = Get-ChildItem -Path packages -Filter "form-master-pro-*.crx" | Sort-Object -Property LastWriteTime -Descending | Select-Object -First 1 -ExpandProperty FullName
+          echo "crx=$crxFile" >> $env:GITHUB_OUTPUT
+          echo "crxname=$(Split-Path -Leaf $crxFile)" >> $env:GITHUB_OUTPUT
+        shell: pwsh
       
-      - name: Build Windows installer
-        shell: cmd
-        run: |
-          cd ${{ github.workspace }}
-          call build_installer.bat
-      
+      # Use GitHub CLI to create a release in the target repository
       - name: Create GitHub Release
-        id: create_release
-        uses: softprops/action-gh-release@v1
-        with:
-          files: |
-            dist/*.exe
-          tag_name: ${{ github.ref_name }}
-          name: FormMaster ${{ steps.get_version.outputs.VERSION }}
-          draft: false
-          prerelease: false
-          generate_release_notes: true
+        if: startsWith(github.ref, 'refs/tags/')
         env:
-          GITHUB_TOKEN: ${{ secrets.PRIVATE_SSH_KEY }}
+          GH_TOKEN: ${{ secrets.REPO_ACCESS_TOKEN }}
+          PACKAGE_PATH: ${{ steps.get-package.outputs.package }}
+          CRX_PATH: ${{ steps.crx-package.outputs.crx }}
+          PACKAGE_NAME: ${{ steps.get-package.outputs.filename }}
+          CRX_NAME: ${{ steps.crx-package.outputs.crxname }}
+          TAG_NAME: ${{ github.ref_name }}
+        run: |
+          # Install GitHub CLI
+          choco install gh -y
+          
+          # Create release in target repository
+          gh release create $env:TAG_NAME `
+            --repo "haroldmei/formmasterpro" `
+            --title "FormMasterPro $env:TAG_NAME" `
+            --notes "Release of FormMasterPro $env:TAG_NAME" `
+            $env:PACKAGE_PATH `
+            $env:CRX_PATH
+          
+          echo "Release created in: https://github.com/haroldmei/formmasterpro"
+          echo "Package uploaded: $env:PACKAGE_NAME"
+          echo "CRX uploaded: $env:CRX_NAME"
+        shell: pwsh
+      
+      - name: Package summary
+        run: |
+          echo "Package created: ${{ steps.get-package.outputs.filename }}"
+          echo "CRX package created: ${{ steps.crx-package.outputs.crxname }}"
+          echo "Release created in: https://github.com/haroldmei/formmasterpro"
+          echo "View releases at: https://github.com/haroldmei/formmasterpro/releases"
+      
+      # Upload artifacts for non-tag builds (branch pushes)
+      - name: Upload build artifacts
+        if: "!startsWith(github.ref, 'refs/tags/')"
+        uses: actions/upload-artifact@v2
+        with:
+          name: extension-packages
+          path: |
+            ${{ steps.get-package.outputs.package }}
+            ${{ steps.crx-package.outputs.crx }}
+          retention-days: 14

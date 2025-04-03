@@ -1,6 +1,6 @@
 // Extract tokens from URL and send to background script
 (function() {
-    const params = new URLSearchParams(window.location.hash.substring(1));
+    const params = new URLSearchParams(self.location.hash.substring(1));
     const accessToken = params.get('access_token');
     const idToken = params.get('id_token');
     const error = params.get('error');
@@ -22,5 +22,5 @@
     }
     
     // Close this tab
-    window.close();
+    self.close();
   })();

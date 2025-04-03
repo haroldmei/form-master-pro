@@ -1,0 +1,59 @@
+{
+  "name": "form-master-pro",
+  "version": "0.1.13",
+  "description": "FormMasterPro - Browser extension for form automation",
+  "private": true,
+  "scripts": {
+    "dev": "webpack --mode=development --watch",
+    "build": "webpack --mode=production",
+    "build:dev": "webpack --mode=development",
+    "obfuscate": "node scripts/obfuscate.js",
+    "package": "npm run build:prod && node scripts/package-extension.js",
+    "package:dev": "npm run build:dev && node scripts/package.js",
+    "build:installer": "node scripts/build-installer.js",
+    "package:full": "npm run package && npm run build:installer",
+    "lint": "eslint browser-extension/**/*.js",
+    "version:patch": "node scripts/bump-version.js patch",
+    "version:minor": "node scripts/bump-version.js minor",
+    "version:major": "node scripts/bump-version.js major",
+    "version:set": "node scripts/bump-version.js",
+    "build:prod": "webpack --mode=production --env production"
+  },
+  "keywords": [
+    "browser-extension",
+    "form",
+    "automation",
+    "formmaster"
+  ],
+  "author": "FormMasterPro Team",
+  "license": "PROPRIETARY",
+  "devDependencies": {
+    "@babel/core": "^7.22.5",
+    "@babel/plugin-transform-runtime": "^7.22.15",
+    "@babel/preset-env": "^7.22.5",
+    "@types/chrome": "^0.0.242",
+    "adm-zip": "^0.5.10",
+    "babel-loader": "^9.1.2",
+    "chalk": "^4.1.2",
+    "clean-webpack-plugin": "^4.0.0",
+    "copy-webpack-plugin": "^11.0.0",
+    "crx": "5.0.1",
+    "css-loader": "^6.8.1",
+    "css-minimizer-webpack-plugin": "^5.0.1",
+    "eslint": "^8.43.0",
+    "file-loader": "^6.2.0",
+    "html-webpack-plugin": "^5.5.3",
+    "javascript-obfuscator": "^4.0.2",
+    "style-loader": "^3.3.3",
+    "terser-webpack-plugin": "^5.3.9",
+    "webpack": "^5.88.0",
+    "webpack-cli": "^5.1.4",
+    "zip-webpack-plugin": "^4.0.1"
+  },
+  "dependencies": {
+    "@babel/runtime": "^7.22.15",
+    "core-js": "^3.32.1",
+    "lodash": "^4.17.21",
+    "pdfjs-dist": "^5.1.91"
+  }
+}

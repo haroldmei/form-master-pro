@@ -24,38 +24,42 @@ document.addEventListener('DOMContentLoaded', function() {
   const loggedInView = document.getElementById('logged-in-view');
   const userName = document.getElementById('user-name');
   const userPicture = document.getElementById('user-picture');
-  
 
   // Button elements
   const analyzeFormBtn = document.getElementById('analyze-form');
-  const loadDataBtn = document.getElementById('load-data');
-  const dataMappingsBtn = document.getElementById('data-mappings');
-  const autoFillBtn = document.getElementById('auto-fill');
-  const openOptionsBtn = document.getElementById('open-options');
   
   // Form analysis panel
   const formAnalysisPanel = document.getElementById('form-analysis');
   const fieldCount = document.getElementById('field-count');
   const fieldsContainer = document.getElementById('fields-container');
   
+  // Email verification elements
+  const verificationAlert = document.getElementById('verification-alert');
+  const resendVerificationBtn = document.getElementById('resend-verification');
+  const checkVerificationBtn = document.getElementById('check-verification');
+  const verificationBadge = document.getElementById('verification-badge');
+  
+  // Subscription elements
+  const subscriptionStatus = document.getElementById('subscription-status');
+  const subscriptionLink = document.getElementById('subscription-link');
+  
   // Check authentication state on popup open
   checkAuthState();
+  
+  // Check subscription status on popup open
+  checkSubscriptionStatus();
   
   // Add auth button listeners
   if (loginButton) loginButton.addEventListener('click', login);
   if (logoutButton) logoutButton.addEventListener('click', logout);
 
   // Set up event listeners
-  addSafeEventListener('analyze-form', 'click', analyzeCurrentForm);
-  addSafeEventListener('load-data', 'click', loadProfileData);
-  addSafeEventListener('data-mappings', 'click', openDataMappings);
-  addSafeEventListener('auto-fill', 'click', autoFillForm);
-  addSafeEventListener('open-options', 'click', openOptions);
-  
-  // Remove redundant event listeners for elements that don't exist
-  // addSafeEventListener('fill-form-btn', 'click', fillCurrentForm);
-  // addSafeEventListener('settings-btn', 'click', openSettings);
-  
+  // addSafeEventListener('analyze-form', 'click', analyzeCurrentForm);
+
+  // Add verification-related event listeners
+  if (resendVerificationBtn) resendVerificationBtn.addEventListener('click', resendVerificationEmail);
+  if (checkVerificationBtn) checkVerificationBtn.addEventListener('click', relogin); // Check verification status on button click
+
   // Listen for auth state changes from background script
   chrome.runtime.onMessage.addListener((message) => {
     if (message.type === 'auth-state-changed') {
@@ -108,20 +112,43 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   }
   
+
+  async function relogin(){
+    logout();
+    login();
+  }
+
   // Check authentication state
   async function checkAuthState() {
     try {
       const response = await chrome.runtime.sendMessage({ action: 'checkAuth' });
       
       if (response && response.isAuthenticated) {
-        showAuthenticatedUI();
-        loadUserProfile();
+        // User is authenticated, but we need to check email verification
+        const isVerified = await checkEmailVerification(false); // false means don't show messages
+        
+        if (isVerified) {
+          // Fully authenticated and verified
+          showAuthenticatedUI(true);
+          loadUserProfile();
+          checkSubscriptionStatus(); // Check subscription when user is authenticated
+        } else {
+          // Authenticated but not verified
+          showAuthenticatedUI(false);
+          loadUserProfile();
+          showVerificationAlert();
+          checkSubscriptionStatus(); // Check subscription when user is authenticated but not verified
+        }
       } else {
         showUnauthenticatedUI();
+        // Hide subscription information when not logged in
+        if (subscriptionStatus) subscriptionStatus.parentElement.parentElement.classList.add('hidden');
       }
     } catch (error) {
       console.error('Error checking auth state:', error);
       showUnauthenticatedUI();
+      // Hide subscription information on error
+      if (subscriptionStatus) subscriptionStatus.parentElement.parentElement.classList.add('hidden');
     }
   }
   
@@ -134,6 +161,13 @@ document.addEventListener('DOMContentLoaded', function() {
       if (userInfo) {
         if (userName) userName.textContent = userInfo.name || userInfo.email || 'User';
         if (userPicture && userInfo.picture) userPicture.src = userInfo.picture;
+        
+        // Update subscription link with email parameter if available
+        const subscriptionLink = document.getElementById('subscription-link');
+        if (subscriptionLink && userInfo.email) {
+          const baseUrl = 'https://subscribe.formmasterpro.com/';
+          subscriptionLink.href = `${baseUrl}?email=${encodeURIComponent(userInfo.email)}`;
+        }
       }
     } catch (error) {
       console.error('Error loading user profile:', error);
@@ -161,12 +195,34 @@ document.addEventListener('DOMContentLoaded', function() {
   }
   
   // Show authenticated UI
-  function showAuthenticatedUI() {
+  function showAuthenticatedUI(verified = true) {
     if (loggedOutView) loggedOutView.classList.add('hidden');
     if (loggedInView) loggedInView.classList.remove('hidden');
     
-    // Enable buttons that require authentication
-    enableFormFeatures(true);
+    // Only enable form features if the user is verified
+    enableFormFeatures(verified);
+    
+    // Set verification badge
+    if (verificationBadge) {
+      if (verified) {
+        verificationBadge.textContent = 'Verified';
+        verificationBadge.className = 'user-badge badge-verified';
+      } else {
+        verificationBadge.textContent = 'Unverified';
+        verificationBadge.className = 'user-badge badge-unverified';
+      }
+    }
+    
+    // Only show verification alert if the user is logged in but not verified
+    if (verificationAlert) {
+      verificationAlert.style.display = verified ? 'none' : 'block';
+    }
+
+    // Show subscription container for authenticated users
+    const subscriptionContainer = document.getElementById('subscription-container');
+    if (subscriptionContainer) {
+      subscriptionContainer.classList.remove('hidden');
+    }
   }
   
   // Show unauthenticated UI
@@ -174,75 +230,98 @@ document.addEventListener('DOMContentLoaded', function() {
     if (loggedOutView) loggedOutView.classList.remove('hidden');
     if (loggedInView) loggedInView.classList.add('hidden');
     
+    // Always hide verification alert for logged out users
+    if (verificationAlert) {
+      verificationAlert.style.display = 'none';
+    }
+    
     // Disable buttons that require authentication
     enableFormFeatures(false);
+
+    // Hide subscription container for unauthenticated users
+    const subscriptionContainer = document.getElementById('subscription-container');
+    if (subscriptionContainer) {
+      subscriptionContainer.classList.add('hidden');
+    }
   }
   
-  // Enable/disable form features based on auth state
-  function enableFormFeatures(enabled) {
-    const buttons = []; //[analyzeFormButton, loadDataButton, dataMappingsButton, autoFillButton];
-    buttons.forEach(button => {
-      if (button) button.disabled = !enabled;
-    });
-  }
-  
-  // Function to analyze the current form
-  function analyzeCurrentForm2() {
-    analyzeFormBtn.disabled = true;
-    analyzeFormBtn.textContent = 'Analyzing...';
-    
-    chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
-      chrome.scripting.executeScript({
-        target: { tabId: tabs[0].id },
-        function: scanFormFields
-      }, results => {
-        if (results && results[0] && results[0].result) {
-          displayFormFields(results[0].result);
-          autoFillBtn.disabled = false;
-        } else {
-          fieldsContainer.innerHTML = '<p class="error">No form detected or error analyzing form.</p>';
-          formAnalysisPanel.classList.remove('hidden');
+  // Check email verification status
+  async function checkEmailVerification(showMessages = true) {
+    try {
+      const response = await chrome.runtime.sendMessage({ action: 'checkEmailVerification' });
+      
+      if (response && response.success) {
+        const isVerified = response.isVerified === true;
+        
+        if (isVerified && showMessages) {
+          showToast('Email verified successfully!', 'success');
+          showAuthenticatedUI(true);
+        } else if (showMessages) {
+          showToast('Email is not verified yet', 'warning');
         }
         
-        analyzeFormBtn.disabled = false;
-        analyzeFormBtn.textContent = 'Analyze Current Form';
-      });
+        return isVerified;
+      }
+      
+      return false;
+    } catch (error) {
+      console.error('Error checking verification status:', error);
+      if (showMessages) {
+        showToast('Error checking verification status', 'error');
+      }
+      return false;
+    }
+  }
+  
+  // Resend verification email
+  async function resendVerificationEmail() {
+    try {
+      resendVerificationBtn.disabled = true;
+      resendVerificationBtn.textContent = 'Sending...';
+      
+      const response = await chrome.runtime.sendMessage({ action: 'resendVerificationEmail' });
+      
+      if (response && response.success) {
+        showToast('Verification email sent!', 'success');
+      } else {
+        showToast(response?.error || 'Error sending verification email', 'error');
+      }
+    } catch (error) {
+      console.error('Error sending verification email:', error);
+      showToast('Error sending verification email', 'error');
+    } finally {
+      resendVerificationBtn.disabled = false;
+      resendVerificationBtn.textContent = 'Resend Email';
+    }
+  }
+  
+  // Show verification alert (only for authenticated but unverified users)
+  function showVerificationAlert() {
+    // This function is now redundant as the alert visibility is managed in showAuthenticatedUI
+    // Keeping it for compatibility with existing code
+    if (verificationAlert) {
+      verificationAlert.style.display = 'block';
+    }
+  }
+
+  // Enable/disable form features based on auth state and verification
+  function enableFormFeatures(enabled) {
+    // Update to handle all form-related buttons
+    if (analyzeFormBtn) analyzeFormBtn.disabled = !enabled;
+    
+    // Add any other buttons that require authentication
+    const buttons = [analyzeFormBtn]; // Add other form buttons here
+    
+    buttons.forEach(button => {
+      if (button) {
+        button.disabled = !enabled;
+        if (!enabled && button.title) {
+          button.title = 'Email verification required';
+        }
+      }
     });
   }
   
-  // Function to scan form fields
-  function scanFormFields() {
-    const fields = [];
-    
-    // Get all input elements
-    const inputs = document.querySelectorAll('input, select, textarea');
-    
-    inputs.forEach(input => {
-      // Skip hidden, submit, button, and other non-data fields
-      if (['submit', 'button', 'image', 'reset', 'file'].includes(input.type)) {
-        return;
-      }
-      
-      const fieldInfo = {
-        type: input.type || 'text',
-        id: input.id || '',
-        name: input.name || '',
-        placeholder: input.placeholder || '',
-        className: input.className || '',
-        value: input.value || ''
-      };
-      
-      // Get label text if available
-      const labelElement = document.querySelector(`label[for="${input.id}"]`);
-      if (labelElement) {
-        fieldInfo.label = labelElement.textContent.trim();
-      }
-      
-      fields.push(fieldInfo);
-    });
-    
-    return fields;
-  }
 
   // Function to analyze the current form
   function analyzeCurrentForm() {
@@ -260,7 +339,7 @@ document.addEventListener('DOMContentLoaded', function() {
           target: { tabId: tabs[0].id },
           function: () => {
             // Use the FormExtract object exposed by form_extract.js
-            const formData = window.FormExtract.extractFormControls();
+            const formData = self.FormExtract.extractFormControls();
 
             // Flatten the structure to match what displayFormFields expects
             const fields = [];
@@ -422,45 +501,6 @@ document.addEventListener('DOMContentLoaded', function() {
     formAnalysisPanel.classList.remove('hidden');
   }
   
-  // Function to load user profile data
-  function loadProfileData() {
-    // In standalone mode, open the profile editor
-    chrome.tabs.create({url: 'profile.html'});
-    showToast('Opening profile editor');
-  }
-  
-  // Function to open data mappings page
-  function openDataMappings() {
-    chrome.tabs.create({url: 'mappings.html'});
-  }
-  
-  // Function to trigger auto-fill
-  function autoFillForm() {
-    autoFillBtn.disabled = true;
-    autoFillBtn.textContent = 'Filling...';
-    
-    chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
-      chrome.runtime.sendMessage({ 
-        action: 'fillForm', 
-        tabId: tabs[0].id,
-        url: tabs[0].url
-      }, response => {
-        if (response && response.success) {
-          showToast('Form filled successfully');
-        } else {
-          showToast('Error filling form: ' + (response?.error || 'Unknown error'), 'error');
-        }
-        
-        autoFillBtn.disabled = false;
-        autoFillBtn.textContent = 'Auto Fill Form';
-      });
-    });
-  }
-  
-  // Function to open options page
-  function openOptions() {
-    chrome.runtime.openOptionsPage();
-  }
   
   // Helper function to show toast messages
   function showToast(message, type = 'info') {
@@ -479,36 +519,6 @@ document.addEventListener('DOMContentLoaded', function() {
     }, 10);
   }
   
-  /**
-   * Fill the current form with data
-   */
-  function fillCurrentForm() {
-    // This function is now only used internally, not connected to a DOM element
-    chrome.tabs.query({ active: true, currentWindow: true }, tabs => {
-      const tab = tabs[0];
-      if (!tab) return;
-      
-      chrome.runtime.sendMessage({ 
-        action: 'fillForm', 
-        tabId: tab.id,
-        url: tab.url
-      }, response => {
-        if (response && response.success) {
-          showToast('Form filled successfully');
-        } else {
-          showToast('Error filling form: ' + (response?.error || 'Unknown error'), 'error');
-        }
-      });
-    });
-  }
-  
-  /**
-   * Open the extension settings page
-   */
-  function openSettings() {
-    // This function is now only used internally, not connected to a DOM element
-    chrome.runtime.openOptionsPage();
-  }
   
   // Initialize your popup interface
   function initializePopup() {
@@ -516,4 +526,109 @@ document.addEventListener('DOMContentLoaded', function() {
   }
   
   initializePopup();
+
+  // Helper function to show error messages
+  function showError(message) {
+    const errorContainer = document.createElement('div');
+    errorContainer.className = 'error-message';
+    errorContainer.textContent = message;
+
+    // Append the error message to the body or a specific container
+    document.body.appendChild(errorContainer);
+
+    // Automatically remove the error message after 3 seconds
+    setTimeout(() => {
+      errorContainer.remove();
+    }, 3000);
+  }
+
+  // Check subscription status
+  async function checkSubscriptionStatus() {
+    try {
+      // First check if we have recent subscription data in local storage
+      const storageData = await new Promise(resolve => {
+        chrome.storage.local.get(['subscriptionData'], result => {
+          resolve(result.subscriptionData);
+        });
+      });
+      
+      // Use cached data if it exists and is less than 24 hours old
+      let response;
+      if (storageData && 
+          storageData.timestamp && 
+          (Date.now() - storageData.timestamp < 24 * 60 * 60 * 1000)) {
+        console.log('Using cached subscription data');
+        response = storageData.data;
+      } else {
+        // Otherwise request fresh data
+        response = await chrome.runtime.sendMessage({ action: 'checkSubscription' });
+      }
+      
+      if (response && response.isSubscribed) {
+        // User has an active subscription
+        subscriptionStatus.textContent = 'Active';
+        subscriptionStatus.className = 'subscription-badge subscription-active';
+        
+        // Display expiry date if available
+        const expiryElem = document.getElementById('subscription-expiry');
+        if (expiryElem && response.expiresAt) {
+          try {
+            // Parse ISO date string directly
+            const expiryDate = new Date(response.expiresAt);
+            
+            // Format the date in a user-friendly way
+            const options = { year: 'numeric', month: 'short', day: 'numeric' };
+            const formattedDate = expiryDate.toLocaleDateString(undefined, options);
+            
+            expiryElem.textContent = `Expires: ${formattedDate}`;
+            expiryElem.classList.remove('hidden');
+            
+            // Check if subscription expires soon (within 7 days)
+            const daysUntilExpiry = Math.ceil((expiryDate - new Date()) / (1000 * 60 * 60 * 24));
+            
+            if (daysUntilExpiry <= 7) {
+              // Change expiry text to red and show renewal link
+              expiryElem.style.color = '#dc3545';
+              subscriptionLink.textContent = 'Renew Now';
+              subscriptionLink.classList.remove('hidden');
+              
+              // If very close to expiry (3 days), make it more noticeable
+              if (daysUntilExpiry <= 3) {
+                expiryElem.innerHTML = `<strong>Expires in ${daysUntilExpiry} days!</strong>`;
+              }
+            } else {
+              // Not expiring soon, hide renewal link
+              subscriptionLink.classList.add('hidden');
+            }
+          } catch (e) {
+            console.error('Error formatting expiry date:', e, response.expiresAt);
+            expiryElem.classList.add('hidden');
+          }
+        }
+      } else {
+        // User does not have an active subscription
+        subscriptionStatus.textContent = 'Free';
+        subscriptionStatus.className = 'subscription-badge subscription-inactive';
+        subscriptionLink.textContent = 'Upgrade';
+        subscriptionLink.classList.remove('hidden');
+        
+        // Hide expiry element for free users
+        const expiryElem = document.getElementById('subscription-expiry');
+        if (expiryElem) {
+          expiryElem.classList.add('hidden');
+        }
+      }
+    } catch (error) {
+      console.error('Error checking subscription status:', error);
+      subscriptionStatus.textContent = 'Unknown';
+      subscriptionStatus.className = 'subscription-badge subscription-inactive';
+      subscriptionLink.classList.remove('hidden');
+      
+      // Hide expiry element on error
+      const expiryElem = document.getElementById('subscription-expiry');
+      if (expiryElem) {
+        expiryElem.classList.add('hidden');
+      }
+    }
+  }
 });

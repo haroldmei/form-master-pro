@@ -16,7 +16,7 @@ const formFiller = (() => {
         target: { tabId: message.tabId },
         function: () => {
           // Use the FormExtract object exposed by form_extract.js
-          const formData = window.FormExtract.extractFormControls();
+          const formData = self.FormExtract.extractFormControls();
           console.log("Extracted form data:", formData);
 
           // Flatten the structure to match what processForm expects
@@ -410,3 +410,5 @@ function fillFormWithData(fieldValues) {
     fillFormWithData
   };
 })();
+
+self.formFiller = formFiller;

@@ -1,20 +1,16 @@
 {
   "manifest_version": 3,
-  "name": "FormMaster Pro",
-  "version": "0.1.0",
+  "name": "FormMasterPro",
+  "version": "0.1.13",
   "description": "Advanced form automation for web applications",
   "permissions": [
     "storage",
     "activeTab",
-    "developerPrivate",
-    "contextMenus",
     "scripting",
-    "nativeMessaging",
-    "webNavigation",
-    "identity"  // Add this permission
+    "identity"
   ],
   "host_permissions": [
-    "http://*/*", 
+    "http://*/*",
     "https://*/*"
   ],
   "action": {
@@ -35,20 +31,44 @@
   },
   "content_scripts": [
     {
-      "matches": ["<all_urls>"],
-      "js": ["content.js", "scripts/ui-injector.js"],
+      "matches": [
+        "<all_urls>"
+      ],
+      "js": [
+        "content.js",
+        "libs/jszip.min.js",
+        "ui-injector.js"
+      ],
       "run_at": "document_start"
     }
   ],
-  
-  "web_accessible_resources": [{
-    "resources": [
-      "files/*.js",
-      "libs/*.js"
-    ],
-    "matches": ["<all_urls>"]
-  }],
-  
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "styles/injector-ui.css",
+        "lib/*"
+      ],
+      "matches": [
+        "<all_urls>"
+      ]
+    },
+    {
+      "resources": [
+        "package.json"
+      ],
+      "matches": [
+        "<all_urls>"
+      ]
+    },
+    {
+      "resources": [
+        "styles/injector-ui.css"
+      ],
+      "matches": [
+        "<all_urls>"
+      ]
+    }
+  ],
   "options_page": "options.html",
   "minimum_chrome_version": "88",
   "browser_specific_settings": {
@@ -57,8 +77,6 @@
       "strict_min_version": "89.0"
     }
   },
-  
-  // If your manifest is v3, you might need this for module support
   "content_security_policy": {
     "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'"
   }
