@@ -106,7 +106,7 @@ jobs:
       # Upload artifacts for non-tag builds (branch pushes)
       - name: Upload build artifacts
         if: "!startsWith(github.ref, 'refs/tags/')"
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: extension-packages
           path: |
