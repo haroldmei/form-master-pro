@@ -152,7 +152,7 @@ class Auth0Service {
       
       // Verify state parameter
       if (state !== authParams.state) {
-        throw new Error('Invalid state parameter');
+        throw new Error('Invalid state parameter', state, authParams.state);
       }
       
       // Exchange code for tokens
