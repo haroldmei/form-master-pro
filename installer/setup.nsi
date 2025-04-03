@@ -49,7 +49,7 @@ FunctionEnd
 !ifndef PRODUCT_VERSION
   !define PRODUCT_VERSION "0.1.0"  ; Fallback version if not provided
 !endif
-!define PRODUCT_PUBLISHER "FormMaster Team"
+!define PRODUCT_PUBLISHER "FormMasterPro Team"
 !define PRODUCT_WEB_SITE "https://formmaster.pro"
 !define PRODUCT_DIR_REGKEY "Software\Microsoft\Windows\CurrentVersion\App Paths\FormMaster-Pro"
 !define PRODUCT_UNINST_KEY "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT_NAME}"
