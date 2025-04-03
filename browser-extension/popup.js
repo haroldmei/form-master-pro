@@ -126,6 +126,8 @@ document.addEventListener('DOMContentLoaded', function() {
       if (response && response.isAuthenticated) {
         // User is authenticated, but we need to check email verification
         const isVerified = await checkEmailVerification(false); // false means don't show messages
+        console.log('User is authenticated:', response.isAuthenticated, 'Verified:', isVerified);
+
         
         if (isVerified) {
           // Fully authenticated and verified
@@ -218,10 +220,14 @@ document.addEventListener('DOMContentLoaded', function() {
       verificationAlert.style.display = verified ? 'none' : 'block';
     }
 
-    // Show subscription container for authenticated users
+    // Show subscription container ONLY for verified users
     const subscriptionContainer = document.getElementById('subscription-container');
     if (subscriptionContainer) {
-      subscriptionContainer.classList.remove('hidden');
+      if (verified) {
+        subscriptionContainer.classList.remove('hidden');
+      } else {
+        subscriptionContainer.classList.add('hidden');
+      }
     }
   }
   
@@ -555,12 +561,14 @@ document.addEventListener('DOMContentLoaded', function() {
       // Use cached data if it exists and is less than 24 hours old
       let response;
       if (storageData && 
+          storageData.data && storageData.data.isSubscribed && // by default any new subscription should be active
           storageData.timestamp && 
           (Date.now() - storageData.timestamp < 24 * 60 * 60 * 1000)) {
-        console.log('Using cached subscription data');
+        console.log('Cached subscription status', storageData.data.isSubscribed, storageData.data.success);
         response = storageData.data;
       } else {
         // Otherwise request fresh data
+        console.log('Fetch subscription data from server');
         response = await chrome.runtime.sendMessage({ action: 'checkSubscription' });
       }
       

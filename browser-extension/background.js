@@ -111,8 +111,9 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       // First check if we have recent subscription data in storage
       chrome.storage.local.get(['subscriptionData'], async (result) => {
         if (result.subscriptionData && 
-            result.subscriptionData.timestamp && 
-            (Date.now() - result.subscriptionData.timestamp < 24 * 60 * 60 * 1000)) {
+          result.subscriptionData.data && result.subscriptionData.data.isSubscribed && // by default any new subscription should be active
+          result.subscriptionData.timestamp && 
+          (Date.now() - result.subscriptionData.timestamp < 24 * 60 * 60 * 1000)) {
           // Use cached data if less than 24 hours old
           console.log('Using cached subscription data');
           sendResponse(result.subscriptionData.data);
