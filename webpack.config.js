@@ -2,6 +2,7 @@ const path = require('path');
 const webpack = require('webpack'); // Add this import
 const CopyPlugin = require('copy-webpack-plugin');
 const TerserPlugin = require('terser-webpack-plugin');
+const CssMinimizerPlugin = require('css-minimizer-webpack-plugin'); // Add this import
 const { CleanWebpackPlugin } = require('clean-webpack-plugin');
 const ZipPlugin = require('zip-webpack-plugin');
 
@@ -52,9 +53,14 @@ module.exports = (env, argv) => {
               comments: false,
             },
             compress: {
-              drop_console: true,
-              drop_debugger: true,
-              pure_funcs: ['console.log', 'console.info', 'console.debug']
+              drop_console: isProduction, // Only drop in production
+              drop_debugger: isProduction,
+              pure_funcs: isProduction ? ['console.log', 'console.info', 'console.debug', 'console.warn'] : [],
+              passes: 2, // Multiple optimization passes
+              ecma: 2020, // Use modern ECMAScript features for better minification
+              toplevel: true, // Better top-level minification
+              unsafe_math: true, // Allow unsafe math optimizations
+              booleans_as_integers: true // Convert boolean to integer when beneficial
             },
             mangle: {
               reserved: ['FormExtract'], // Preserve necessary global names
@@ -65,7 +71,46 @@ module.exports = (env, argv) => {
           },
           extractComments: false,
         }),
+        // Add CSS minifier
+        new CssMinimizerPlugin({
+          minimizerOptions: {
+            preset: [
+              'default',
+              { 
+                discardComments: { removeAll: true },
+                normalizeWhitespace: true,
+                minifyFontValues: true
+              },
+            ],
+          }
+        })
       ],
+      // Add better tree shaking configuration
+      usedExports: true,
+      innerGraph: true,
+      sideEffects: true,
+      splitChunks: isProduction ? {
+        chunks: 'all',
+        minSize: 20000,
+        maxSize: 0,
+        minChunks: 1,
+        maxAsyncRequests: 30,
+        maxInitialRequests: 30,
+        automaticNameDelimiter: '~',
+        enforceSizeThreshold: 50000,
+        cacheGroups: {
+          defaultVendors: {
+            test: /[\\/]node_modules[\\/]/,
+            priority: -10,
+            reuseExistingChunk: true,
+          },
+          default: {
+            minChunks: 2,
+            priority: -20,
+            reuseExistingChunk: true,
+          },
+        },
+      } : false,
     },
     resolve: {
       fallback: {
@@ -90,7 +135,11 @@ module.exports = (env, argv) => {
       new CleanWebpackPlugin(),
       new CopyPlugin({
         patterns: [
-          // Copy manifest and static assets
+          // Copy LICENSE file to ensure it's included in the build
+          { 
+            from: './LICENSE',
+            to: '.'
+          },
           // Add this to copy pre-built PDF.js files from node_modules
           {
             from: './browser-extension/styles/injector-ui.css',
@@ -150,8 +199,11 @@ module.exports = (env, argv) => {
       }),
       ...(isProduction ? [
         new ZipPlugin({
-          filename: 'form-master-pro.zip',
+          filename: `form-master-pro-v${require('./package.json').version}.zip`, // Use version from package.json
           path: '../packages',
+          compressionOptions: {
+            level: 9 // Maximum compression level
+          }
         })
       ] : [])
     ],
