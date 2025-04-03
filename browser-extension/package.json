@@ -19,7 +19,7 @@
     "automation",
     "formmaster"
   ],
-  "author": "FormMaster Team",
+  "author": "FormMasterPro Team",
   "license": "MIT",
   "devDependencies": {
     "@types/chrome": "^0.0.242",
