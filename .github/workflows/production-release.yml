@@ -2,6 +2,8 @@ name: Production Release
 
 on:
   push:
+    branches:
+      - main
     tags:
       - 'v*.*.*'  # Run when version tags are pushed
   workflow_dispatch:  # Allow manual triggering
@@ -51,11 +53,18 @@ jobs:
             openssl genrsa -out key/private.pem 2048
           }
           
+          # Determine version from tag or generate from current date if on main branch
+          $version = if ($env:GITHUB_REF.StartsWith('refs/tags/')) {
+            $env:GITHUB_REF_NAME
+          } else {
+            "dev-$(Get-Date -Format 'yyyyMMdd-HHmm')"
+          }
+          
           # Use the crx package to create the crx file
-          npx crx pack ./dist -o ./packages/form-master-pro-v${{ github.ref_name }}.crx -p key/private.pem
+          npx crx pack ./dist -o ./packages/form-master-pro-$version.crx -p key/private.pem
           
           # Set outputs
-          $crxFile = Get-ChildItem -Path packages -Filter "form-master-pro-v*.crx" | Sort-Object -Property LastWriteTime -Descending | Select-Object -First 1 -ExpandProperty FullName
+          $crxFile = Get-ChildItem -Path packages -Filter "form-master-pro-*.crx" | Sort-Object -Property LastWriteTime -Descending | Select-Object -First 1 -ExpandProperty FullName
           echo "crx=$crxFile" >> $env:GITHUB_OUTPUT
           echo "crxname=$(Split-Path -Leaf $crxFile)" >> $env:GITHUB_OUTPUT
         shell: pwsh
@@ -93,3 +102,14 @@ jobs:
           echo "CRX package created: ${{ steps.crx-package.outputs.crxname }}"
           echo "Release created in: https://github.com/haroldmei/formmasterpro"
           echo "View releases at: https://github.com/haroldmei/formmasterpro/releases"
+      
+      # Upload artifacts for non-tag builds (branch pushes)
+      - name: Upload build artifacts
+        if: "!startsWith(github.ref, 'refs/tags/')"
+        uses: actions/upload-artifact@v2
+        with:
+          name: extension-packages
+          path: |
+            ${{ steps.get-package.outputs.package }}
+            ${{ steps.crx-package.outputs.crx }}
+          retention-days: 14
