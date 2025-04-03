@@ -288,17 +288,16 @@ async function resendVerificationEmail() {
   try {
     const token = await auth0Service.getAccessToken();
     const userInfo = await auth0Service.getUserInfo();
-    
+
     // Call Auth0 Management API to resend verification email
-    const response = await fetch(`https://${auth0Service.auth0Domain}/api/v2/jobs/verification-email`, {
+    const response = await fetch(`https://bargain4me.com/api/auth/send-email-verification`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        user_id: userInfo.sub,
-        client_id: auth0Service.clientId
+        user_id: userInfo.sub
       })
     });
     
