@@ -1,15 +1,4 @@
-/**
- * Radio button group extraction utilities for FormMaster.
- * This module provides specialized functions for extracting and analyzing radio button groups from HTML pages.
- * Browser-compatible version - no Node.js dependencies.
- */
-
-/**
- * Extract radio button groups from the container
- * 
- * @param {Element} container - Container element to extract radio groups from
- * @returns {Array} Array of radio groups
- */
+// FormRadios.js
 function extractRadioGroups(container) {
   try {
     console.log('FormRadios.extractRadioGroups called with container:', container);
@@ -61,12 +50,6 @@ function extractRadioGroups(container) {
   }
 }
 
-/**
- * Try to find a label for a radio button element
- * 
- * @param {Element} element - Radio button element to find label for
- * @returns {string} Label text or empty string if not found
- */
 function getRadioElementLabel(element) {
   // Try to find a label by for attribute
   if (element.id) {
@@ -82,10 +65,11 @@ function getRadioElementLabel(element) {
     if (parent.tagName === 'LABEL') {
       // Extract text but exclude the radio button's value
       let labelText = parent.textContent.trim();
-      if (element.value && labelText.includes(element.value)) {
-        labelText = labelText.replace(element.value, '').trim();
-      }
-      return labelText;
+      // if (element.value && labelText.includes(element.value)) {
+      //   labelText = labelText.replace(element.value, '').trim();
+      // }
+      // return labelText;
+      return element.value || labelText;
     }
     parent = parent.parentElement;
   }
@@ -104,12 +88,6 @@ function getRadioElementLabel(element) {
   return element.value || ''; // Fall back to value as last resort
 }
 
-/**
- * Try to find a label for a group of radio buttons
- * 
- * @param {Element} radioElement - Radio button element
- * @returns {string} Group label or empty string if not found
- */
 function getRadioGroupLabel(radioElement) {
   try {
     console.log('Trying to find label for radio group:', radioElement.name);
@@ -129,6 +107,88 @@ function getRadioGroupLabel(radioElement) {
         }
         break;
       }
+      parent = parent.parentElement;
+      depth++;
+    }
+    
+    // Instead of looking for specific class names, look for structural patterns
+    // that are common across different frameworks
+    parent = radioElement.parentElement;
+    depth = 0;
+    
+    while (parent && depth < 6) {
+      // 1. Check if this is any kind of form group container (regardless of class name)
+      // Look for structural hints rather than specific classes
+      const isFormGroup = 
+        // Has label + control arrangement
+        (parent.querySelector('label') && parent.querySelectorAll('input, select, textarea').length > 0) ||
+        // Has typical form group structure (regardless of class names)
+        (parent.children.length >= 2 && 
+         Array.from(parent.children).some(el => el.tagName === 'LABEL' || 
+                                         el.querySelector('label'))) ||
+        // Has form group related classes (using partial matching for flexibility)
+        Array.from(parent.classList).some(cls => 
+          /form|group|field|control|row/i.test(cls)
+        );
+      
+      if (isFormGroup) {
+        console.log('Found potential form group container:', parent);
+        
+        // Look for standalone labels that could be group headers
+        // Query all labels and filter out those that contain radio buttons
+        const allLabels = Array.from(parent.querySelectorAll('label'));
+        const standaloneLabels = allLabels.filter(label => !label.querySelector('input[type="radio"]'));
+        
+        // Among standalone labels, prioritize those that:
+        // 1. Are direct children of the form group
+        // 2. Appear before the radio buttons
+        // 3. Have certain common structural patterns
+        for (const criteria of [
+          // Direct children with common label class patterns
+          label => label.parentNode === parent && 
+                  Array.from(label.classList).some(cls => /label|caption|header|title/i.test(cls)),
+          // Any standalone label positioned before the first radio
+          label => !radioElement.compareDocumentPosition(label) & Node.DOCUMENT_POSITION_FOLLOWING,
+          // Any label without a "for" attribute (likely a group label)
+          label => !label.hasAttribute('for'),
+          // Any remaining standalone label
+          label => true
+        ]) {
+          const matchedLabel = standaloneLabels.find(criteria);
+          if (matchedLabel) {
+            const text = matchedLabel.textContent.trim();
+            console.log(`Found standalone label: "${text}"`);
+            return text;
+          }
+        }
+        
+        // If no standalone labels found, try looking for heading elements or other descriptive text
+        const descriptiveElements = parent.querySelectorAll('h1, h2, h3, h4, h5, h6, legend, caption, [aria-label]');
+        for (const elem of descriptiveElements) {
+          // Use aria-label if available, otherwise use text content
+          const text = elem.getAttribute('aria-label') || elem.textContent.trim();
+          if (text) {
+            console.log(`Found descriptive element: "${text}"`);
+            return text;
+          }
+        }
+        
+        // Look for any element with "label" or "title" in its class or role
+        const potentialLabelElements = Array.from(parent.querySelectorAll('*')).filter(
+          el => Array.from(el.classList).some(cls => /label|title|caption|head/i.test(cls)) ||
+               el.getAttribute('role') === 'heading' ||
+               el.getAttribute('aria-labelledby')
+        );
+        
+        for (const elem of potentialLabelElements) {
+          const text = elem.textContent.trim();
+          if (text && !text.includes(radioElement.value)) {
+            console.log(`Found element with label-like class: "${text}"`);
+            return text;
+          }
+        }
+      }
+      
       parent = parent.parentElement;
       depth++;
     }
@@ -265,12 +325,6 @@ function getRadioGroupLabel(radioElement) {
   }
 }
 
-/**
- * Get all radio groups on the page with their selected values
- * 
- * @param {Element} container - Container element to search within
- * @returns {Object} Dictionary of radio groups with name as key and selected value as value
- */
 function getRadioGroupValues(container = document.body) {
   const values = {};
   const radioGroups = extractRadioGroups(container);

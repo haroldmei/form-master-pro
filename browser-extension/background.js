@@ -23,7 +23,7 @@ auth0Service.init()
     console.error('Auth initialization error:', error);
   });
 
-  // Configure PDF.js to use the imported worker
+// Configure PDF.js to use the imported worker
 if (typeof pdfjsLib !== 'undefined') {
   // After importing the worker script directly, no need for a separate worker
   pdfjsLib.GlobalWorkerOptions.disableWorker = true;
@@ -36,23 +36,20 @@ if (typeof pdfjsLib !== 'undefined') {
 // Consolidated message listener for all extension communications
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   const tabId = sender.tab?.id;
-  const isFromContentScript = !!sender.tab;
-  
-  if (isFromContentScript) {
-    console.log("Received message from content script:", message, "from tab:", tabId);
-  }
   
   if (message.action === 'getUserProfile') {
-    sendResponse({ success: true, profile: self.globalUserProfile });
-    return false;
+    userProfileManager.getUserProfile().then(profile => {
+      sendResponse({ success: true, profile });
+    });
+    return true; // Indicate we'll send response asynchronously
   }
   
   if (message.action === 'updateUserProfile') {
-    // Update global memory only
-    self.globalUserProfile = message.profile;
-    console.log('User profile updated in global memory');
-    sendResponse({ success: true });
-    return false;
+    userProfileManager.saveUserProfile(message.profile).then(() => {
+      console.log('User profile updated in storage');
+      sendResponse({ success: true });
+    });
+    return true;
   }
   
   if (message.type === 'auth-callback') {
@@ -148,11 +145,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     // We're now in standalone mode, always "connected"
     sendResponse({ connected: true, standalone: true });
     return false;
-  }
-  
-  if (message.action === 'fillForm') {
-    formFiller.injectAndFillForm(message, sendResponse);
-    return true; // Keep the message channel open for async response
   }
   
   if (message.action === 'openFilePicker') {
@@ -253,11 +245,20 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 
   if (message.action === 'loadProfileInfo') {
-    sendResponse({ 
-      success: true, 
-      profile: self.globalUserProfile 
+    userProfileManager.getUserProfile().then(profile => {
+      sendResponse({ 
+        success: true, 
+        profile 
+      });
     });
-    return false;
+    return true;
+  }
+  
+  if (message.action === 'clearSuggestions') {
+    formProcessor.clearSuggestions()
+      .then(result => sendResponse(result))
+      .catch(error => sendResponse({ success: false, error: error.message }));
+    return true;
   }
   
   // If we reach here, the message wasn't handled
@@ -362,56 +363,32 @@ function countFormFields(formData) {
   return count;
 }
 
-// Fill form in the current tab
+// Fill form in the current tab - Main orchestration function
 async function fillFormInTab(tabId, url) {
   try {
-    // First check if email is verified
-    const isVerified = await checkEmailVerification();
-    if (!isVerified) {
+    // Check if user is verified before proceeding
+    if (!(await isUserVerified())) {
       return { message: 'Email verification required to use this feature', requiresVerification: true };
     }
     
     console.log(`Filling form in tab ${tabId} for URL: ${url}`);
     
-    // Step 1: First inject the form extraction scripts to analyze the form
-    await chrome.scripting.executeScript({
-      target: { tabId },
-      files: ['forms/form_radios.js', 'forms/form_extract.js']
-    });
-    
-    // Step 2: Extract all form fields from the page
-    const results = await chrome.scripting.executeScript({
-      target: { tabId },
-      function: () => {
-        return self.FormExtract.extractFormControls();
-      }
-    });
-    
-    if (!results || !results[0] || !results[0].result) {
+    // Extract form data from the page
+    const formData = await extractFormData(tabId);
+    if (!formData) {
       return { message: 'No form detected on page' };
     }
     
-    const formData = results[0].result;
-    
-    // Step 3: Create a flattened array of all form fields
-    const allFields = [];
-    
-    if (formData.inputs) allFields.push(...formData.inputs);
-    if (formData.selects) allFields.push(...formData.selects);
-    if (formData.textareas) allFields.push(...formData.textareas);
-    if (formData.radios) allFields.push(...formData.radios);
-    if (formData.checkboxes) allFields.push(...formData.checkboxes);
-    
+    // Flatten form fields into a single array
+    const allFields = flattenFormFields(formData);    
     console.log(`Found ${allFields.length} form fields to process`);
     
     if (allFields.length === 0) {
       return { message: 'No fillable form fields detected' };
     }
     
-    // Step 4: Process the form fields to get values using global user profile
-    const processedForm = await formProcessor.processForm(allFields, url, self.globalUserProfile);
-    
-    // Check for auth errors
+    // Process form fields with user profile data
+    const processedForm = await processFormFields(allFields, url);
     if (!processedForm.success) {
       return { message: processedForm.error || 'Error processing form' };
     }
@@ -420,112 +397,298 @@ async function fillFormInTab(tabId, url) {
       return { message: 'No fields could be mapped for filling' };
     }
     
-    // Step 5: Inject form filling script and fill the form
-    const fillResult = await chrome.scripting.executeScript({
-      target: { tabId },
-      function: (fieldValues) => {
-        // This function runs in the context of the web page
-        
-        // Helper function to locate fillable elements
-        function findFillableElement(identifier) {
-          // Try by ID first
-          let element = document.getElementById(identifier);
-          if (element) return element;
-          
-          // Try by name
-          element = document.querySelector(`[name="${identifier}"]`);
-          if (element) return element;
-          
-          // Try by other common selectors
-          return null;
-        }
-        
-        // Track stats
-        const stats = {
-          filled: 0,
-          failed: 0,
-          total: Object.keys(fieldValues).length
-        };
-        
-        // Fill each field
-        for (const [identifier, value] of Object.entries(fieldValues)) {
-          try {
-            const element = findFillableElement(identifier);
-            
-            if (!element) {
-              console.warn(`Could not find element with identifier: ${identifier}`);
-              stats.failed++;
-              continue;
-            }
-            
-            const tagName = element.tagName.toLowerCase();
-            const inputType = element.type ? element.type.toLowerCase() : '';
-            
-            // Handle different element types
-            if (tagName === 'select') {
-              // For select elements
-              const options = Array.from(element.options);
-              const option = options.find(opt => 
-                opt.value === value || 
-                opt.text === value || 
-                opt.textContent.trim() === value
-              );
-              
-              if (option) {
-                element.value = option.value;
-                element.dispatchEvent(new Event('change', { bubbles: true }));
-                stats.filled++;
-              } else {
-                stats.failed++;
-              }
-            } else if (tagName === 'input' && (inputType === 'checkbox' || inputType === 'radio')) {
-              // For checkboxes and radios
-              if (typeof value === 'boolean') {
-                element.checked = value;
-              } else if (typeof value === 'string') {
-                element.checked = value.toLowerCase() === 'true' || 
-                                 value === '1' || 
-                                 value.toLowerCase() === 'yes' ||
-                                 value.toLowerCase() === 'checked';
-              }
-              element.dispatchEvent(new Event('change', { bubbles: true }));
-              stats.filled++;
-            } else {
-              // For text inputs and textareas
-              element.value = value;
-              element.dispatchEvent(new Event('input', { bubbles: true }));
-              element.dispatchEvent(new Event('change', { bubbles: true }));
-              stats.filled++;
-              
-              // Add a visual indicator that the field was filled
-              element.style.borderLeft = '3px solid #4285f4';
-            }
-          } catch (error) {
-            console.error(`Error filling field ${identifier}:`, error);
-            stats.failed++;
-          }
-        }
-        
-        return stats;
-      },
-      args: [processedForm.fields]
-    });
-    
-    // Step 6: Return results
-    if (!fillResult || !fillResult[0] || !fillResult[0].result) {
-      return { message: 'Error filling form' };
-    }
-    
-    const stats = fillResult[0].result;
-    return {
-      message: `Filled ${stats.filled} of ${stats.total} fields`,
-      filledCount: stats.filled,
-      failedCount: stats.failed,
-      totalFields: stats.total
-    };
+    // Fill the form with the processed data
+    return await executeFormFilling(tabId, processedForm.fields);
   } catch (error) {
     console.error('Error in fillFormInTab:', error);
     return { message: `Error: ${error.message}` };
+  }
+}
+
+// Check if user's email is verified
+async function isUserVerified() {
+  return await checkEmailVerification();
+}
+
+// Extract form data from the page
+async function extractFormData(tabId) {
+  // Inject the form extraction scripts
+  await chrome.scripting.executeScript({
+    target: { tabId },
+    files: ['forms/form_radios.js', 'forms/form_extract.js']
+  });
+  
+  // Execute the form extraction
+  const results = await chrome.scripting.executeScript({
+    target: { tabId },
+    function: () => {
+      return self.FormExtract.extractFormControls();
+    }
+  });
+  
+  if (!results || !results[0] || !results[0].result) {
+    return null;
+  }
+  
+  return results[0].result;
+}
+
+// Flatten form fields from different types into a single array
+function flattenFormFields(formData) {
+  const allFields = [];
+  
+  if (formData.inputs) allFields.push(...formData.inputs);
+  if (formData.selects) allFields.push(...formData.selects);
+  if (formData.textareas) allFields.push(...formData.textareas);
+  if (formData.radios) allFields.push(...formData.radios);
+  if (formData.checkboxes) allFields.push(...formData.checkboxes);
+  
+  return allFields;
+}
+
+// Process form fields with user profile data
+async function processFormFields(allFields, url) {
+  console.log('Processing form fields with user profile data');
+  const userProfile = await userProfileManager.getUserProfile();
+  
+  // Use the formProcessor module to get field values
+  return await formProcessor.processForm(allFields, url, userProfile);
+}
+
+// Execute the form filling on the page
+async function executeFormFilling(tabId, fieldValues) {
+  // Execute form filling script in the page context
+  const fillResult = await chrome.scripting.executeScript({
+    target: { tabId },
+    function: performFormFilling,
+    args: [fieldValues]
+  });
+  
+  // Process and return results
+  if (!fillResult || !fillResult[0] || !fillResult[0].result) {
+    return { message: 'Error filling form' };
+  }
+  
+  const stats = fillResult[0].result;
+  return {
+    message: `Filled ${stats.filled} of ${stats.total} fields`,
+    filledCount: stats.filled,
+    failedCount: stats.failed,
+    totalFields: stats.total
+  };
+}
+
+// This function runs in the context of the web page
+function performFormFilling(fieldValues) {
+  // Track stats
+  const stats = {
+    filled: 0,
+    failed: 0,
+    total: Object.keys(fieldValues).length
+  };
+  
+  // Fill each field
+  for (const [identifier, value] of Object.entries(fieldValues)) {
+    try {
+      const element = findFillableElement(identifier);
+      
+      if (!element) {
+        console.warn(`Could not find element with identifier: ${identifier}`);
+        stats.failed++;
+        continue;
+      }
+      
+      const tagName = element.tagName.toLowerCase();
+      const inputType = element.type ? element.type.toLowerCase() : '';
+      
+      if (fillField(element, tagName, inputType, value)) {
+        stats.filled++;
+      } else {
+        stats.failed++;
+      }
+    } catch (error) {
+      console.error(`Error filling field ${identifier}:`, error);
+      stats.failed++;
+    }
+  }
+  
+  return stats;
+  
+  // Helper function to locate fillable elements
+  function findFillableElement(identifier) {
+    // Try by ID first
+    let element = document.getElementById(identifier);
+    if (element) return element;
+    
+    // Try by name
+    element = document.querySelector(`[name="${identifier}"]`);
+    if (element) return element;
+    
+    // Try by other common selectors
+    return null;
+  }
+  
+  // Helper function to find radio button by name and value
+  function findRadioButton(name, value) {
+    return document.querySelector(`input[type="radio"][name="${name}"][value="${value}"]`);
+  }
+  
+  // Fill a field with the given value
+  function fillField(element, tagName, inputType, value) {
+    // Handle different element types
+    if (tagName === 'select') {
+      return fillSelectField(element, value);
+    } else if (tagName === 'input' && (inputType === 'checkbox' || inputType === 'radio')) {
+      return fillCheckboxOrRadio(element, inputType, value);
+    } else {
+      return fillTextField(element, value);
+    }
+  }
+  
+  // Handle select elements (both regular and enhanced)
+  function fillSelectField(element, value) {
+    if (element.style.display === 'none') {
+      // This is likely an enhanced select with a UI widget replacement
+      console.log(`Hidden select detected with id: ${element.id}, trying enhanced handling`);
+      return updateEnhancedSelect(element, value);
+    } else {
+      // Regular select handling
+      const options = Array.from(element.options);
+      const option = options.find(opt => 
+        opt.value === value || 
+        opt.text === value || 
+        opt.textContent.trim() === value
+      );
+      
+      if (option) {
+        element.value = option.value;
+        element.dispatchEvent(new Event('change', { bubbles: true }));
+        return true;
+      }
+      return false;
+    }
+  }
+  
+  // Handle checkbox and radio inputs
+  function fillCheckboxOrRadio(element, inputType, value) {
+    if (inputType === 'radio') {  
+      console.log(`Handling radio button: ${element.name} with value: ${value}`);
+      
+      // Check if value looks like an option value rather than a boolean/state
+      if (typeof value === 'string' && !['true', 'false', 'on', 'off', 'yes', 'no', '1', '0'].includes(value.toLowerCase())) {
+        // Try to find the specific radio button with this value
+        const radioButton = findRadioButton(element.name, value);
+        if (radioButton) {
+          // Select this specific radio button
+          radioButton.checked = true;
+          radioButton.dispatchEvent(new Event('change', { bubbles: true }));
+          console.log(`Selected radio option with value: ${value}`);
+          return true;
+        } else {
+          console.warn(`Could not find radio button with name ${element.name} and value ${value}`);
+        }
+      }
+    }
+    
+    // Regular checkbox/radio handling
+    if (typeof value === 'boolean') {
+      element.checked = value;
+    } else if (typeof value === 'string') {
+      element.checked = value.toLowerCase() === 'true' || 
+                       value === '1' || 
+                       value.toLowerCase() === 'yes' ||
+                       value === element.value ||
+                       value.toLowerCase() === 'checked';
+    }
+    element.dispatchEvent(new Event('change', { bubbles: true }));
+    return true;
+  }
+  
+  // Handle text inputs and textareas
+  function fillTextField(element, value) {
+    element.value = value;
+    element.dispatchEvent(new Event('input', { bubbles: true }));
+    element.dispatchEvent(new Event('change', { bubbles: true }));
+    
+    // Add a visual indicator that the field was filled
+    element.style.borderLeft = '3px solid #4285f4';
+    return true;
+  }
+  
+  // Handle enhanced selects (Chosen.js, Select2, etc.)
+  function updateEnhancedSelect(selectElement, value) {
+    if (!selectElement) return false;
+    
+    // First update the native select element
+    const options = Array.from(selectElement.options);
+    const option = options.find(opt => 
+      opt.value === value || 
+      opt.text.trim() === value || 
+      opt.textContent.trim() === value
+    );
+    
+    if (option) {
+      // Update the native select element
+      selectElement.value = option.value;
+      
+      // Trigger native change event
+      selectElement.dispatchEvent(new Event('change', { bubbles: true }));
+      
+      // Check for enhanced dropdown implementations
+      // 1. Chosen.js
+      const chosenId = `${selectElement.id}_chosen`;
+      const chosenContainer = document.getElementById(chosenId);
+      
+      if (chosenContainer) {
+        console.log(`Found enhanced Chosen.js dropdown: ${chosenId}`);
+        
+        try {
+          // Update Chosen's display text
+          const chosenSpan = chosenContainer.querySelector('.chosen-single span');
+          if (chosenSpan) {
+            chosenSpan.textContent = option.text || option.value;
+          }
+          
+          // Update the result-selected class in the dropdown list
+          const resultItems = chosenContainer.querySelectorAll('.chosen-results li');
+          resultItems.forEach(item => item.classList.remove('result-selected'));
+          
+          // Find the matching item in the dropdown and mark it as selected
+          const selectedIndex = options.indexOf(option);
+          if (selectedIndex >= 0) {
+            const resultItem = chosenContainer.querySelector(`.chosen-results li:nth-child(${selectedIndex + 1})`);
+            if (resultItem) {
+              resultItem.classList.add('result-selected');
+            }
+          }
+          
+          // If the library is available, try to update using its API
+          if (window.jQuery && window.jQuery(selectElement).chosen) {
+            window.jQuery(selectElement).trigger('chosen:updated');
+          }
+          
+          return true;
+        } catch (error) {
+          console.error(`Error updating Chosen dropdown: ${error.message}`);
+        }
+      }
+      
+      // 2. Select2
+      if (window.jQuery && window.jQuery(selectElement).data('select2')) {
+        console.log(`Found enhanced Select2 dropdown: ${selectElement.id}`);
+        try {
+          window.jQuery(selectElement).trigger('change');
+          return true;
+        } catch (error) {
+          console.error(`Error updating Select2 dropdown: ${error.message}`);
+        }
+      }
+      
+      // If we made it here, we at least updated the native select
+      return true;
+    }
+    
+    return false;
   }
 }
 
@@ -646,7 +809,8 @@ async function processPDF(pdfData, fileName) {
       timeLoaded: new Date().toISOString()
     };
 
-    self.globalUserProfile = userProfile;
+    // Save to storage instead of global variable
+    await userProfileManager.saveUserProfile(userProfile);
     
     return {
       success: true,

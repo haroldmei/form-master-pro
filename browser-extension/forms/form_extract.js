@@ -1,15 +1,3 @@
-/**
- * Form control extraction utilities for FormMaster.
- * This module provides functions to extract and analyze form controls from HTML pages.
- * Browser-compatible version - no Node.js dependencies.
- */
-
-/**
- * Extract form controls from the current page
- * 
- * @param {string} formSelector - CSS selector for the form element
- * @returns {Object} Dictionary of form controls grouped by type
- */
 function extractFormControls(formSelector = null) {
   try {
     // Find target form if selector provided, otherwise use whole document
@@ -40,12 +28,7 @@ function extractFormControls(formSelector = null) {
   }
 }
 
-/**
- * Extract a more user-friendly form structure with labels as primary keys
- * 
- * @param {string} formSelector - CSS selector for the form element
- * @returns {Object} Dictionary with labels as keys and control information as values
- */
+
 function extractFormStructure(formSelector = null) {
   try {
     const controls = extractFormControls(formSelector);
@@ -57,12 +40,7 @@ function extractFormStructure(formSelector = null) {
   }
 }
 
-/**
- * Extract input elements from the container
- * 
- * @param {Element} container - Container element to extract inputs from
- * @returns {Array} Array of input elements
- */
+
 function extractInputs(container) {
   const inputs = [];
   const inputElements = container.querySelectorAll('input:not([type="submit"]):not([type="button"]):not([type="image"]):not([type="reset"]):not([type="file"]):not([type="radio"]):not([type="checkbox"]):not([type="hidden"])');
@@ -82,12 +60,7 @@ function extractInputs(container) {
   return inputs;
 }
 
-/**
- * Extract select elements from the container
- * 
- * @param {Element} container - Container element to extract selects from
- * @returns {Array} Array of select elements
- */
+
 function extractSelects(container) {
   const selects = [];
   const selectElements = container.querySelectorAll('select');
@@ -113,12 +86,7 @@ function extractSelects(container) {
   return selects;
 }
 
-/**
- * Extract textarea elements from the container
- * 
- * @param {Element} container - Container element to extract textareas from
- * @returns {Array} Array of textarea elements
- */
+
 function extractTextareas(container) {
   const textareas = [];
   const textareaElements = container.querySelectorAll('textarea');
@@ -138,12 +106,7 @@ function extractTextareas(container) {
   return textareas;
 }
 
-/**
- * Extract button elements from the container
- * 
- * @param {Element} container - Container element to extract buttons from
- * @returns {Array} Array of button elements
- */
+
 function extractButtons(container) {
   const buttons = [];
   const buttonElements = container.querySelectorAll('button, input[type="button"], input[type="submit"], input[type="reset"]');
@@ -162,12 +125,7 @@ function extractButtons(container) {
   return buttons;
 }
 
-/**
- * Extract radio button groups from the container
- * 
- * @param {Element} container - Container element to extract radio groups from
- * @returns {Array} Array of radio groups
- */
+
 function extractRadioGroups(container) {
   console.log('FormExtract.extractRadioGroups called', self.FormRadios ? 'FormRadios exists' : 'FormRadios missing');
   
@@ -212,12 +170,7 @@ function extractRadioGroups(container) {
   return Object.values(groups);
 }
 
-/**
- * Extract checkbox elements from the container
- * 
- * @param {Element} container - Container element to extract checkboxes from
- * @returns {Array} Array of checkbox elements
- */
+
 function extractCheckboxes(container) {
   const checkboxes = [];
   const checkboxElements = container.querySelectorAll('input[type="checkbox"]');
@@ -237,12 +190,7 @@ function extractCheckboxes(container) {
   return checkboxes;
 }
 
-/**
- * Try to find a label for an element
- * 
- * @param {Element} element - Element to find label for
- * @returns {string} Label text or empty string if not found
- */
+
 function getElementLabel(element) {
   // Try to find a label by for attribute
   if (element.id) {
@@ -261,6 +209,55 @@ function getElementLabel(element) {
     parent = parent.parentElement;
   }
   
+  // Look for form groups with label + control structure (Bootstrap, Foundation, etc.)
+  parent = element.parentElement;
+  while (parent && !parent.matches('form') && parent.tagName !== 'BODY') {
+    // Look for common form group patterns
+    const formGroup = parent.closest('.form-group, .sv-form-group, .input-group, .field-wrapper, .field');
+    if (formGroup) {
+      // Check for label within the form group
+      const groupLabel = formGroup.querySelector('label');
+      if (groupLabel) {
+        return groupLabel.textContent.trim();
+      }
+      break;
+    }
+    parent = parent.parentElement;
+  }
+  
+  // Handle hidden selects with UI enhancements like Chosen, Select2, etc.
+  if (element.tagName === 'SELECT' && element.style.display === 'none') {
+    // 1. Try to find Chosen container
+    const chosenId = `${element.id}_chosen`;
+    const chosenContainer = document.getElementById(chosenId);
+    if (chosenContainer) {
+      // Look for a label in the parent structure of the Chosen container
+      const containerParent = chosenContainer.parentElement;
+      if (containerParent) {
+        const parentGroup = containerParent.closest('.form-group, .sv-form-group, .control-group');
+        if (parentGroup) {
+          const groupLabel = parentGroup.querySelector('label');
+          if (groupLabel) {
+            return groupLabel.textContent.trim();
+          }
+        }
+      }
+    }
+    
+    // 2. Try to find any container with a similar ID pattern
+    const containers = document.querySelectorAll(`[id$="_${element.id}"], [id^="${element.id}_"], [data-select-id="${element.id}"]`);
+    for (const container of containers) {
+      // Look in the parent structure for a label
+      const containerParent = container.parentElement;
+      if (containerParent) {
+        const groupLabel = containerParent.querySelector('label');
+        if (groupLabel) {
+          return groupLabel.textContent.trim();
+        }
+      }
+    }
+  }
+  
   // Try to find nearby text that might be a label
   const prevSibling = element.previousElementSibling;
   if (prevSibling && prevSibling.tagName !== 'INPUT' && 
@@ -268,15 +265,20 @@ function getElementLabel(element) {
     return prevSibling.textContent.trim();
   }
   
+  // Try to find a parent div with a sibling label (common pattern for structured forms)
+  parent = element.parentElement;
+  while (parent && !parent.matches('form') && parent.tagName !== 'BODY') {
+    const parentSibling = parent.previousElementSibling;
+    if (parentSibling && parentSibling.tagName === 'LABEL') {
+      return parentSibling.textContent.trim();
+    }
+    parent = parent.parentElement;
+  }
+  
   return '';
 }
 
-/**
- * Try to find a label for a group of radio buttons
- * 
- * @param {Element} radioElement - Radio button element
- * @returns {string} Group label or empty string if not found
- */
+
 function getGroupLabel(radioElement) {
   // Try to find a fieldset legend
   let parent = radioElement.parentElement;
@@ -294,12 +296,7 @@ function getGroupLabel(radioElement) {
   return '';
 }
 
-/**
- * Create a mapping of labels to control information for easier reference
- * 
- * @param {Object} controls - Controls object with different control types
- * @returns {Object} Mapping of labels to control information
- */
+
 function createLabelMapping(controls) {
   const mapping = {};
   

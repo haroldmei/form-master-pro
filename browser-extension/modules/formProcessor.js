@@ -2,9 +2,14 @@
  * Form processing module
  */
 const formProcessor = (() => {
-  /**
-   * Process a form with field mappings
-   */
+  // Cache for ALL suggestions (both AI and rule-based) to minimize API calls
+  const allSuggestionsCache = {};
+  
+  function generateProfileHash(userProfile) {
+    if (!userProfile.filename) return 'default';
+    return 'profile_' + userProfile.filename;
+  }
+  
   async function processForm(formFields, url) {
     try {
       console.log("Processing form for URL:", url);
@@ -12,10 +17,19 @@ const formProcessor = (() => {
       // Extract the root URL (domain + path up to first directory)
       const urlObj = new URL(url);
       const rootUrl = urlObj.hostname;
-      //console.log("Using root URL for mappings:", rootUrl);
       
-      // Get existing field mappings from storage
-      const result = await chrome.storage.sync.get(['fieldMappings']);
+      // Get user profile and generate hash
+      const userProfile = userProfileManager.getUserProfileSync();
+      console.log("User profile:", userProfile);
+      if (!userProfile.filename) {
+        throw new Error('Please load data first.');
+      }
+
+      const profileHash = generateProfileHash(userProfile);
+      const cacheKey = `${rootUrl}_${profileHash}`;
+      
+      // Get existing field mappings and ALL suggestions from storage
+      const result = await chrome.storage.local.get(['fieldMappings', 'allSuggestions']);
       let siteFieldMappings = result.fieldMappings || {};
       
       // Initialize site mappings if not present
@@ -23,155 +37,208 @@ const formProcessor = (() => {
         siteFieldMappings[rootUrl] = [];
       }
       
-      // Create fieldKeywords as key/value pairs instead of an array
-      const fieldKeywords = {};
+      // Initialize or load ALL suggestions cache
+      const storedSuggestions = result.allSuggestions || {};
+      if (!allSuggestionsCache[cacheKey] && storedSuggestions[cacheKey]) {
+        allSuggestionsCache[cacheKey] = storedSuggestions[cacheKey];
+      } else if (!allSuggestionsCache[cacheKey]) {
+        allSuggestionsCache[cacheKey] = {};
+      }
+      
+      // Create fieldKeywords for current form
+      const currentFormFields = {};
       formFields.forEach(field => {
-        // Prefer label if available, otherwise use name or id
         const keyName = field.label || field.name || field.id || '';
-        
-        // Skip empty keys
         if (keyName.trim() === '') return;
         
-        // Set the value to field options if available, otherwise empty array
         if (field.options && Array.isArray(field.options) && field.options.length > 0) {
-          // Extract option labels/values
-          fieldKeywords[keyName] = field.options.map(option => 
+          currentFormFields[keyName] = field.options.map(option => 
             option.text || option.label || option.value || ''
           ).filter(Boolean);
         } else {
-          // No options available, use empty array
-          fieldKeywords[keyName] = [];
+          currentFormFields[keyName] = [];
         }
       });
       
-      console.log("Field keywords for AI:", fieldKeywords);
+      // Check if we need to make an API call
+      let needApiCall = false;
+      let allSuggestions = { ...allSuggestionsCache[cacheKey] };
       
-      // If we have field keywords and user profile data, make an API call
-      let aiSuggestions = {};
-      if (Object.keys(fieldKeywords).length > 0) {
-        try {
-          const userProfile = userProfileManager.getUserProfile();
-          if (Object.keys(userProfile).length > 0) {
-            aiSuggestions = await aiService.getAiSuggestions(fieldKeywords, userProfile, url);
-            console.log("AI suggestions:", aiSuggestions);
-            
-            // Store the AI suggestions for later reference
-            chrome.storage.local.set({ lastAiSuggestions: aiSuggestions });
-          }
-        } catch (apiError) {
-          console.error("Error getting AI suggestions:", apiError);
-          return { success: false, error: apiError.message };
+      console.log("Current form fields:", currentFormFields);
+      console.log("Cached suggestions:", allSuggestions);
+      
+      // Check if all current form fields have suggestions in our cache
+      for (const fieldKey of Object.keys(currentFormFields)) {
+        if (!allSuggestions[fieldKey]) {
+          needApiCall = true;
+          console.log("Need API call for field:", fieldKey);
+          break;
         }
       }
+      
+      // Step 1: First check with AI for missing fields if needed
+      if (needApiCall && Object.keys(userProfile).length > 0) {
+        console.log("API call needed for new fields");
+        
+        // Gather all known fields for this site (current form + historical mappings)
+        const allSiteFields = {...currentFormFields};
+        
+        // Add fields from historical site mappings
+        siteFieldMappings[rootUrl].forEach(mapping => {
+          const keyName = mapping.label || mapping.name || mapping.id || '';
+          if (keyName.trim() !== '' && !allSiteFields[keyName]) {
+            // Check if this is a select or radio field with options
+            if ((mapping.type === 'select' || mapping.type === 'radio') && mapping.options) {
+              allSiteFields[keyName] = mapping.options.map(option => 
+                option.text || option.label || option.value || ''
+              ).filter(Boolean);
+            } else {
+              allSiteFields[keyName] = [];
+            }
+          }
+        });
+        
+        console.log("Making API call with ALL site fields:", Object.keys(allSiteFields));
+        
+        try {
+          // Make ONE comprehensive API call for all fields
+          const aiSuggestions = await aiService.getAiSuggestions(allSiteFields, userProfile, url);
+          console.log("Received AI suggestions");
+          
+          // Merge AI suggestions into our combined suggestions
+          allSuggestions = {
+            ...allSuggestions,
+            ...aiSuggestions
+          };
+        } catch (apiError) {
+          console.error("Error getting AI suggestions:", apiError);
+          // Continue with processing - we'll use rule-based suggestions as fallback
+        }
+      } else {
+        console.log("Using cached suggestions - no API call needed");
+      }
+      
+      // Step 2: Apply rule-based matches for any remaining fields without answers
+      formFields.forEach(field => {
+        const fieldId = field.id || '';
+        const fieldName = field.name || '';
+        const fieldLabel = field.label || '';
+        
+        // Skip if we already have a suggestion for this field
+        const keyName = fieldLabel || fieldName || fieldId;
+        if (!keyName || allSuggestions[keyName]) return;
+        
+        // Apply rule-based mapping for this field
+        const fieldType = field.type || 'text';
+        const result = getValueFromGeneralMappings(field, fieldId, fieldName, fieldLabel, fieldType);
+        if (result.value) {
+          // Add rule-based suggestion to our collection
+          allSuggestions[keyName] = result.value;
+        } else {
+            // If no suggestion found, use default values based on field type
+            if (field.options && Array.isArray(field.options) && field.options.length > 0) {
+              allSuggestions[keyName] = field.options[0].value || field.options[0].text || field.options[0].label;
+              console.log("default option for field:", keyName, allSuggestions[keyName]);
+            } else if (fieldType === 'date') {
+              // For date fields, use today's date in YYYY-MM-DD format
+              const today = new Date();
+              const yyyy = today.getFullYear();
+              const mm = String(today.getMonth() + 1).padStart(2, '0'); // Months are 0-based
+              const dd = String(today.getDate()).padStart(2, '0');
+              allSuggestions[keyName] = `${yyyy}-${mm}-${dd}`;
+              console.log("default date for field:", keyName, allSuggestions[keyName]);
+            } else if (fieldType === 'text') {
+              allSuggestions[keyName] = '-';
+              console.log("default value for field:", keyName, allSuggestions[keyName]);
+            } else if (fieldType === 'checkbox' || fieldType === 'radio') {
+              allSuggestions[keyName] = 'on';
+              console.log("default value for check/radio field:", keyName, allSuggestions[keyName]);
+            } else {
+              allSuggestions[keyName] = 'na';
+              console.log("empty default for field:", keyName);
+            }
+        }
+      });
+      
+      // Save all suggestions to cache
+      allSuggestionsCache[cacheKey] = {...allSuggestions};
+      
+      // Step 3: Save everything to 'allSuggestions' storage
+      storedSuggestions[cacheKey] = allSuggestionsCache[cacheKey];
+      chrome.storage.local.set({ allSuggestions: storedSuggestions }, function() {
+        console.log("Saved all suggestions for URL + profile");
+      });
       
       // Match form fields with mappings and retrieve values
       const fieldValues = {};
       const updatedSiteMapping = [...siteFieldMappings[rootUrl]]; // Clone existing mappings
       let mappingsUpdated = false;
       
+      console.log("Current page:", formFields.map(f => f.label || f.id || f.name));
       formFields.forEach(field => {
         const fieldId = field.id || '';
         const fieldName = field.name || '';
         const fieldLabel = field.label || '';
         const fieldType = field.type || 'text';
         
-        // First check if AI provided a suggestion for this field
-        // Try multiple identifiers to find a match
+        // Check if we have a suggestion for this field from any source
         let suggestionValue = null;
+        let isAiGenerated = false;
         
-        // Look for AI suggestions using various field identifiers
-        if (fieldId && aiSuggestions[fieldId]) {
-          suggestionValue = aiSuggestions[fieldId];
-        } else if (fieldName && aiSuggestions[fieldName]) {
-          suggestionValue = aiSuggestions[fieldName];
-        } else if (fieldLabel && aiSuggestions[fieldLabel]) {
-          suggestionValue = aiSuggestions[fieldLabel];
+        // Look for suggestions using various field identifiers
+        if (fieldId && allSuggestions[fieldId]) {
+          suggestionValue = allSuggestions[fieldId];
+          isAiGenerated = true; // Assume AI-generated by default, we can't easily distinguish the source
+        } else if (fieldName && allSuggestions[fieldName]) {
+          suggestionValue = allSuggestions[fieldName];
+          isAiGenerated = true;
+        } else if (fieldLabel && allSuggestions[fieldLabel]) {
+          suggestionValue = allSuggestions[fieldLabel];
+          isAiGenerated = true;
         } else {
-          // Try to find any matching key in suggestions that contains our field identifiers
-          const suggestionKeys = Object.keys(aiSuggestions);
+          // Try to find any matching key in suggestions
+          const suggestionKeys = Object.keys(allSuggestions);
           
           for (const key of suggestionKeys) {
-            // Case-insensitive matching for better results
             const keyLower = key.toLowerCase();
             
             if ((fieldId && keyLower.includes(fieldId.toLowerCase())) || 
                 (fieldName && keyLower.includes(fieldName.toLowerCase())) || 
                 (fieldLabel && keyLower.includes(fieldLabel.toLowerCase()))) {
-              suggestionValue = aiSuggestions[key];
+              suggestionValue = allSuggestions[key];
+              isAiGenerated = true;
               break;
             }
           }
         }
         
+        // Store this mapping for future use
+        const existingIndex = updatedSiteMapping.findIndex(mapping => 
+          (fieldId && mapping.id === fieldId) || (mapping.name && mapping.name === fieldName)
+          );
+
         // If we found a suggestion, process it according to field type
         if (suggestionValue !== null) {
           // Format the value based on field type
           let formattedValue = utils.formatValueForFieldType(suggestionValue, fieldType, field);
           fieldValues[fieldId || fieldName] = formattedValue;
           
-          // Store this successful AI mapping for future use
-          const existingIndex = updatedSiteMapping.findIndex(mapping => 
-            (mapping.id === fieldId) || (mapping.name === fieldName)
-          );
-          
-          const newMapping = {
-            id: fieldId,
-            label: fieldLabel,
-            name: fieldName,
-            type: fieldType,
-            value: formattedValue,
-            aiGenerated: true,
-            lastUsed: new Date().toISOString()
-          };
-          
-          if (existingIndex >= 0) {
-            updatedSiteMapping[existingIndex] = newMapping;
-          } else {
-            updatedSiteMapping.push(newMapping);
-          }
-          
-          mappingsUpdated = true;
-          return; // Skip further processing for this field
-        }
-        
-        // Check if the field exists in our site-specific mappings
-        const existingMapping = siteFieldMappings[rootUrl].find(mapping => 
-          (mapping.id && mapping.id === fieldId) || (mapping.name && mapping.name === fieldName)
-        );
-        
-        if (existingMapping) {
-          // Use the existing mapping
-          const formattedValue = utils.formatValueForFieldType(existingMapping.value, fieldType, field);
-          fieldValues[fieldId || fieldName] = formattedValue;
-          
-          // Update the lastUsed timestamp
-          const mappingIndex = updatedSiteMapping.findIndex(m => 
-            (m.id === existingMapping.id) || (m.name === existingMapping.name)
-          );
-          
-          if (mappingIndex >= 0) {
-            updatedSiteMapping[mappingIndex].lastUsed = new Date().toISOString();
-            mappingsUpdated = true;
-          }
-        } else {
-          // If no existing mapping found, fall back to general field mappings
-          const result = getValueFromGeneralMappings(field, fieldId, fieldName, fieldLabel, fieldType);
-          
-          if (result.value) {
-            fieldValues[fieldId || fieldName] = result.value;
-            
-            // Add this mapping to the site-specific mappings for future use
-            updatedSiteMapping.push({
-              id: fieldId,
-              label: fieldLabel,
-              name: fieldName,
-              type: fieldType,
-              value: result.value,
-              source: result.source,
+          if (existingIndex < 0) {
+            const newMapping = {
+              id: fieldId, 
+              label: fieldLabel, 
+              name: fieldName, 
+              type: fieldType, 
+              value: formattedValue, 
+              aiGenerated: isAiGenerated,
               lastUsed: new Date().toISOString()
-            });
-            
+            };
+            updatedSiteMapping.push(newMapping);
             mappingsUpdated = true;
+          } else {
+            // Update the existing mapping with the new value
+            updatedSiteMapping[existingIndex].value = formattedValue;
+            updatedSiteMapping[existingIndex].lastUsed = new Date().toISOString();
           }
         }
       });
@@ -181,16 +248,16 @@ const formProcessor = (() => {
         siteFieldMappings[rootUrl] = updatedSiteMapping;
         console.log("Saving updated field mappings for site:", rootUrl);
         
-        // Limit storage size by keeping only the last 100 mappings per site
-        if (updatedSiteMapping.length > 100) {
-          // Sort by lastUsed and keep only the most recent 100
+        // Limit storage size by keeping only the last 200 mappings per site
+        if (updatedSiteMapping.length > 200) {
+          // Sort by lastUsed and keep only the most recent 200
           siteFieldMappings[rootUrl] = updatedSiteMapping
             .sort((a, b) => new Date(b.lastUsed) - new Date(a.lastUsed))
-            .slice(0, 100);
+            .slice(0, 200);
         }
         
         // Save the updated mappings
-        chrome.storage.sync.set({ fieldMappings: siteFieldMappings }, function() {
+        chrome.storage.local.set({ fieldMappings: siteFieldMappings }, function() {
           console.log("Field mappings updated successfully");
         });
       }
@@ -245,7 +312,8 @@ const formProcessor = (() => {
     for (const identifier of identifiers) {
       for (const mapping of commonMappings) {
         if (mapping.pattern.test(identifier)) {
-          const value = userProfileManager.getUserProfileField(mapping.path);
+          // Use the synchronous version to avoid Promise issues
+          const value = userProfileManager.getUserProfileFieldSync(mapping.path);
           if (value) {
             return { 
               value: utils.formatValueForFieldType(value, fieldType, field),
@@ -260,9 +328,47 @@ const formProcessor = (() => {
     return { value: null, source: null };
   }
   
+  /**
+   * Clear all suggestions data from cache and storage
+   */
+  async function clearSuggestions() {
+    try {
+      // Clear in-memory cache
+      Object.keys(allSuggestionsCache).forEach(key => {
+        delete allSuggestionsCache[key];
+      });
+      
+      // Clear storage
+      await new Promise((resolve, reject) => {
+        chrome.storage.local.remove('allSuggestions', () => {
+          if (chrome.runtime.lastError) {
+            reject(chrome.runtime.lastError);
+          } else {
+            resolve();
+          }
+        });
+      });
+      
+      console.log("All form suggestions data cleared");
+      return { success: true };
+    } catch (error) {
+      console.error("Error clearing suggestions:", error);
+      return { success: false, error: error.message || "Unknown error clearing data" };
+    }
+  }
+  
+  // Initialize by loading ALL suggestions from storage
+  chrome.storage.local.get(['allSuggestions'], function(result) {
+    if (result.allSuggestions) {
+      Object.assign(allSuggestionsCache, result.allSuggestions);
+      console.log("Loaded all suggestions from storage");
+    }
+  });
+  
   // Return public API
   return {
-    processForm
+    processForm,
+    clearSuggestions  // Add the new function to the public API
   };
 })();
 

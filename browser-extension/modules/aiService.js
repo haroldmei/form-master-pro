@@ -76,12 +76,11 @@ const aiService = (() => {
       
       // Format processed profile data for the prompt
       const profileJson = JSON.stringify(processedProfile);
-      console.log("User profile JSON:", profileJson.length, "bytes (optimized from original)");
-      console.log("User profile JSON:", profileJson);
+      console.log("User profile JSON (first 100 bytes):", profileJson.substring(0, 100));
       
       // Make the API call to bargain4me.com
-      const response = await fetch(`https://bargain4me.com/api/formmaster`, {
-      //const response = await fetch(`http://localhost:3001/api/formmaster`, {
+      //const response = await fetch(`https://bargain4me.com/api/formmaster`, {
+      const response = await fetch(`http://localhost:3001/api/formmaster`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -94,43 +93,56 @@ const aiService = (() => {
         })
       });
 
-      const responseData = await response.json();
-      console.log("FromMasterPro API response:", responseData);
-      if (!response.ok) {
-        if (response.status === 403 && responseData.error === 'email_not_verified') {
-          throw {
-            status: response.status,
-            message: responseData.message || 'Email verification required',
-            error: responseData.error,
-            isVerificationError: true
-          };
+      const contentType = response.headers.get('content-type');
+      if (contentType && contentType.includes('application/json')) {
+        const responseData = await response.json();
+        //console.log("FromMasterPro API response:", responseData);
+        if (!response.ok) {
+          if (response.status === 403 && responseData.error === 'email_not_verified') {
+            throw {
+              status: response.status,
+              message: responseData.message || 'Email verification required',
+              error: responseData.error,
+              isVerificationError: true
+            };
+          }
+          else{
+            throw new Error(`FromMasterPro API error: ${response.status} ${response.statusText}`);
+          }
         }
-        else{
-          throw new Error(`FromMasterPro API error: ${response.status} ${response.statusText}`);
+
+        // Extract the content from the response
+        // Adjust based on the actual response structure from bargain4me.com API
+        const content = responseData.reply;
+        if (!content) {
+          throw new Error("Invalid response format from FromMasterPro API");
         }
-      }
-      
-      // Extract the content from the response
-      // Adjust based on the actual response structure from bargain4me.com API
-      const content = responseData.reply;
-      if (!content) {
-        throw new Error("Invalid response format from FromMasterPro API");
-      }
-      
-      // Parse the JSON content
-      // First, we need to extract JSON from the response which might contain markdown formatting
-      const jsonMatch = content.match(/```json\n([\s\S]*?)\n```/) || 
-                       content.match(/```([\s\S]*?)```/) || 
-                       [null, content];
-      
-      const jsonContent = jsonMatch[1] || content;
-      
-      try {
-        return JSON.parse(jsonContent);
-      } catch (parseError) {
-        console.error("Error parsing FromMasterPro response as JSON:", parseError);
-        console.log("Response content:", content);
-        return {};
+
+        // Parse the JSON content
+        // First, we need to extract JSON from the response which might contain markdown formatting
+        const jsonMatch = content.match(/```json\n([\s\S]*?)\n```/) || 
+                         content.match(/```([\s\S]*?)```/) || 
+                         [null, content];
+
+        const jsonContent = jsonMatch[1] || content;
+
+        try {
+          return JSON.parse(jsonContent);
+        } catch (parseError) {
+          console.error("Error parsing FromMasterPro response as JSON:", parseError);
+          console.log("Response content:", content);
+          return {};
+        }
+      } else {
+        // Not JSON, get as text instead
+        const errorText = await response.text();
+        
+        // Check for rate limit text
+        if (errorText.includes("Too many requests") || errorText.includes("rate limit")) {
+          throw new Error(`Rate limit exceeded. Please try again later.`);
+        } else {
+          throw new Error(`API error (${response.status}): ${errorText.substring(0, 100)}`);
+        }
       }
     } catch (error) {
       console.error("Error calling FromMasterPro API:", error);

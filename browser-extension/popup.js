@@ -54,7 +54,7 @@ document.addEventListener('DOMContentLoaded', function() {
   if (logoutButton) logoutButton.addEventListener('click', logout);
 
   // Set up event listeners
-  // addSafeEventListener('analyze-form', 'click', analyzeCurrentForm);
+  addSafeEventListener('analyze-form', 'click', analyzeCurrentForm);
 
   // Add verification-related event listeners
   if (resendVerificationBtn) resendVerificationBtn.addEventListener('click', resendVerificationEmail);
@@ -202,7 +202,8 @@ document.addEventListener('DOMContentLoaded', function() {
     if (loggedInView) loggedInView.classList.remove('hidden');
     
     // Only enable form features if the user is verified
-    enableFormFeatures(verified);
+    const ENABLE_FORM_FEATURES = true; // Set this based on your environment variable
+    enableFormFeatures(verified && ENABLE_FORM_FEATURES);
     
     // Set verification badge
     if (verificationBadge) {

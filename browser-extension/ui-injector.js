@@ -22,6 +22,9 @@
     // Avoid duplicate injection
     if (document.getElementById('formmaster-ui')) return;
     
+    // Track API call status to prevent duplicate calls
+    let isApiCallInProgress = false;
+    
     // Create the container with Shadow DOM to isolate CSS
     const container = document.createElement('div');
     container.id = 'formmaster-ui';
@@ -78,7 +81,8 @@
     // Add buttons to panel
     const buttons = [
       { id: 'load-data', text: 'Load Data', icon: '📂' },
-      { id: 'auto-fill', text: 'Auto Fill', icon: '✏️' }
+      { id: 'auto-fill', text: 'Auto Fill', icon: '✏️' },
+      { id: 'clear-data', text: 'Clear Data', icon: '🗑️' }  // New Clear Data button
     ];
     
     // Make sure buttons are added with the correct structure
@@ -192,7 +196,43 @@
     }
     
     function handleButtonClick(action, buttonElement) {
-      // Special handling for load-data action - directly open file dialog
+      // Don't proceed if an API call is already in progress
+      if (isApiCallInProgress) {
+        showToast('Please wait, an operation is in progress', 'info');
+        return;
+      }
+      
+      // Special handling for clear-data action
+      if (action === 'clear-data') {
+        // Ask for confirmation before clearing data
+        if (confirm('Are you sure you want to clear all AI generated form filling data? This cannot be undone.')) {
+          // Store original HTML before showing loading state
+          const originalHTML = buttonElement.innerHTML;
+          
+          // Show loading state
+          buttonElement.classList.add('loading');
+          buttonElement.disabled = true;
+          setToggleBusy(true);
+          
+          // Send message to clear suggestions data
+          chrome.runtime.sendMessage({ action: 'clearSuggestions' }, function(response) {
+            // Reset button state
+            buttonElement.classList.remove('loading');
+            buttonElement.disabled = false;
+            buttonElement.innerHTML = originalHTML;
+            setToggleBusy(false);
+            
+            if (response && response.success) {
+              showToast('Form data cleared successfully', 'success');
+            } else {
+              showToast(response?.error || 'Error clearing form data', 'error');
+            }
+          });
+        }
+        return;
+      }
+      
+      // Special handling for load-data action
       if (action === 'load-data') {
         // First check email verification
         chrome.runtime.sendMessage({ action: 'checkEmailVerification' }, function(response) {
@@ -214,9 +254,10 @@
             const file = e.target.files[0];
             if (!file) return;
             
-            // Show loading state
+            // Show loading state on both button and toggle
             buttonElement.classList.add('loading');
             buttonElement.disabled = true;
+            setToggleBusy(true);
             
             try {
               const fileExtension = file.name.split('.').pop().toLowerCase();
@@ -243,6 +284,7 @@
               buttonElement.classList.remove('loading');
               buttonElement.disabled = false;
               buttonElement.innerHTML = originalHTML;
+              setToggleBusy(false); // Ensure toggle is reset
             }
           };
           
@@ -266,6 +308,7 @@
           
           buttonElement.classList.add('loading');
           buttonElement.disabled = true;
+          setToggleBusy(true); // Set FM toggle to busy state
           
           // Check if Chrome extension API is available
           if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.sendMessage) {
@@ -277,6 +320,7 @@
               // Remove loading state regardless of success or failure
               buttonElement.classList.remove('loading');
               buttonElement.disabled = false;
+              setToggleBusy(false); // Clear FM toggle busy state
               
               // Restore original HTML
               buttonElement.innerHTML = originalHTML;
@@ -294,6 +338,7 @@
             console.error('Chrome extension API not available');
             buttonElement.classList.remove('loading');
             buttonElement.disabled = false;
+            setToggleBusy(false); // Clear FM toggle busy state
             
             // Restore original HTML
             buttonElement.innerHTML = originalHTML;
@@ -304,8 +349,12 @@
         return;
       }
       
+      // For all other actions, show toggle loading state
+      setToggleBusy(true);
+      
       chrome.runtime.sendMessage({ action: 'checkEmailVerification' }, function(response) {
         if (!response || !response.isVerified) {
+          setToggleBusy(false); // Clear loading state
           showToast('Email verification required to use this feature', 'error');
           return;
         }
@@ -315,6 +364,8 @@
           action: action,
           url: self.location.href
         }, response => {
+          setToggleBusy(false); // Clear loading state when response received
+          
           if (response && response.success) {
             showToast(response.message || 'Action completed successfully', 'success');
           } else {
@@ -322,6 +373,40 @@
           }
         });
       });
+    }
+    
+    // Helper function to set the toggle button to busy/loading state
+    function setToggleBusy(isBusy) {
+      if (isBusy) {
+        toggleButton.classList.add('fm-loading');
+        
+        // Store original text
+        if (!toggleButton.dataset.originalText) {
+          toggleButton.dataset.originalText = toggleButton.textContent;
+        }
+        
+        // Create spinner element if it doesn't exist
+        if (!toggleButton.querySelector('.fm-spinner')) {
+          const spinner = document.createElement('div');
+          spinner.className = 'fm-spinner';
+          toggleButton.textContent = '';
+          toggleButton.appendChild(spinner);
+        }
+        
+        // Set the busy flag to prevent concurrent operations
+        isApiCallInProgress = true;
+      } else {
+        toggleButton.classList.remove('fm-loading');
+        
+        // Restore original text
+        if (toggleButton.dataset.originalText) {
+          toggleButton.textContent = toggleButton.dataset.originalText;
+          delete toggleButton.dataset.originalText;
+        }
+        
+        // Remove loading state
+        isApiCallInProgress = false;
+      }
     }
     
     // Process PDF file - Now sends to background script
@@ -337,9 +422,13 @@
             
             // Set a timeout to handle potential message timeout errors
             const timeoutId = setTimeout(() => {
+              setToggleBusy(false); // Clear busy state if timeout occurs
               reject(new Error('Request timed out - background process may be busy'));
             }, 30000); // 30-second timeout
                     
+            // Show the toggle in loading state
+            setToggleBusy(true);
+            
             // Send as base64 string which survives message passing
             chrome.runtime.sendMessage({ 
               action: 'processPDF', 
@@ -350,6 +439,9 @@
             }, (response) => {
               // Clear the timeout since we received a response
               clearTimeout(timeoutId);
+              
+              // Clear loading state
+              setToggleBusy(false);
               
               // Check for errors with the Chrome runtime first
               if (chrome.runtime.lastError) {
@@ -367,10 +459,12 @@
             });
           };
           reader.onerror = function(error) {
+            setToggleBusy(false); // Clear loading state on error
             reject(new Error(`Error reading file: ${error}`));
           };
           reader.readAsArrayBuffer(file);
         } catch (error) {
+          setToggleBusy(false); // Clear loading state on error
           reject(error);
         }
       });
@@ -389,33 +483,223 @@
     // Process DOCX file - Simplified to send data to background
     async function processDocxFile(file) {
       try {
-        const userProfile = {
-          source: 'docx',
-          filename: file.name,
-          fileSize: file.size,
-          timeLoaded: new Date().toISOString()
-        };
+        // Load the docx-extractor.js module
+        try {
+          // Extract content from DOCX
+          const docxContent = await extractDocxContent(file, file.name);
+          console.log('Extracted DOCX content:', JSON.stringify(docxContent));
 
-        // Save the profile via background script
-        await new Promise((resolve, reject) => {
-          chrome.runtime.sendMessage({ 
-            action: 'updateUserProfile', 
-            profile: userProfile 
-          }, function(response) {
-            if (chrome.runtime.lastError || !response || !response.success) {
-              reject(chrome.runtime.lastError || new Error('Failed to save profile'));
+          // Check if docxContent has the expected structure
+          if (!docxContent) {
+            throw new Error('DOCX extraction returned empty result');
+          }
+
+          // Create a user profile structure from the DOCX content
+          const userProfile = {
+            source: 'docx',
+            filename: file.name,
+            extractedContent: docxContent,
+            // Create a simple representation for display - safely handle both old and new formats
+            docxData: {
+              paragraphs: Array.isArray(docxContent.paragraphs) ? docxContent.paragraphs.map(p => p.text || p) : 
+                         Array.isArray(docxContent.strings) ? docxContent.strings : [],
+              tables: Array.isArray(docxContent.tables) ? docxContent.tables : []
+            }
+          };
+          
+          chrome.runtime.sendMessage({ action: 'updateUserProfile', profile: userProfile }, function(response) {
+            if (response && response.success) {
+              console.log('User profile saved successfully:', response);
             } else {
-              resolve();
+              console.error('Error saving user profile:', response?.error);
             }
           });
-        });
-        
-        return userProfile;
+
+        } catch (moduleError) {
+          console.error("Error loading DOCX extractor module:", moduleError);
+          throw new Error(`Could not load DOCX extractor: ${moduleError.message}`);
+        }
       } catch (error) {
         throw new Error(`Error processing DOCX: ${error.message}`);
       }
     }
+  
     
+    async function extractDocxContent(docxFile, filename) {
+      try {
+        console.log('DOCX file loaded:', docxFile);
+      
+        // Check if JSZip is defined and try to load it if not
+        if (typeof JSZip === 'undefined') {
+          console.log('JSZip not found. Attempting to load...');
+          try {
+            // Try to load from various local paths
+            const possiblePaths = [
+              './libs/jszip.min.js'
+            ];
+            
+            let loaded = false;
+            for (const path of possiblePaths) {
+              try {
+                await loadScript(chrome.runtime.getURL(path));
+                console.log(`JSZip loaded successfully from ${path}`);
+                loaded = true;
+                break;
+              } catch (pathError) {
+                console.log(`Failed to load from ${path}, trying next option...`);
+              }
+            }
+            
+            if (!loaded) {
+              console.error('All loading attempts failed.');
+              throw new Error('Could not load JSZip from any location');
+            }
+          } catch (loadErr) {
+            console.error('Failed to load JSZip:', loadErr);
+            return {
+              strings: [],
+              filename: filename
+            };
+          }
+        }
+      
+        // Load the docx file into JSZip
+        const zip = new JSZip();
+        const docxContent = await zip.loadAsync(await docxFile.arrayBuffer());
+        
+        // Get the main document.xml file
+        const documentXml = await docxContent.file("word/document.xml").async("text");
+        
+        // Parse XML
+        const parser = new DOMParser();
+        const xmlDoc = parser.parseFromString(documentXml, "text/xml");
+        
+        // Function to extract all elements of a specific name regardless of namespace
+        function getElementsByTagName(doc, name) {
+          const elements = [];
+          const allElements = doc.getElementsByTagName('*');
+          
+          for (let i = 0; i < allElements.length; i++) {
+            const element = allElements[i];
+            const localName = element.localName || element.baseName || element.nodeName.split(':').pop();
+            
+            if (localName === name) {
+              elements.push(element);
+            }
+          }
+          
+          return elements;
+        }
+        
+        // Initialize the content structure - simplified to just a list of strings
+        const extractedStrings = [];
+        
+        // Extract paragraphs with filtering for important content
+        const paragraphs = getElementsByTagName(xmlDoc, 'p');
+        for (const paragraph of paragraphs) {
+          // Extract text from all text elements (t) within this paragraph
+          const textElements = getElementsByTagName(paragraph, 't');
+          let paragraphText = "";
+          
+          for (const textEl of textElements) {
+            paragraphText += textEl.textContent;
+          }
+          
+          // Only include paragraph if it contains significant content
+          if (paragraphText.trim() && isImportantContent(paragraphText)) {
+            // Remove spaces and line breaks
+            const cleanText = paragraphText.trim(); 
+            if (cleanText) {
+              extractedStrings.push(cleanText);
+            }
+          }
+        }
+        
+        // Extract tables with filtering for important content (still as strings)
+        const tables = getElementsByTagName(xmlDoc, 'tbl');
+        for (const table of tables) {
+          // Get all rows
+          const rows = getElementsByTagName(table, 'tr');
+          for (const row of rows) {
+            // Get all cells
+            const cells = getElementsByTagName(row, 'tc');
+            for (const cell of cells) {
+              // Get all paragraphs in the cell
+              const cellParagraphs = getElementsByTagName(cell, 'p');
+              let cellText = "";
+              
+              for (const para of cellParagraphs) {
+                // Extract text from all text elements in this paragraph
+                const textElements = getElementsByTagName(para, 't');
+                
+                for (const textEl of textElements) {
+                  cellText += textEl.textContent;
+                }
+              }
+              
+              if (cellText.trim() && isImportantContent(cellText)) {
+                // Remove spaces and line breaks
+                const cleanText = cellText.trim();
+                if (cleanText) {
+                  extractedStrings.push(cleanText);
+                }
+              }
+            }
+          }
+        }
+        
+        // Return in a format compatible with profile.js expectations
+        return {
+          filename: filename,
+          rawText: extractedStrings.join(''),
+          paragraphs: extractedStrings.map(text => ({ text })),
+          tables: [],
+          // Also include the new format for future use
+          strings: extractedStrings
+        };
+      } catch (err) {
+        console.error(`Error extracting content: ${err.message}`, err);
+        return {
+          filename: filename,
+          rawText: "",
+          paragraphs: [],
+          tables: [],
+          strings: []
+        };
+      }
+    }
+    
+    function isImportantContent(text) {
+      if (!text || text.length === 0) return false;
+      
+      // Skip very short text that isn't likely to be important
+      if (text.length <= 1) return false;
+      
+      // Patterns that indicate unimportant content
+      const unimportantPatterns = [
+        /^page\s+\d+(\s+of\s+\d+)?$/i,             // Page numbers
+        /^confidential$/i,                          // Confidentiality markers
+        /^draft$/i,                                 // Draft markers
+        /^internal use only$/i,                     // Internal use markers
+        /^(created|modified|updated) (by|on|at)/i,  // Document metadata
+        /^document ID:/i,                           // Document IDs
+        /^version:/i,                               // Version information
+        /^copyright/i,                              // Copyright text
+        /^all rights reserved$/i,                   // Rights reserved text
+        /^last (updated|modified):/i,               // Last updated info
+        /^do not (copy|distribute|share)$/i,        // Distribution restrictions
+      ];
+      
+      // Check if text matches any unimportant pattern
+      for (const pattern of unimportantPatterns) {
+        if (pattern.test(text.trim())) {
+          return false;
+        }
+      }
+      
+      return true;
+    }
+
     // Show toast notification
     function showToast(message, type = 'info') {
       toast.textContent = message;

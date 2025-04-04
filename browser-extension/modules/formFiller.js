@@ -2,9 +2,7 @@
  * Form filling module
  */
 const formFiller = (() => {
-  /**
-   * Inject the form extraction script and then fill the form
-   */
+
   function injectAndFillForm(message, sendResponse) {
     // First inject the form_extract.js file
     chrome.scripting.executeScript({
@@ -118,9 +116,6 @@ const formFiller = (() => {
     });
   }
   
-  /**
-   * Show a notification on the page
-   */
   function showPageNotification(tabId, userName) {
     chrome.scripting.executeScript({
       target: { tabId: tabId },
@@ -153,9 +148,6 @@ const formFiller = (() => {
     });
   }
   
-  /**
-   * Function to scan form fields (injected into page)
-   */
   function scanFormFields() {
     const fields = [];
     
@@ -189,9 +181,6 @@ const formFiller = (() => {
     return fields;
   }
   
-  /**
- * Function to fill form fields (injected into page)
- */
 function fillFormWithData(fieldValues) {
     console.log("Filling form with data:", fieldValues);
     
