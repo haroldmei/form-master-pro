@@ -380,11 +380,14 @@ document.addEventListener('DOMContentLoaded', function() {
           }
         }, results => {
           if (results && results[0] && results[0].result) {
-            displayFormFields(results[0].result);
-            autoFillBtn.disabled = false;
+            // Instead of displaying in popup, send to dialog in the page
+            displayFormFieldsInPageDialog(results[0].result, tabs[0].id);
+            
+            if (typeof autoFillBtn !== 'undefined' && autoFillBtn) {
+              autoFillBtn.disabled = false;
+            }
           } else {
-            fieldsContainer.innerHTML = '<p class="error">No form detected or error analyzing form.</p>';
-            formAnalysisPanel.classList.remove('hidden');
+            showToast('No form detected or error analyzing form.', 'error');
           }
           
           analyzeFormBtn.disabled = false;
@@ -394,122 +397,313 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 
-  // Function to display the analyzed form fields
-  function displayFormFields(fields) {
-    fieldCount.textContent = fields.length;
-    fieldsContainer.innerHTML = '';
-    
-    console.log('Form data fields:', fields);
-
-    // Create table element
-    const table = document.createElement('table');
-    table.className = 'fields-table';
-    
-    // Create table header
-    const thead = document.createElement('thead');
-    const headerRow = document.createElement('tr');
-    
-    // Add column for options
-    ['Label/Name', 'Type', 'ID', 'Value', 'Options'].forEach(headerText => {
-      const th = document.createElement('th');
-      th.textContent = headerText;
-      headerRow.appendChild(th);
-    });
-    
-    thead.appendChild(headerRow);
-    table.appendChild(thead);
-    
-    // Create table body
-    const tbody = document.createElement('tbody');
-    
-    fields.forEach(field => {
-      const row = document.createElement('tr');
-      
-      // Label/Name cell
-      const labelCell = document.createElement('td');
-      labelCell.className = 'field-label';
-      labelCell.textContent = field.label || field.name || field.id || 'Unnamed Field';
-      row.appendChild(labelCell);
-      
-      // Type cell
-      const typeCell = document.createElement('td');
-      typeCell.className = 'field-type';
-      typeCell.textContent = field.type;
-      row.appendChild(typeCell);
-      
-      // ID cell
-      const idCell = document.createElement('td');
-      idCell.className = 'field-id';
-      idCell.textContent = field.id || '-';
-      row.appendChild(idCell);
-      
-      // Value cell
-      const valueCell = document.createElement('td');
-      valueCell.className = 'field-value';
-      
-      if (field.type === 'select' || field.type === 'radio') {
-        // For select/radio, show selected option
-        const selectedOpt = field.options?.find(opt => opt.selected || opt.checked);
-        valueCell.textContent = selectedOpt ? selectedOpt.value || selectedOpt.text : '-';
-      } else if (field.type === 'checkbox') {
-        valueCell.textContent = field.checked ? 'Checked' : 'Unchecked';
-      } else {
-        valueCell.textContent = field.value || '-';
-      }
-      
-      row.appendChild(valueCell);
-      
-      // Options cell - new cell for displaying available options
-      const optionsCell = document.createElement('td');
-      optionsCell.className = 'field-options';
-      
-      if (field.options && field.options.length > 0) {
-        // For fields with options (select, radio), display them
-        const optionsList = document.createElement('ul');
-        optionsList.className = 'options-list';
-        
-        // Limit to first 5 options if there are many, to avoid UI clutter
-        const displayLimit = 5;
-        const displayOptions = field.options.slice(0, displayLimit);
-        
-        displayOptions.forEach(option => {
-          const optItem = document.createElement('li');
-          optItem.className = option.selected || option.checked ? 'selected-option' : '';
-          
-          // Use the most informative value available
-          const optionText = option.text || option.value || option.label || '-';
-          optItem.textContent = optionText;
-          optionsList.appendChild(optItem);
-        });
-        
-        // If there are more options than the display limit, add an indicator
-        if (field.options.length > displayLimit) {
-          const moreItem = document.createElement('li');
-          moreItem.className = 'more-options';
-          moreItem.textContent = `...and ${field.options.length - displayLimit} more`;
-          optionsList.appendChild(moreItem);
+  // New function to display form fields in a dialog on the page
+  function displayFormFieldsInPageDialog(fields, tabId) {
+    // First inject the CSS for the dialog if it doesn't exist
+    chrome.scripting.insertCSS({
+      target: { tabId: tabId },
+      css: `
+        .formmaster-overlay {
+          position: fixed;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background-color: rgba(0, 0, 0, 0.5);
+          z-index: 9999;
+          display: flex;
+          justify-content: center;
+          align-items: center;
         }
         
-        optionsCell.appendChild(optionsList);
-      } else {
-        optionsCell.textContent = '-';
-      }
-      
-      row.appendChild(optionsCell);
-      
-      tbody.appendChild(row);
+        .formmaster-dialog {
+          background-color: #ffffff;
+          border-radius: 8px;
+          box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+          width: 80%;
+          max-width: 900px;
+          max-height: 80vh;
+          overflow: hidden;
+          display: flex;
+          flex-direction: column;
+        }
+        
+        .formmaster-dialog-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding: 16px;
+          border-bottom: 1px solid #e0e0e0;
+          background-color: #f5f5f5;
+        }
+        
+        .formmaster-dialog-title {
+          font-size: 18px;
+          font-weight: 600;
+          color: #4285f4;
+          margin: 0;
+        }
+        
+        .formmaster-dialog-close {
+          background: none;
+          border: none;
+          font-size: 20px;
+          cursor: pointer;
+          color: #5f6368;
+          padding: 0;
+          width: 30px;
+          height: 30px;
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+        
+        .formmaster-dialog-close:hover {
+          background-color: #e8eaed;
+        }
+        
+        .formmaster-dialog-body {
+          padding: 16px;
+          overflow-y: auto;
+        }
+        
+        .formmaster-fields-table {
+          width: 100%;
+          border-collapse: collapse;
+          margin-top: 12px;
+        }
+        
+        .formmaster-fields-table th, 
+        .formmaster-fields-table td {
+          padding: 10px 12px;
+          text-align: left;
+          border-bottom: 1px solid #e0e0e0;
+        }
+        
+        .formmaster-fields-table th {
+          background-color: #f8f9fa;
+          position: sticky;
+          top: 0;
+          font-weight: 600;
+          color: #202124;
+        }
+        
+        .formmaster-fields-table tr:hover td {
+          background-color: #f0f7ff;
+        }
+        
+        .formmaster-field-count {
+          background-color: #4285f4;
+          color: white;
+          border-radius: 16px;
+          padding: 2px 8px;
+          font-size: 14px;
+          margin-left: 8px;
+        }
+        
+        .formmaster-options-list {
+          margin: 0;
+          padding: 0;
+          list-style: none;
+        }
+        
+        .formmaster-option-item {
+          padding: 3px 5px;
+          margin-bottom: 2px;
+          border-radius: 3px;
+        }
+        
+        .formmaster-selected-option {
+          background-color: #e6f2ff;
+          font-weight: bold;
+          border-left: 3px solid #4285f4;
+        }
+      `
+    });
+
+    // Then inject and execute the script to create the dialog
+    chrome.scripting.executeScript({
+      target: { tabId: tabId },
+      function: (fieldsData) => {
+        // Remove any existing dialog first
+        const existingDialog = document.querySelector('.formmaster-overlay');
+        if (existingDialog) {
+          document.body.removeChild(existingDialog);
+        }
+        
+        // Create the dialog
+        const overlay = document.createElement('div');
+        overlay.className = 'formmaster-overlay';
+        
+        const dialog = document.createElement('div');
+        dialog.className = 'formmaster-dialog';
+        
+        // Create dialog header
+        const header = document.createElement('div');
+        header.className = 'formmaster-dialog-header';
+        
+        const title = document.createElement('h2');
+        title.className = 'formmaster-dialog-title';
+        title.textContent = 'FormMasterPro Analysis';
+        
+        const fieldCount = document.createElement('span');
+        fieldCount.className = 'formmaster-field-count';
+        fieldCount.textContent = fieldsData.length;
+        title.appendChild(fieldCount);
+        
+        const closeButton = document.createElement('button');
+        closeButton.className = 'formmaster-dialog-close';
+        closeButton.innerHTML = '&times;';
+        closeButton.onclick = () => {
+          document.body.removeChild(overlay);
+        };
+        
+        header.appendChild(title);
+        header.appendChild(closeButton);
+        
+        // Create dialog body
+        const body = document.createElement('div');
+        body.className = 'formmaster-dialog-body';
+        
+        // Create the table
+        const table = document.createElement('table');
+        table.className = 'formmaster-fields-table';
+        
+        // Create table header
+        const thead = document.createElement('thead');
+        const headerRow = document.createElement('tr');
+        
+        ['Label/Name', 'Type', 'ID', 'Value', 'Options'].forEach(headerText => {
+          const th = document.createElement('th');
+          th.textContent = headerText;
+          headerRow.appendChild(th);
+        });
+        
+        thead.appendChild(headerRow);
+        table.appendChild(thead);
+        
+        // Create table body
+        const tbody = document.createElement('tbody');
+        
+        fieldsData.forEach(field => {
+          const row = document.createElement('tr');
+          
+          // Label/Name cell
+          const labelCell = document.createElement('td');
+          labelCell.textContent = field.label || field.name || field.id || 'Unnamed Field';
+          row.appendChild(labelCell);
+          
+          // Type cell
+          const typeCell = document.createElement('td');
+          typeCell.textContent = field.type;
+          row.appendChild(typeCell);
+          
+          // ID cell
+          const idCell = document.createElement('td');
+          idCell.textContent = field.id || '-';
+          row.appendChild(idCell);
+          
+          // Value cell
+          const valueCell = document.createElement('td');
+          
+          if (field.type === 'select' || field.type === 'radio') {
+            // For select/radio, show selected option
+            const selectedOpt = field.options?.find(opt => opt.selected || opt.checked);
+            valueCell.textContent = selectedOpt ? selectedOpt.value || selectedOpt.text : '-';
+          } else if (field.type === 'checkbox') {
+            valueCell.textContent = field.checked ? 'Checked' : 'Unchecked';
+          } else {
+            valueCell.textContent = field.value || '-';
+          }
+          
+          row.appendChild(valueCell);
+          
+          // Options cell
+          const optionsCell = document.createElement('td');
+          
+          if (field.options && field.options.length > 0) {
+            const optionsList = document.createElement('ul');
+            optionsList.className = 'formmaster-options-list';
+            
+            // Limit to first 5 options
+            const displayLimit = 5;
+            const displayOptions = field.options.slice(0, displayLimit);
+            
+            displayOptions.forEach(option => {
+              const optItem = document.createElement('li');
+              optItem.className = 'formmaster-option-item';
+              if (option.selected || option.checked) {
+                optItem.className += ' formmaster-selected-option';
+              }
+              
+              const optionText = option.text || option.value || option.label || '-';
+              optItem.textContent = optionText;
+              optionsList.appendChild(optItem);
+            });
+            
+            // If there are more options than the display limit, add an indicator
+            if (field.options.length > displayLimit) {
+              const moreItem = document.createElement('li');
+              moreItem.className = 'formmaster-option-item';
+              moreItem.style.fontStyle = 'italic';
+              moreItem.style.color = '#5f6368';
+              moreItem.textContent = `...and ${field.options.length - displayLimit} more`;
+              optionsList.appendChild(moreItem);
+            }
+            
+            optionsCell.appendChild(optionsList);
+          } else {
+            optionsCell.textContent = '-';
+          }
+          
+          row.appendChild(optionsCell);
+          tbody.appendChild(row);
+        });
+        
+        table.appendChild(tbody);
+        body.appendChild(table);
+        
+        // Assemble the dialog
+        dialog.appendChild(header);
+        dialog.appendChild(body);
+        overlay.appendChild(dialog);
+        
+        // Add to the page
+        document.body.appendChild(overlay);
+        
+        // Add event listener to close dialog when clicking outside
+        overlay.addEventListener('click', (event) => {
+          if (event.target === overlay) {
+            document.body.removeChild(overlay);
+          }
+        });
+        
+        // Prevent scrolling of the background content
+        document.body.style.overflow = 'hidden';
+        
+        // Restore scrolling when dialog is closed
+        closeButton.addEventListener('click', () => {
+          document.body.style.overflow = '';
+        });
+        
+        overlay.addEventListener('click', (event) => {
+          if (event.target === overlay) {
+            document.body.style.overflow = '';
+          }
+        });
+      },
+      args: [fields]
     });
     
-    table.appendChild(tbody);
-    fieldsContainer.appendChild(table);
-    
-    // No need to add inline styles here anymore since we've defined them in the HTML
-    
-    formAnalysisPanel.classList.remove('hidden');
+    // Show success message in the popup
+    showToast(`Analyzed ${fields.length} form fields`, 'success');
   }
-  
-  
-  // Helper function to show toast messages
+
+  // Old displayFormFields function can be removed as we're replacing it with the dialog version
+  /* The original displayFormFields function is removed since we now use the dialog version */
+
+// Helper function to show toast messages
   function showToast(message, type = 'info') {
     const toast = document.createElement('div');
     toast.className = `toast ${type}`;
