@@ -20,8 +20,7 @@ const aiService = (() => {
       if (Array.isArray(processedProfile.extractedContent.paragraphs)) {
         const cleanStrings = processedProfile.extractedContent.paragraphs.map(p => {
           const text = typeof p === 'object' && p.text ? p.text : String(p);
-          // Remove all whitespace (spaces, tabs, line breaks)
-          return text.replace(/\s/g, '');
+          return text;
         }).filter(str => str.length > 0); // Remove empty strings
         
         // Replace paragraphs with the cleaned strings
@@ -31,14 +30,14 @@ const aiService = (() => {
       // Also process the strings array if it exists
       if (Array.isArray(processedProfile.extractedContent.strings)) {
         processedProfile.extractedContent.strings = processedProfile.extractedContent.strings
-          .map(text => String(text).replace(/\s/g, ''))
+          .map(text => String(text))
           .filter(str => str.length > 0);
       }
       
       // Clean up rawText if it exists
       if (processedProfile.extractedContent.rawText) {
         processedProfile.extractedContent.rawText = 
-          processedProfile.extractedContent.rawText.replace(/\s/g, '');
+          processedProfile.extractedContent.rawText;
       }
     }
     
@@ -46,8 +45,8 @@ const aiService = (() => {
     if (processedProfile.docxData) {
       if (Array.isArray(processedProfile.docxData.paragraphs)) {
         processedProfile.docxData.paragraphs = processedProfile.docxData.paragraphs
-          .map(p => typeof p === 'string' ? p.replace(/\s/g, '') : 
-               (p && p.text) ? p.text.replace(/\s/g, '') : '')
+          .map(p => typeof p === 'string' ? p : 
+               (p && p.text) ? p.text : '')
           .filter(str => str.length > 0);
       }
     }
