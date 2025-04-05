@@ -6,13 +6,7 @@
 const defaultsDialog = (() => {
   // Add function to display a dialog for collecting default field values
   async function showDefaultValueDialog(missingFields, rootUrl) {
-    return new Promise((resolve, reject) => {
-      // Check if we're in a background script context
-      const isBackgroundContext = (typeof chrome !== 'undefined' && 
-                                  chrome.extension &&
-                                  chrome.extension.getBackgroundPage &&
-                                  chrome.extension.getBackgroundPage() === window);
-      
+    return new Promise((resolve, reject) => {      
       // Get the active tab in a way that works in both contexts
       function getActiveTab() {
         return new Promise((resolve, reject) => {
@@ -267,7 +261,7 @@ const defaultsDialog = (() => {
                   }
                   
                   // Display field label with mandatory indicator if required
-                  label.textContent = field.label || field.name || field.id;
+                  label.textContent = field.label + ' ' + field.name || field.id;
                   if (isMandatory) {
                     const mandatoryIndicator = document.createElement('span');
                     mandatoryIndicator.className = 'formmaster-mandatory-indicator';
