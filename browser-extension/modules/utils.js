@@ -2,13 +2,7 @@
  * Utility functions
  */
 const utils = (() => {
-  /**
-   * Format a value based on the field type
-   * @param {*} value - The raw value to format
-   * @param {string} fieldType - The type of the form field (e.g., 'text', 'radio', 'checkbox')
-   * @param {Object} fieldInfo - Additional field info like options for selects
-   * @returns {*} - Formatted value appropriate for the field type
-   */
+  
   function formatValueForFieldType(value, fieldType, fieldInfo) {
     // Return null or undefined values as empty string to avoid errors
     if (value === null || value === undefined) {
@@ -155,9 +149,6 @@ const utils = (() => {
     }
   }
   
-  /**
-   * Check if a field identifier matches the pattern
-   */
   function isPatternMatch(identifier, pattern) {
     if (!identifier || !pattern) return false;
     

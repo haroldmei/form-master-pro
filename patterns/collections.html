@@ -1,0 +1,683 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FormMasterPro Smoke Test Collection</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.0/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/chosen-js@1.8.7/chosen.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css">
+    <style>
+        body { padding: 20px; }
+        h2 { margin-top: 2rem; color: #375f9d; }
+        h3 { margin-top: 1.5rem; color: #5a7cb6; }
+        .test-section { border: 1px solid #dee2e6; border-radius: 8px; padding: 16px; margin-bottom: 20px; }
+        .form-section { margin-bottom: 30px; }
+        .custom-form-group { margin-bottom: 15px; }
+        .custom-label { font-weight: 600; }
+        .custom-framework-1 { background-color: #f8f9fa; padding: 15px; border-radius: 5px; }
+        .custom-framework-2 { background-color: #e9ecef; padding: 15px; border-radius: 3px; }
+        .ref-number { background: #eee; padding: 3px 8px; border-radius: 3px; margin-right: 5px; font-family: monospace; }
+        
+        /* Fix for Chosen.js dropdown width */
+        .chosen-container {
+            min-width: 250px !important;
+            width: 100% !important;
+        }
+        .chosen-container-single .chosen-single {
+            height: 38px;
+            line-height: 36px;
+            background: #fff;
+        }
+        .chosen-container-active.chosen-with-drop .chosen-single {
+            border-color: #80bdff;
+            box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+        }
+        .chosen-container .chosen-drop {
+            width: 100% !important;
+            border-color: #80bdff;
+        }
+        /* Ensure dropdowns in custom frameworks have proper dimensions */
+        .sv-col-md-4 .chosen-container {
+            width: 100% !important;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="mb-4">FormMasterPro Control Collection</h1>
+        <p class="lead">This page contains various implementations of form controls for testing FormMasterPro's extraction and filling capabilities.</p>
+
+        <div class="alert alert-info">
+            Each section contains form elements implemented in different ways to test FormMasterPro's compatibility with various frameworks and styling approaches.
+        </div>
+
+        <!-- SECTION 1: BASIC INPUT TYPES -->
+        <div class="test-section">
+            <h2>1. Basic Input Types</h2>
+            <form class="form-section">
+                <h3>1.1 Text Inputs</h3>
+                <!-- Regular text input -->
+                <div class="form-group">
+                    <label for="basic-text">Basic Text Input</label>
+                    <input type="text" class="form-control" id="basic-text" name="basic-text">
+                </div>
+
+                <!-- Text with placeholder -->
+                <div class="form-group">
+                    <label for="placeholder-text">Text with Placeholder</label>
+                    <input type="text" class="form-control" id="placeholder-text" name="placeholder-text" placeholder="Enter your name">
+                </div>
+
+                <!-- Text with default value -->
+                <div class="form-group">
+                    <label for="default-text">Text with Default Value</label>
+                    <input type="text" class="form-control" id="default-text" name="default-text" value="Default Value">
+                </div>
+
+                <!-- Required text field -->
+                <div class="form-group">
+                    <label for="required-text">Required Text Field</label>
+                    <input type="text" class="form-control" id="required-text" name="required-text" required>
+                </div>
+
+                <!-- Disabled text field -->
+                <div class="form-group">
+                    <label for="disabled-text">Disabled Text Field</label>
+                    <input type="text" class="form-control" id="disabled-text" name="disabled-text" disabled value="Disabled Value">
+                </div>
+
+                <!-- Readonly text field -->
+                <div class="form-group">
+                    <label for="readonly-text">Readonly Text Field</label>
+                    <input type="text" class="form-control" id="readonly-text" name="readonly-text" readonly value="Readonly Value">
+                </div>
+
+                <h3>1.2 Specialized Input Types</h3>
+                <!-- Email input -->
+                <div class="form-group">
+                    <label for="email-input">Email Input</label>
+                    <input type="email" class="form-control" id="email-input" name="email-input" placeholder="email@example.com">
+                </div>
+
+                <!-- Number input -->
+                <div class="form-group">
+                    <label for="number-input">Number Input</label>
+                    <input type="number" class="form-control" id="number-input" name="number-input" min="0" max="100" step="1">
+                </div>
+
+                <!-- Date input -->
+                <div class="form-group">
+                    <label for="date-input">Date Input</label>
+                    <input type="date" class="form-control" id="date-input" name="date-input">
+                </div>
+
+                <!-- Time input -->
+                <div class="form-group">
+                    <label for="time-input">Time Input</label>
+                    <input type="time" class="form-control" id="time-input" name="time-input">
+                </div>
+
+                <!-- Password input -->
+                <div class="form-group">
+                    <label for="password-input">Password Input</label>
+                    <input type="password" class="form-control" id="password-input" name="password-input">
+                </div>
+
+                <!-- URL input -->
+                <div class="form-group">
+                    <label for="url-input">URL Input</label>
+                    <input type="url" class="form-control" id="url-input" name="url-input" placeholder="https://example.com">
+                </div>
+
+                <!-- Search input -->
+                <div class="form-group">
+                    <label for="search-input">Search Input</label>
+                    <input type="search" class="form-control" id="search-input" name="search-input" placeholder="Search...">
+                </div>
+
+                <!-- File input -->
+                <div class="form-group">
+                    <label for="file-input">File Input</label>
+                    <input type="file" class="form-control-file" id="file-input" name="file-input">
+                </div>
+
+                <!-- Color input -->
+                <div class="form-group">
+                    <label for="color-input">Color Input</label>
+                    <input type="color" class="form-control" id="color-input" name="color-input" value="#563d7c">
+                </div>
+
+                <!-- Range input -->
+                <div class="form-group">
+                    <label for="range-input">Range Input</label>
+                    <input type="range" class="form-control-range" id="range-input" name="range-input" min="0" max="10">
+                </div>
+
+                <!-- Hidden input -->
+                <input type="hidden" id="hidden-input" name="hidden-input" value="hidden-value">
+            </form>
+        </div>
+
+        <!-- SECTION 2: TEXT AREAS -->
+        <div class="test-section">
+            <h2>2. Textareas</h2>
+            <form class="form-section">
+                <!-- Basic textarea -->
+                <div class="form-group">
+                    <label for="basic-textarea">Basic Textarea</label>
+                    <textarea class="form-control" id="basic-textarea" name="basic-textarea" rows="3"></textarea>
+                </div>
+
+                <!-- Textarea with placeholder -->
+                <div class="form-group">
+                    <label for="placeholder-textarea">Textarea with Placeholder</label>
+                    <textarea class="form-control" id="placeholder-textarea" name="placeholder-textarea" rows="3" placeholder="Enter your message here"></textarea>
+                </div>
+
+                <!-- Textarea with default text -->
+                <div class="form-group">
+                    <label for="default-textarea">Textarea with Default Text</label>
+                    <textarea class="form-control" id="default-textarea" name="default-textarea" rows="3">This textarea has default text</textarea>
+                </div>
+
+                <!-- Required textarea -->
+                <div class="form-group">
+                    <label for="required-textarea">Required Textarea</label>
+                    <textarea class="form-control" id="required-textarea" name="required-textarea" rows="3" required></textarea>
+                </div>
+
+                <!-- Disabled textarea -->
+                <div class="form-group">
+                    <label for="disabled-textarea">Disabled Textarea</label>
+                    <textarea class="form-control" id="disabled-textarea" name="disabled-textarea" rows="3" disabled>This textarea is disabled</textarea>
+                </div>
+
+                <!-- Readonly textarea -->
+                <div class="form-group">
+                    <label for="readonly-textarea">Readonly Textarea</label>
+                    <textarea class="form-control" id="readonly-textarea" name="readonly-textarea" rows="3" readonly>This textarea is readonly</textarea>
+                </div>
+            </form>
+        </div>
+
+        <!-- SECTION 3: SELECT DROPDOWNS -->
+        <div class="test-section">
+            <h2>3. Select Dropdowns</h2>
+            <form class="form-section">
+                <h3>3.1 Native Selects</h3>
+                <!-- Basic select -->
+                <div class="form-group">
+                    <label for="basic-select">Basic Select</label>
+                    <select class="form-control" id="basic-select" name="basic-select">
+                        <option value="">-- Select an option --</option>
+                        <option value="option1">Option 1</option>
+                        <option value="option2">Option 2</option>
+                        <option value="option3">Option 3</option>
+                    </select>
+                </div>
+
+                <!-- Select with default value -->
+                <div class="form-group">
+                    <label for="default-select">Select with Default Value</label>
+                    <select class="form-control" id="default-select" name="default-select">
+                        <option value="option1">Option 1</option>
+                        <option value="option2" selected>Option 2</option>
+                        <option value="option3">Option 3</option>
+                    </select>
+                </div>
+
+                <!-- Select with optgroups -->
+                <div class="form-group">
+                    <label for="optgroup-select">Select with Option Groups</label>
+                    <select class="form-control" id="optgroup-select" name="optgroup-select">
+                        <option value="">-- Select an option --</option>
+                        <optgroup label="Group 1">
+                            <option value="g1option1">Group 1 - Option 1</option>
+                            <option value="g1option2">Group 1 - Option 2</option>
+                        </optgroup>
+                        <optgroup label="Group 2">
+                            <option value="g2option1">Group 2 - Option 1</option>
+                            <option value="g2option2">Group 2 - Option 2</option>
+                        </optgroup>
+                    </select>
+                </div>
+
+                <!-- Multiple select -->
+                <div class="form-group">
+                    <label for="multiple-select">Multiple Select</label>
+                    <select multiple class="form-control" id="multiple-select" name="multiple-select">
+                        <option value="option1">Option 1</option>
+                        <option value="option2">Option 2</option>
+                        <option value="option3">Option 3</option>
+                        <option value="option4">Option 4</option>
+                    </select>
+                </div>
+
+                <!-- Required select -->
+                <div class="form-group">
+                    <label for="required-select">Required Select</label>
+                    <select class="form-control" id="required-select" name="required-select" required>
+                        <option value="">-- Please select --</option>
+                        <option value="option1">Option 1</option>
+                        <option value="option2">Option 2</option>
+                    </select>
+                </div>
+
+                <h3>3.2 Chosen.js Enhanced Select</h3>
+                <!-- Chosen.js implementation (like in the original example) -->
+                <div class="form-group">
+                    <label for="chosen-select">Chosen.js Select</label>
+                    <select id="chosen-select" name="chosen-select" class="chosen-select form-control">
+                        <option value="">-- Select --</option>
+                        <option value="MR">Mr</option>
+                        <option value="MRS">Mrs</option>
+                        <option value="MISS">Miss</option>
+                        <option value="MS">Ms</option>
+                        <option value="DR">Dr</option>
+                        <option value="PROF">Professor</option>
+                    </select>
+                </div>
+
+                <h3>3.3 Select2 Enhanced Select</h3>
+                <!-- Select2 implementation -->
+                <div class="form-group">
+                    <label for="select2-example">Select2 Dropdown</label>
+                    <select id="select2-example" name="select2-example" class="select2-control">
+                        <option value="">-- Select --</option>
+                        <option value="apple">Apple</option>
+                        <option value="banana">Banana</option>
+                        <option value="orange">Orange</option>
+                        <option value="grape">Grape</option>
+                    </select>
+                </div>
+            </form>
+        </div>
+
+        <!-- SECTION 4: RADIO BUTTONS -->
+        <div class="test-section">
+            <h2>4. Radio Buttons</h2>
+            <form class="form-section">
+                <h3>4.1 Standard Radio Buttons</h3>
+                <!-- Basic radio group -->
+                <div class="form-group">
+                    <label>Basic Radio Group</label>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="basic-radio" id="radio1" value="option1">
+                        <label class="form-check-label" for="radio1">Option 1</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="basic-radio" id="radio2" value="option2">
+                        <label class="form-check-label" for="radio2">Option 2</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="basic-radio" id="radio3" value="option3">
+                        <label class="form-check-label" for="radio3">Option 3</label>
+                    </div>
+                </div>
+
+                <!-- Radio with default selection -->
+                <div class="form-group">
+                    <label>Radio with Default Selection</label>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="default-radio" id="default-radio1" value="option1">
+                        <label class="form-check-label" for="default-radio1">Option 1</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="default-radio" id="default-radio2" value="option2" checked>
+                        <label class="form-check-label" for="default-radio2">Option 2</label>
+                    </div>
+                </div>
+
+                <!-- Radio buttons as Yes/No with Y/N values (like original example) -->
+                <div class="form-group">
+                    <label>Are you a student?</label>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="student-status" id="student-yes" value="Y">
+                        <label class="form-check-label" for="student-yes">Yes</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="student-status" id="student-no" value="N">
+                        <label class="form-check-label" for="student-no">No</label>
+                    </div>
+                </div>
+
+                <h3>4.2 Inline Radio Buttons</h3>
+                <!-- Inline radio group -->
+                <div class="form-group">
+                    <label>Inline Radio Group</label>
+                    <div>
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="radio" name="inline-radio" id="inline-radio1" value="option1">
+                            <label class="form-check-label" for="inline-radio1">Option 1</label>
+                        </div>
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="radio" name="inline-radio" id="inline-radio2" value="option2">
+                            <label class="form-check-label" for="inline-radio2">Option 2</label>
+                        </div>
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="radio" name="inline-radio" id="inline-radio3" value="option3">
+                            <label class="form-check-label" for="inline-radio3">Option 3</label>
+                        </div>
+                    </div>
+                </div>
+
+                <h3>4.3 Radio Buttons with Varying Label Positions</h3>
+                <!-- Radio with label before input -->
+                <div class="form-group">
+                    <label>Label Before Input</label>
+                    <div>
+                        <label for="label-before-radio1">Label Before Input 1</label>
+                        <input type="radio" name="label-position" id="label-before-radio1" value="option1">
+                        <label for="label-before-radio2">Label Before Input 2</label>
+                        <input type="radio" name="label-position" id="label-before-radio2" value="option2">
+                    </div>
+                </div>
+
+                <!-- Radio with input inside label (like the original example) -->
+                <div class="form-group">
+                    <label>Input Inside Label</label>
+                    <div class="radio">
+                        <label><input type="radio" name="inside-label-radio" value="option1">&nbsp;Option 1</label>
+                    </div>
+                    <div class="radio">
+                        <label><input type="radio" name="inside-label-radio" value="option2">&nbsp;Option 2</label>
+                    </div>
+                </div>
+
+                <h3>4.4 Fieldset and Legend Radio Groups</h3>
+                <!-- Radio in fieldset with legend -->
+                <fieldset class="form-group">
+                    <legend>Radio Group with Fieldset and Legend</legend>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="fieldset-radio" id="fieldset-radio1" value="option1">
+                        <label class="form-check-label" for="fieldset-radio1">Option 1</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="fieldset-radio" id="fieldset-radio2" value="option2">
+                        <label class="form-check-label" for="fieldset-radio2">Option 2</label>
+                    </div>
+                </fieldset>
+
+                <h3>4.5 Custom Framework Radio Style</h3>
+                <!-- Custom framework pattern 1 -->
+                <div class="sv-form-group">
+                    <label class="sv-col-md-3 sv-control-label">Custom Framework Radio Buttons</label>
+                    <div class="sv-col-md-4">
+                        <div class="sv-radio"><label><input name="custom-radio" id="custom-radio1" type="radio" value="Y">&nbsp;Yes</label></div>
+                        <div class="sv-radio"><label><input name="custom-radio" id="custom-radio2" type="radio" value="N">&nbsp;No</label></div>
+                        <small>This is an example from a custom framework.</small>
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        <!-- SECTION 5: CHECKBOXES -->
+        <div class="test-section">
+            <h2>5. Checkboxes</h2>
+            <form class="form-section">
+                <h3>5.1 Standard Checkboxes</h3>
+                <!-- Basic checkbox -->
+                <div class="form-group">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="basic-checkbox" name="basic-checkbox">
+                        <label class="form-check-label" for="basic-checkbox">Basic Checkbox</label>
+                    </div>
+                </div>
+
+                <!-- Checkbox with default checked -->
+                <div class="form-group">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="default-checked" name="default-checked" checked>
+                        <label class="form-check-label" for="default-checked">Default Checked</label>
+                    </div>
+                </div>
+
+                <!-- Checkbox group -->
+                <div class="form-group">
+                    <label>Checkbox Group</label>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="checkbox-group1" name="checkbox-group" value="option1">
+                        <label class="form-check-label" for="checkbox-group1">Option 1</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="checkbox-group2" name="checkbox-group" value="option2">
+                        <label class="form-check-label" for="checkbox-group2">Option 2</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="checkbox-group3" name="checkbox-group" value="option3">
+                        <label class="form-check-label" for="checkbox-group3">Option 3</label>
+                    </div>
+                </div>
+
+                <h3>5.2 Inline Checkboxes</h3>
+                <!-- Inline checkbox group -->
+                <div class="form-group">
+                    <label>Inline Checkbox Group</label>
+                    <div>
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="checkbox" id="inline-checkbox1" name="inline-checkbox" value="option1">
+                            <label class="form-check-label" for="inline-checkbox1">Option 1</label>
+                        </div>
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="checkbox" id="inline-checkbox2" name="inline-checkbox" value="option2">
+                            <label class="form-check-label" for="inline-checkbox2">Option 2</label>
+                        </div>
+                    </div>
+                </div>
+
+                <h3>5.3 Checkbox with Input Inside Label</h3>
+                <!-- Checkbox with input inside label -->
+                <div class="form-group">
+                    <div class="checkbox">
+                        <label><input type="checkbox" name="inside-label-checkbox" value="option1">&nbsp;Checkbox inside label</label>
+                    </div>
+                </div>
+
+                <h3>5.4 Toggle Switch Style Checkbox</h3>
+                <!-- Toggle switch style -->
+                <div class="form-group">
+                    <label for="toggle-switch">Toggle Switch</label>
+                    <div class="custom-control custom-switch">
+                        <input type="checkbox" class="custom-control-input" id="toggle-switch" name="toggle-switch">
+                        <label class="custom-control-label" for="toggle-switch">Turn on this switch</label>
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        <!-- SECTION 6: CUSTOM FRAMEWORK CONTROLS -->
+        <div class="test-section">
+            <h2>6. Custom Framework Controls</h2>
+            
+            <div class="custom-framework-1">
+                <h3>6.1 Custom Framework 1</h3>
+                <!-- Example from original code -->
+                <div class="sv-form-group">
+                    <label for="IPR_TITL" class="sv-col-md-3 sv-control-label">Title *</label>
+                    <div class="sv-col-md-4">
+                        <select name="IPR_TITL" id="IPR_TITL" class="" data-gtm-form-interact-field-id="44">
+                            <option value="">-- Select --</option>
+                            <option value="MR">Mr</option>
+                            <option value="MRS">Mrs</option>
+                            <option value="MISS">Miss</option>
+                            <option value="MS">Ms</option>
+                            <option value="DR">Dr</option>
+                            <option value="ASSOCPROF">Associate Professor</option>
+                            <option value="PROF">Professor</option>
+                            <option value="SIR">Sir</option>
+                            <option value="MX">Mx</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="custom-framework-2">
+                <h3>6.2 Custom Framework 2</h3>
+                <!-- Another custom framework style -->
+                <div class="control-group">
+                    <label class="control-label" for="custom-framework-input">Custom Input</label>
+                    <div class="controls">
+                        <input type="text" id="custom-framework-input" name="custom-framework-input" placeholder="Enter value">
+                    </div>
+                </div>
+                
+                <div class="control-group">
+                    <label class="control-label" for="custom-framework-select">Custom Select</label>
+                    <div class="controls">
+                        <select id="custom-framework-select" name="custom-framework-select">
+                            <option value="">Select an option</option>
+                            <option value="1">One</option>
+                            <option value="2">Two</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- SECTION 7: COMPLEX FORM LAYOUTS -->
+        <div class="test-section">
+            <h2>7. Complex Form Layouts</h2>
+            
+            <h3>7.1 Input Groups</h3>
+            <form class="form-section">
+                <!-- Prepended text -->
+                <div class="form-group">
+                    <label for="prepend-input">Prepended Text</label>
+                    <div class="input-group">
+                        <div class="input-group-prepend">
+                            <span class="input-group-text">@</span>
+                        </div>
+                        <input type="text" class="form-control" id="prepend-input" name="prepend-input" placeholder="Username">
+                    </div>
+                </div>
+                
+                <!-- Appended text -->
+                <div class="form-group">
+                    <label for="append-input">Appended Text</label>
+                    <div class="input-group">
+                        <input type="text" class="form-control" id="append-input" name="append-input">
+                        <div class="input-group-append">
+                            <span class="input-group-text">.00</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Both appended and prepended -->
+                <div class="form-group">
+                    <label for="both-input">Both Appended and Prepended</label>
+                    <div class="input-group">
+                        <div class="input-group-prepend">
+                            <span class="input-group-text">$</span>
+                        </div>
+                        <input type="text" class="form-control" id="both-input" name="both-input">
+                        <div class="input-group-append">
+                            <span class="input-group-text">.00</span>
+                        </div>
+                    </div>
+                </div>
+            </form>
+            
+            <h3>7.2 Grid Layout Forms</h3>
+            <form class="form-section">
+                <div class="form-row">
+                    <div class="form-group col-md-6">
+                        <label for="grid-first-name">First Name</label>
+                        <input type="text" class="form-control" id="grid-first-name" name="grid-first-name">
+                    </div>
+                    <div class="form-group col-md-6">
+                        <label for="grid-last-name">Last Name</label>
+                        <input type="text" class="form-control" id="grid-last-name" name="grid-last-name">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group col-md-6">
+                        <label for="grid-city">City</label>
+                        <input type="text" class="form-control" id="grid-city" name="grid-city">
+                    </div>
+                    <div class="form-group col-md-4">
+                        <label for="grid-state">State</label>
+                        <select id="grid-state" name="grid-state" class="form-control">
+                            <option value="">Choose...</option>
+                            <option value="CA">California</option>
+                            <option value="NY">New York</option>
+                            <option value="TX">Texas</option>
+                        </select>
+                    </div>
+                    <div class="form-group col-md-2">
+                        <label for="grid-zip">Zip</label>
+                        <input type="text" class="form-control" id="grid-zip" name="grid-zip">
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        <!-- SECTION 8: ACCESSIBILITY FEATURES -->
+        <div class="test-section">
+            <h2>8. Accessibility Features</h2>
+            <form class="form-section">
+                <!-- Input with aria-label -->
+                <div class="form-group">
+                    <label for="aria-label-input">Input with ARIA label</label>
+                    <input type="text" class="form-control" id="aria-label-input" name="aria-label-input" aria-label="Accessible input field">
+                </div>
+                
+                <!-- Input with aria-describedby -->
+                <div class="form-group">
+                    <label for="aria-described-input">Input with ARIA description</label>
+                    <input type="text" class="form-control" id="aria-described-input" name="aria-described-input" aria-describedby="aria-description">
+                    <small id="aria-description" class="form-text text-muted">This is a description for screen readers.</small>
+                </div>
+                
+                <!-- Visually hidden label -->
+                <div class="form-group">
+                    <label for="sr-only-input" class="sr-only">Visually Hidden Label</label>
+                    <input type="text" class="form-control" id="sr-only-input" name="sr-only-input" placeholder="Input with visually hidden label">
+                </div>
+            </form>
+        </div>
+
+        <h2>References</h2>
+        <p>This document serves as a comprehensive test page for FormMasterPro to validate form control extraction and filling.</p>
+        <ul>
+            <li><span class="ref-number">1.1</span> Basic text fields for validation</li>
+            <li><span class="ref-number">3.2</span> Custom-styled select dropdowns like Chosen.js</li>
+            <li><span class="ref-number">4.3</span> Radio buttons with various label positions</li>
+            <li><span class="ref-number">6.1</span> Framework-specific form controls</li>
+        </ul>
+    </div>
+
+    <!-- JavaScript to initialize the enhanced selects -->
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chosen-js@1.8.7/chosen.jquery.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    <script>
+        // Initialize enhanced selects after page load
+        $(document).ready(function() {
+            // Initialize Chosen.js with proper width configuration
+            $('.chosen-select').chosen({
+                width: '100%',
+                disable_search_threshold: 10
+            });
+            
+            // Initialize our custom framework select with Chosen
+            $('#IPR_TITL').chosen({
+                width: '100%',
+                disable_search_threshold: 10
+            });
+            
+            // Initialize Select2
+            $('.select2-control').select2({
+                width: '100%',
+                dropdownAutoWidth: true
+            });
+            
+            // Set some default values
+            $('#chosen-select').val('MR').trigger('chosen:updated');
+            $('#IPR_TITL').val('MR').trigger('chosen:updated');
+            $('#select2-example').val('apple').trigger('change');
+        });
+    </script>
+</body>
+</html>

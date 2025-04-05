@@ -17,7 +17,7 @@ function displayExtensionMode() {
 }
 
 function loadSettings() {
-  chrome.storage.sync.get(['fieldMappings'], function(result) {
+  chrome.storage.local.get(['fieldMappings'], function(result) {
     const mappings = result.fieldMappings || [];
     
     const mappingsList = document.getElementById('mappings-list');
@@ -93,7 +93,7 @@ function saveSettings() {
     }
   });
   
-  chrome.storage.sync.set({ fieldMappings: mappings }, function() {
+  chrome.storage.local.set({ fieldMappings: mappings }, function() {
     showStatusMessage('Settings saved successfully!', 'success');
     
     // Directly apply settings without needing to notify external app

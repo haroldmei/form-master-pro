@@ -1,44 +1,69 @@
 /**
  * User profile management module
- * Using global memory only - no storage operations
+ * Using local storage for persistence
  */
 
-// Define global user profile
-self.globalUserProfile = self.globalUserProfile || {};
-
 const userProfileManager = (() => {
+  const USER_PROFILE_KEY = 'userProfileData';
+  // Cache for the current profile to avoid excessive storage reads
+  let profileCache = null;
+  
   /**
    * Initialize with existing data (optional)
    */
   function initWithData(existingData) {
     if (existingData) {
-      self.globalUserProfile = existingData;
+      profileCache = existingData;
+      return new Promise((resolve) => {
+        chrome.storage.local.set({ [USER_PROFILE_KEY]: existingData }, () => {
+          resolve(existingData);
+        });
+      });
     }
-    return self.globalUserProfile;
+    return loadUserProfile();
   }
   
   /**
-   * Load user profile from global memory
+   * Load user profile from local storage
    */
-  function loadUserProfile() {
-    // Just return the global profile - no need to fetch from storage
-    return Promise.resolve(self.globalUserProfile);
+  async function loadUserProfile() {
+    // Return cached profile if available
+    if (profileCache) return profileCache;
+    
+    return new Promise((resolve) => {
+      chrome.storage.local.get([USER_PROFILE_KEY], (result) => {
+        profileCache = result[USER_PROFILE_KEY] || {};
+        resolve(profileCache);
+      });
+    });
   }
   
   /**
-   * Save changes to user profile (updates global memory only)
+   * Save changes to user profile
    */
-  function saveUserProfile() {
-    // No need to do anything - changes to the object are already in memory
-    return Promise.resolve(self.globalUserProfile);
+  function saveUserProfile(profileData) {
+    // Update cache
+    profileCache = profileData;
+    
+    return new Promise((resolve) => {
+      chrome.storage.local.set({ [USER_PROFILE_KEY]: profileData }, () => {
+        resolve(profileData);
+      });
+    });
   }
   
   /**
-   * Get a value from the user profile
+   * Get a value from the user profile - SYNCHRONOUS version that returns cached value
+   * Use this version in code that can't easily be made async
    */
-  function getUserProfileField(field) {
+  function getUserProfileFieldSync(field) {
+    if (!profileCache) {
+      console.warn("Accessing user profile before it's loaded - returning empty value");
+      return '';
+    }
+    
     const parts = field.split('.');
-    let value = self.globalUserProfile;
+    let value = profileCache;
     
     for (const part of parts) {
       if (!value || typeof value !== 'object') return '';
@@ -49,18 +74,42 @@ const userProfileManager = (() => {
   }
   
   /**
-   * Get the entire user profile
+   * Get a value from the user profile - ASYNC version
+   */
+  async function getUserProfileField(field) {
+    const profile = await loadUserProfile();
+    const parts = field.split('.');
+    let value = profile;
+    
+    for (const part of parts) {
+      if (!value || typeof value !== 'object') return '';
+      value = value[part];
+    }
+    
+    return value || '';
+  }
+  
+  /**
+   * Get the entire user profile - SYNCHRONOUS version
+   */
+  function getUserProfileSync() {
+    return profileCache || {};
+  }
+  
+  /**
+   * Get the entire user profile - ASYNC version
    */
   function getUserProfile() {
-    return self.globalUserProfile;
+    return loadUserProfile();
   }
   
   /**
    * Update a specific field in the user profile
    */
-  function updateUserProfileField(fieldPath, value) {
+  async function updateUserProfileField(fieldPath, value) {
+    const profile = await loadUserProfile();
     const parts = fieldPath.split('.');
-    let current = self.globalUserProfile;
+    let current = profile;
     
     // Navigate to the nested location, creating objects as needed
     for (let i = 0; i < parts.length - 1; i++) {
@@ -74,9 +123,15 @@ const userProfileManager = (() => {
     // Set the value at the final location
     current[parts[parts.length - 1]] = value;
     
-    // No need to save to storage
-    return self.globalUserProfile;
+    // Save to local storage
+    return saveUserProfile(profile);
   }
+  
+  // Initialize the cache from storage on module load
+  chrome.storage.local.get([USER_PROFILE_KEY], (result) => {
+    profileCache = result[USER_PROFILE_KEY] || {};
+    console.log("User profile cache initialized from storage");
+  });
   
   // Return public API
   return {
@@ -84,7 +139,9 @@ const userProfileManager = (() => {
     loadUserProfile,
     saveUserProfile,
     getUserProfileField,
+    getUserProfileFieldSync, // New synchronous version
     getUserProfile,
+    getUserProfileSync, // New synchronous version
     updateUserProfileField
   };
 })();
