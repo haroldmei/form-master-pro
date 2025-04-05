@@ -111,12 +111,22 @@ function getRadioGroupLabel(radioElement) {
       depth++;
     }
     
-    // Instead of looking for specific class names, look for structural patterns
-    // that are common across different frameworks
+    // Look for Bootstrap form-group pattern with label preceding radio group
     parent = radioElement.parentElement;
     depth = 0;
     
     while (parent && depth < 6) {
+      // Check for Bootstrap's form-group pattern
+      if (parent.classList.contains('form-group')) {
+        // Look for direct label child at the beginning of form-group
+        const directLabel = parent.querySelector(':scope > label');
+        if (directLabel) {
+          const text = directLabel.textContent.trim();
+          console.log(`Found Bootstrap form-group direct label: "${text}"`);
+          return text;
+        }
+      }
+      
       // 1. Check if this is any kind of form group container (regardless of class name)
       // Look for structural hints rather than specific classes
       const isFormGroup = 
@@ -133,6 +143,18 @@ function getRadioGroupLabel(radioElement) {
       
       if (isFormGroup) {
         console.log('Found potential form group container:', parent);
+        
+        // Enhanced: Look for standalone label that is direct child of form group
+        const directLabels = Array.from(parent.children).filter(
+          child => child.tagName === 'LABEL' && 
+                  !child.querySelector('input[type="radio"]')
+        );
+        
+        if (directLabels.length > 0) {
+          const text = directLabels[0].textContent.trim();
+          console.log(`Found direct label in form group: "${text}"`);
+          return text;
+        }
         
         // Look for standalone labels that could be group headers
         // Query all labels and filter out those that contain radio buttons
@@ -311,6 +333,44 @@ function getRadioGroupLabel(radioElement) {
       }
     }
     
+    // Handle Bootstrap inline radio case with shared parent div
+    const radioName = radioElement.name;
+    if (radioName) {
+      // Get parent container of all radios with this name
+      const allRadiosWithSameName = document.querySelectorAll(`input[type="radio"][name="${CSS.escape(radioName)}"]`);
+      if (allRadiosWithSameName.length > 0) {
+        // Find common ancestor that contains all radio buttons
+        let commonParent = allRadiosWithSameName[0].parentElement;
+        let foundCommon = false;
+        
+        while (commonParent && !foundCommon) {
+          const containsAll = Array.from(allRadiosWithSameName).every(radio => 
+            commonParent.contains(radio)
+          );
+          
+          if (containsAll) {
+            foundCommon = true;
+            // Look for a label that is a sibling or direct child of the parent
+            const parentContainer = commonParent.parentElement;
+            if (parentContainer) {
+              // Try to find label as a direct child of parent container
+              const containerLabels = Array.from(parentContainer.children).filter(
+                child => child.tagName === 'LABEL'
+              );
+              
+              if (containerLabels.length > 0) {
+                const text = containerLabels[0].textContent.trim();
+                console.log(`Found label in common parent container: "${text}"`);
+                return text;
+              }
+            }
+          } else {
+            commonParent = commonParent.parentElement;
+          }
+        }
+      }
+    }
+
     // Default: if no label found, use the name attribute with formatting
     const formattedName = name
       .replace(/([A-Z])/g, ' $1') // Add spaces before capital letters

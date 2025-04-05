@@ -10,6 +10,8 @@ const formProcessor = (() => {
     return 'profile_' + userProfile.filename;
   }
   
+  // Moved dialog functions to defaultsDialog.js
+  
   async function processForm(formFields, url) {
     try {
       console.log("Processing form for URL:", url);
@@ -69,7 +71,7 @@ const formProcessor = (() => {
       
       // Check if all current form fields have suggestions in our cache
       for (const fieldKey of Object.keys(currentFormFields)) {
-        if (!allSuggestions[fieldKey]) {
+        if (!allSuggestions || !(fieldKey in allSuggestions)) {
           needApiCall = true;
           console.log("Need API call for field:", fieldKey);
           break;
@@ -118,7 +120,13 @@ const formProcessor = (() => {
         console.log("Using cached suggestions - no API call needed");
       }
       
+      // Load any saved default field values for this URL
+      const savedDefaultValues = await defaultsDialog.getDefaultFieldValues(rootUrl);
+      console.log(`Loaded ${Object.keys(savedDefaultValues).length} saved default values for ${rootUrl}`);
+      
       // Step 2: Apply rule-based matches for any remaining fields without answers
+      const missingFields = []; // Track fields that need default values
+      
       formFields.forEach(field => {
         const fieldId = field.id || '';
         const fieldName = field.name || '';
@@ -126,39 +134,96 @@ const formProcessor = (() => {
         
         // Skip if we already have a suggestion for this field
         const keyName = fieldLabel || fieldName || fieldId;
+        
         if (!keyName || allSuggestions[keyName]) return;
+        
+        // Check if we have a saved default value for this field
+        if (savedDefaultValues && keyName in savedDefaultValues) { // check if key exists, even if value is empty string
+          allSuggestions[keyName] = savedDefaultValues[keyName];
+          console.log("Using saved default value for field:", keyName, savedDefaultValues[keyName]);
+          return;
+        }
         
         // Apply rule-based mapping for this field
         const fieldType = field.type || 'text';
         const result = getValueFromGeneralMappings(field, fieldId, fieldName, fieldLabel, fieldType);
+        
         if (result.value) {
           // Add rule-based suggestion to our collection
           allSuggestions[keyName] = result.value;
         } else {
-            // If no suggestion found, use default values based on field type
-            if (field.options && Array.isArray(field.options) && field.options.length > 0) {
-              allSuggestions[keyName] = field.options[0].value || field.options[0].text || field.options[0].label;
-              console.log("default option for field:", keyName, allSuggestions[keyName]);
-            } else if (fieldType === 'date') {
-              // For date fields, use today's date in YYYY-MM-DD format
-              const today = new Date();
-              const yyyy = today.getFullYear();
-              const mm = String(today.getMonth() + 1).padStart(2, '0'); // Months are 0-based
-              const dd = String(today.getDate()).padStart(2, '0');
-              allSuggestions[keyName] = `${yyyy}-${mm}-${dd}`;
-              console.log("default date for field:", keyName, allSuggestions[keyName]);
-            } else if (fieldType === 'text') {
-              allSuggestions[keyName] = '-';
-              console.log("default value for field:", keyName, allSuggestions[keyName]);
-            } else if (fieldType === 'checkbox' || fieldType === 'radio') {
-              allSuggestions[keyName] = 'on';
-              console.log("default value for check/radio field:", keyName, allSuggestions[keyName]);
-            } else {
-              allSuggestions[keyName] = 'na';
-              console.log("empty default for field:", keyName);
-            }
+          // If no rule-based value, add to missing fields list
+          missingFields.push({
+            id: fieldId,
+            name: fieldName,
+            label: fieldLabel || keyName,
+            type: fieldType,
+            options: field.options,
+            // Try to determine if field is mandatory based on various signals
+            mandatory: field.required === true || 
+                      fieldLabel?.includes('*') ||
+                      fieldId?.toLowerCase().includes('required') ||
+                      fieldName?.toLowerCase().includes('required')
+          });
+          
+
+          if (keyName === 'Yes') {
+            console.log("default data for field:", keyName, fieldLabel, fieldId, fieldName, allSuggestions[keyName]);
+          }
+
+          // Still set a temporary default value (will be overridden if user provides one)
+          if (field.options && Array.isArray(field.options) && field.options.length > 0) {
+            allSuggestions[keyName] = field.options[0].value || field.options[0].text || field.options[0].label;
+          } else if (fieldType === 'date') {
+            const today = new Date();
+            const yyyy = today.getFullYear();
+            const mm = String(today.getMonth() + 1).padStart(2, '0'); // Months are 0-based
+            const dd = String(today.getDate()).padStart(2, '0');
+            allSuggestions[keyName] = `${yyyy}-${mm}-${dd}`;
+          } else if (fieldType === 'text') {
+            allSuggestions[keyName] = '-';
+          } else if (fieldType === 'checkbox' || fieldType === 'radio') {
+            allSuggestions[keyName] = 'on';
+          } else {
+            allSuggestions[keyName] = 'na';
+          }
         }
       });
+
+      // Add at module level
+      let dialogActive = false;
+      // If we have missing fields, show dialog to get default values from the user
+      if (missingFields.length > 0 && !dialogActive) {
+        console.log("Showing dialog for missing fields:", missingFields);
+        dialogActive = true;
+        
+        try {
+          // Use the extracted defaultsDialog module
+          // Wrap in timeout to ensure Chrome API is ready
+          const userDefaultValues = await defaultsDialog.showDefaultValueDialog(missingFields, rootUrl);
+
+          console.log("User provided default values:", userDefaultValues);
+          
+          if (Object.keys(userDefaultValues).length > 0) {
+            // Save these values for future form filling using the defaultsDialog module
+            // They will be merged with existing values in saveDefaultFieldValues
+            await defaultsDialog.saveDefaultFieldValues(rootUrl, userDefaultValues);
+            
+            // Update our current suggestions with the user-provided values
+            missingFields.forEach(field => {
+              const keyName = field.label || field.name || field.id;
+              if (userDefaultValues[keyName]) {
+                allSuggestions[keyName] = userDefaultValues[keyName];
+              }
+            });
+          }
+        } catch (dialogError) {
+          console.error("Error showing default values dialog:", dialogError);
+          // Continue with temporary default values we already set
+        } finally {
+          //dialogActive = false;
+        }
+      }
       
       // Save all suggestions to cache
       allSuggestionsCache[cacheKey] = {...allSuggestions};
@@ -368,7 +433,8 @@ const formProcessor = (() => {
   // Return public API
   return {
     processForm,
-    clearSuggestions  // Add the new function to the public API
+    clearSuggestions
+    // No longer exporting the defaults dialog functions as they've been moved
   };
 })();
 
