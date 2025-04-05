@@ -204,31 +204,28 @@
       
       // Special handling for clear-data action
       if (action === 'clear-data') {
-        // Ask for confirmation before clearing data
-        if (confirm('Are you sure you want to clear all AI generated form filling data? This cannot be undone.')) {
-          // Store original HTML before showing loading state
-          const originalHTML = buttonElement.innerHTML;
+        // Store original HTML before showing loading state
+        const originalHTML = buttonElement.innerHTML;
+        
+        // Show loading state
+        buttonElement.classList.add('loading');
+        buttonElement.disabled = true;
+        setToggleBusy(true);
+        
+        // Send message to clear suggestions data
+        chrome.runtime.sendMessage({ action: 'clearSuggestions' }, function(response) {
+          // Reset button state
+          buttonElement.classList.remove('loading');
+          buttonElement.disabled = false;
+          buttonElement.innerHTML = originalHTML;
+          setToggleBusy(false);
           
-          // Show loading state
-          buttonElement.classList.add('loading');
-          buttonElement.disabled = true;
-          setToggleBusy(true);
-          
-          // Send message to clear suggestions data
-          chrome.runtime.sendMessage({ action: 'clearSuggestions' }, function(response) {
-            // Reset button state
-            buttonElement.classList.remove('loading');
-            buttonElement.disabled = false;
-            buttonElement.innerHTML = originalHTML;
-            setToggleBusy(false);
-            
-            if (response && response.success) {
-              showToast('Form data cleared successfully', 'success');
-            } else {
-              showToast(response?.error || 'Error clearing form data', 'error');
-            }
-          });
-        }
+          if (response && response.success) {
+            showToast('Form data cleared successfully', 'success');
+          } else {
+            showToast(response?.error || 'Error clearing form data', 'error');
+          }
+        });
         return;
       }
       
