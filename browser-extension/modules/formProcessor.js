@@ -122,6 +122,7 @@ const formProcessor = (() => {
       
       // Load any saved default field values for this URL
       const savedDefaultValues = await defaultsDialog.getDefaultFieldValues(rootUrl);
+      console.log(`Loaded ${Object.keys(savedDefaultValues).length} saved default values for ${rootUrl}`);
       
       // Step 2: Apply rule-based matches for any remaining fields without answers
       const missingFields = []; // Track fields that need default values
@@ -137,7 +138,7 @@ const formProcessor = (() => {
         if (!keyName || allSuggestions[keyName]) return;
         
         // Check if we have a saved default value for this field
-        if (savedDefaultValues && keyName in savedDefaultValues) { // even it is empty string
+        if (savedDefaultValues && keyName in savedDefaultValues) { // check if key exists, even if value is empty string
           allSuggestions[keyName] = savedDefaultValues[keyName];
           console.log("Using saved default value for field:", keyName, savedDefaultValues[keyName]);
           return;
@@ -206,6 +207,7 @@ const formProcessor = (() => {
           
           if (Object.keys(userDefaultValues).length > 0) {
             // Save these values for future form filling using the defaultsDialog module
+            // They will be merged with existing values in saveDefaultFieldValues
             await defaultsDialog.saveDefaultFieldValues(rootUrl, userDefaultValues);
             
             // Update our current suggestions with the user-provided values

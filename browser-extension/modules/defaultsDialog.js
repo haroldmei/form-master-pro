@@ -449,9 +449,16 @@ const defaultsDialog = (() => {
     return new Promise((resolve) => {
       chrome.storage.local.get(['defaultFieldValues'], function(result) {
         const defaultFieldValues = result.defaultFieldValues || {};
-        defaultFieldValues[url] = values;
+        
+        // Merge new values with existing ones instead of complete replacement
+        const existingValues = defaultFieldValues[url] || {};
+        defaultFieldValues[url] = {
+          ...existingValues,  // Keep existing default values
+          ...values           // Add or update with new values
+        };
         
         chrome.storage.local.set({ defaultFieldValues }, function() {
+          console.log(`Updated default values for ${url}, now have ${Object.keys(defaultFieldValues[url]).length} fields`);
           resolve();
         });
       });
