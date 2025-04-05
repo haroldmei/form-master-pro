@@ -262,6 +262,14 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
   
+  // Add this to your background.js message listener
+  if (message.type === 'defaults-dialog-response') {
+    console.log('Received dialog response:', message);
+    // This message should be processed by defaultsDialog
+    // Implement handling here or ensure defaultsDialog is properly listening
+    return true;
+  }
+
   // If we reach here, the message wasn't handled
   console.warn('Unhandled message:', message);
   sendResponse({ success: false, error: 'Unhandled message type or action' });

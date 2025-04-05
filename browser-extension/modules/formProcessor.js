@@ -190,21 +190,18 @@ const formProcessor = (() => {
           }
         }
       });
-      
+
+      // Add at module level
+      let dialogActive = false;
       // If we have missing fields, show dialog to get default values from the user
-      if (missingFields.length > 0) {
+      if (missingFields.length > 0 && !dialogActive) {
         console.log("Showing dialog for missing fields:", missingFields);
+        dialogActive = true;
         
         try {
           // Use the extracted defaultsDialog module
           // Wrap in timeout to ensure Chrome API is ready
-          const userDefaultValues = await Promise.race([
-            defaultsDialog.showDefaultValueDialog(missingFields, rootUrl),
-            new Promise(resolve => setTimeout(() => {
-              console.log("Dialog timeout - continuing with defaults");
-              resolve({});
-            }, 1000)) // Short timeout as fallback
-          ]);
+          const userDefaultValues = await defaultsDialog.showDefaultValueDialog(missingFields, rootUrl);
 
           console.log("User provided default values:", userDefaultValues);
           
@@ -224,6 +221,8 @@ const formProcessor = (() => {
         } catch (dialogError) {
           console.error("Error showing default values dialog:", dialogError);
           // Continue with temporary default values we already set
+        } finally {
+          //dialogActive = false;
         }
       }
       

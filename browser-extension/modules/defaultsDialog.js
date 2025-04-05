@@ -163,10 +163,14 @@ const defaultsDialog = (() => {
           }).then(() => {
             // Set up a message listener for this specific dialog
             const messageListener = (message, sender, sendResponse) => {
-              if (sender.tab && sender.tab.id === tabId && 
-                  message.type === 'defaults-dialog-response' && 
-                  message.channelId === channelId) {
+              if (//sender.tab && sender.tab.id === tabId && 
+                  message.type === 'defaults-dialog-response' 
+                  //&& message.channelId === channelId
+                ) {
                 
+                // Log receipt for debugging
+                console.log(`Received ${message.action} response for dialog ${channelId}`);
+    
                 // Remove this listener once we get a response
                 chrome.runtime.onMessage.removeListener(messageListener);
                 
