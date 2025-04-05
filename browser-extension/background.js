@@ -4,6 +4,7 @@ importScripts('auth.js');
 // Import other modules
 importScripts(
   'modules/userProfile.js',
+  'modules/defaultsDialog.js', // Add the new module
   'modules/formProcessor.js',
   'modules/aiService.js',
   'modules/formFiller.js',
