@@ -137,7 +137,7 @@ const formProcessor = (() => {
         if (!keyName || allSuggestions[keyName]) return;
         
         // Check if we have a saved default value for this field
-        if (savedDefaultValues[keyName]) {
+        if (savedDefaultValues && keyName in savedDefaultValues) { // even it is empty string
           allSuggestions[keyName] = savedDefaultValues[keyName];
           console.log("Using saved default value for field:", keyName, savedDefaultValues[keyName]);
           return;
@@ -168,7 +168,7 @@ const formProcessor = (() => {
           // Still set a temporary default value (will be overridden if user provides one)
           if (field.options && Array.isArray(field.options) && field.options.length > 0) {
             allSuggestions[keyName] = field.options[0].value || field.options[0].text || field.options[0].label;
-            console.log("default option for field:", keyName, allSuggestions[keyName]);
+            //console.log("default option for field:", keyName, allSuggestions[keyName]);
           } else if (fieldType === 'date') {
             // For date fields, use today's date in YYYY-MM-DD format
             const today = new Date();
@@ -176,16 +176,16 @@ const formProcessor = (() => {
             const mm = String(today.getMonth() + 1).padStart(2, '0'); // Months are 0-based
             const dd = String(today.getDate()).padStart(2, '0');
             allSuggestions[keyName] = `${yyyy}-${mm}-${dd}`;
-            console.log("default date for field:", keyName, allSuggestions[keyName]);
+            //console.log("default date for field:", keyName, allSuggestions[keyName]);
           } else if (fieldType === 'text') {
             allSuggestions[keyName] = '-';
-            console.log("default value for field:", keyName, allSuggestions[keyName]);
+            //console.log("default value for field:", keyName, allSuggestions[keyName]);
           } else if (fieldType === 'checkbox' || fieldType === 'radio') {
             allSuggestions[keyName] = 'on';
-            console.log("default value for check/radio field:", keyName, allSuggestions[keyName]);
+            //console.log("default value for check/radio field:", keyName, allSuggestions[keyName]);
           } else {
             allSuggestions[keyName] = 'na';
-            console.log("empty default for field:", keyName);
+            //console.log("empty default for field:", keyName);
           }
         }
       });
