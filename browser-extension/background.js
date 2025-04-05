@@ -539,7 +539,76 @@ function performFormFilling(fieldValues) {
   
   // Helper function to find radio button by name and value
   function findRadioButton(name, value) {
-    return document.querySelector(`input[type="radio"][name="${name}"][value="${value}"]`);
+    // First try exact match
+    const exactMatch = document.querySelector(`input[type="radio"][name="${name}"][value="${value}"]`);
+    if (exactMatch) return exactMatch;
+    
+    // If no exact match, try case-insensitive match for common yes/no patterns
+    if (typeof value === 'string') {
+      // Handle common yes/no patterns
+      if (value.toLowerCase() === 'yes' || value.toLowerCase() === 'y') {
+        // Look for yes, y, true, 1
+        const yesRadio = document.querySelector(`input[type="radio"][name="${name}"][value="yes"], 
+                                               input[type="radio"][name="${name}"][value="Yes"], 
+                                               input[type="radio"][name="${name}"][value="Y"], 
+                                               input[type="radio"][name="${name}"][value="y"], 
+                                               input[type="radio"][name="${name}"][value="true"], 
+                                               input[type="radio"][name="${name}"][value="1"]`);
+        if (yesRadio) return yesRadio;
+      } else if (value.toLowerCase() === 'no' || value.toLowerCase() === 'n') {
+        // Look for no, n, false, 0
+        const noRadio = document.querySelector(`input[type="radio"][name="${name}"][value="no"], 
+                                              input[type="radio"][name="${name}"][value="No"], 
+                                              input[type="radio"][name="${name}"][value="N"], 
+                                              input[type="radio"][name="${name}"][value="n"], 
+                                              input[type="radio"][name="${name}"][value="false"], 
+                                              input[type="radio"][name="${name}"][value="0"]`);
+        if (noRadio) return noRadio;
+      }
+      
+      // Try finding by label text when no match by value
+      const allRadios = document.querySelectorAll(`input[type="radio"][name="${name}"]`);
+      for (const radio of allRadios) {
+        // Check the radio's associated label
+        let label = null;
+        
+        // First try to find label by 'for' attribute
+        if (radio.id) {
+          label = document.querySelector(`label[for="${radio.id}"]`);
+        }
+        
+        // If no label found, check parent or next sibling
+        if (!label) {
+          // Check if radio is wrapped in a label
+          let parent = radio.parentElement;
+          while (parent && parent.tagName !== 'LABEL' && 
+                 !parent.classList.contains('form-check') && 
+                 !parent.classList.contains('radio')) {
+            parent = parent.parentElement;
+          }
+          
+          if (parent) {
+            // Find label inside this container
+            label = parent.tagName === 'LABEL' ? parent : parent.querySelector('label');
+          }
+          
+          // If still no label, try next sibling
+          if (!label) {
+            let sibling = radio.nextElementSibling;
+            if (sibling && sibling.tagName === 'LABEL') {
+              label = sibling;
+            }
+          }
+        }
+        
+        // If we found a label and its text matches our value
+        if (label && label.textContent.trim().toLowerCase() === value.toLowerCase()) {
+          return radio;
+        }
+      }
+    }
+    
+    return null;
   }
   
   // Fill a field with the given value
@@ -584,8 +653,8 @@ function performFormFilling(fieldValues) {
       console.log(`Handling radio button: ${element.name} with value: ${value}`);
       
       // Check if value looks like an option value rather than a boolean/state
-      if (typeof value === 'string' && !['true', 'false', 'on', 'off', 'yes', 'no', '1', '0'].includes(value.toLowerCase())) {
-        // Try to find the specific radio button with this value
+      if (typeof value === 'string') {
+        // For bootstrap form-check-inline structure, first try to find the specific radio button
         const radioButton = findRadioButton(element.name, value);
         if (radioButton) {
           // Select this specific radio button
@@ -596,10 +665,63 @@ function performFormFilling(fieldValues) {
         } else {
           console.warn(`Could not find radio button with name ${element.name} and value ${value}`);
         }
+        
+        // Handle Yes/No or Y/N patterns for radio buttons
+        if (['yes', 'y', 'true', '1'].includes(value.toLowerCase())) {
+          const yesOptions = document.querySelectorAll(`input[type="radio"][name="${element.name}"]`);
+          // Try to find a "Yes" option among the radio group
+          for (const option of yesOptions) {
+            if (['yes', 'y', '1', 'true'].includes(option.value.toLowerCase()) ||
+                option.id.toLowerCase().includes('yes') ||
+                option.id.toLowerCase().includes('y')) {
+              option.checked = true;
+              option.dispatchEvent(new Event('change', { bubbles: true }));
+              console.log(`Selected radio yes option: ${option.value}`);
+              return true;
+            }
+            
+            // Check if the label indicates this is a "Yes" option
+            if (option.id) {
+              const label = document.querySelector(`label[for="${option.id}"]`);
+              if (label && ['yes', 'y'].includes(label.textContent.trim().toLowerCase())) {
+                option.checked = true;
+                option.dispatchEvent(new Event('change', { bubbles: true }));
+                console.log(`Selected radio yes option by label: ${label.textContent}`);
+                return true;
+              }
+            }
+          }
+        }
+        
+        if (['no', 'n', 'false', '0'].includes(value.toLowerCase())) {
+          const noOptions = document.querySelectorAll(`input[type="radio"][name="${element.name}"]`);
+          // Try to find a "No" option among the radio group
+          for (const option of noOptions) {
+            if (['no', 'n', '0', 'false'].includes(option.value.toLowerCase()) ||
+                option.id.toLowerCase().includes('no') ||
+                option.id.toLowerCase().includes('n')) {
+              option.checked = true;
+              option.dispatchEvent(new Event('change', { bubbles: true }));
+              console.log(`Selected radio no option: ${option.value}`);
+              return true;
+            }
+            
+            // Check if the label indicates this is a "No" option
+            if (option.id) {
+              const label = document.querySelector(`label[for="${option.id}"]`);
+              if (label && ['no', 'n'].includes(label.textContent.trim().toLowerCase())) {
+                option.checked = true;
+                option.dispatchEvent(new Event('change', { bubbles: true }));
+                console.log(`Selected radio no option by label: ${label.textContent}`);
+                return true;
+              }
+            }
+          }
+        }
       }
     }
     
-    // Regular checkbox/radio handling
+    // Regular checkbox/radio handling for cases not covered above
     if (typeof value === 'boolean') {
       element.checked = value;
     } else if (typeof value === 'string') {

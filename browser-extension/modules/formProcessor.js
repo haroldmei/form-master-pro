@@ -71,7 +71,7 @@ const formProcessor = (() => {
       
       // Check if all current form fields have suggestions in our cache
       for (const fieldKey of Object.keys(currentFormFields)) {
-        if (!allSuggestions[fieldKey]) {
+        if (!allSuggestions || !(fieldKey in allSuggestions)) {
           needApiCall = true;
           console.log("Need API call for field:", fieldKey);
           break;
