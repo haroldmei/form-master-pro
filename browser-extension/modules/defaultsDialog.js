@@ -163,7 +163,7 @@ const defaultsDialog = (() => {
           }).then(() => {
             // Set up a message listener for this specific dialog
             const messageListener = (message, sender, sendResponse) => {
-              if (//sender.tab && sender.tab.id === tabId && 
+              if (sender.tab && sender.tab.id === tabId && 
                   message.type === 'defaults-dialog-response' 
                   //&& message.channelId === channelId
                 ) {

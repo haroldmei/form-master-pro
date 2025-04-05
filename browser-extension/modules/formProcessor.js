@@ -166,27 +166,26 @@ const formProcessor = (() => {
                       fieldName?.toLowerCase().includes('required')
           });
           
+
+          if (keyName === 'Yes') {
+            console.log("default data for field:", keyName, fieldLabel, fieldId, fieldName, allSuggestions[keyName]);
+          }
+
           // Still set a temporary default value (will be overridden if user provides one)
           if (field.options && Array.isArray(field.options) && field.options.length > 0) {
             allSuggestions[keyName] = field.options[0].value || field.options[0].text || field.options[0].label;
-            //console.log("default option for field:", keyName, allSuggestions[keyName]);
           } else if (fieldType === 'date') {
-            // For date fields, use today's date in YYYY-MM-DD format
             const today = new Date();
             const yyyy = today.getFullYear();
             const mm = String(today.getMonth() + 1).padStart(2, '0'); // Months are 0-based
             const dd = String(today.getDate()).padStart(2, '0');
             allSuggestions[keyName] = `${yyyy}-${mm}-${dd}`;
-            //console.log("default date for field:", keyName, allSuggestions[keyName]);
           } else if (fieldType === 'text') {
             allSuggestions[keyName] = '-';
-            //console.log("default value for field:", keyName, allSuggestions[keyName]);
           } else if (fieldType === 'checkbox' || fieldType === 'radio') {
             allSuggestions[keyName] = 'on';
-            //console.log("default value for check/radio field:", keyName, allSuggestions[keyName]);
           } else {
             allSuggestions[keyName] = 'na';
-            //console.log("empty default for field:", keyName);
           }
         }
       });
