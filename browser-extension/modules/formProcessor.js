@@ -133,14 +133,13 @@ const formProcessor = (() => {
         
         // Skip if we already have a suggestion for this field
         const keyName = fieldLabel || fieldName || fieldId;
-        const fieldIdentifier = fieldId || fieldName;
         
         if (!keyName || allSuggestions[keyName]) return;
         
         // Check if we have a saved default value for this field
-        if (savedDefaultValues[fieldIdentifier]) {
-          allSuggestions[keyName] = savedDefaultValues[fieldIdentifier];
-          console.log("Using saved default value for field:", keyName, savedDefaultValues[fieldIdentifier]);
+        if (savedDefaultValues[keyName]) {
+          allSuggestions[keyName] = savedDefaultValues[keyName];
+          console.log("Using saved default value for field:", keyName, savedDefaultValues[keyName]);
           return;
         }
         
@@ -211,10 +210,9 @@ const formProcessor = (() => {
             
             // Update our current suggestions with the user-provided values
             missingFields.forEach(field => {
-              const fieldIdentifier = field.id || field.name;
-              if (userDefaultValues[fieldIdentifier]) {
-                const keyName = field.label || field.name || field.id;
-                allSuggestions[keyName] = userDefaultValues[fieldIdentifier];
+              const keyName = field.label || field.name || field.id;
+              if (userDefaultValues[keyName]) {
+                allSuggestions[keyName] = userDefaultValues[keyName];
               }
             });
           }

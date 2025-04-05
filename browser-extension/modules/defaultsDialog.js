@@ -377,10 +377,13 @@ const defaultsDialog = (() => {
                     const element = inputElements[field.id || field.name];
                     if (!element) return;
                     
+                    // Use the same key naming convention as in formProcessor (label first)
+                    const keyName = field.label || field.name || field.id;
+                    
                     if (field.type === 'checkbox') {
-                      values[field.id || field.name] = element.checked;
+                      values[keyName] = element.checked;
                     } else {
-                      values[field.id || field.name] = element.value;
+                      values[keyName] = element.value;
                     }
                   });
                   
