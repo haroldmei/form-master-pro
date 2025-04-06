@@ -185,7 +185,13 @@ const formProcessor = (() => {
         try {
           // Make ONE comprehensive API call for all fields
           const aiSuggestions = await aiService.getAiSuggestions(allSiteFields, userProfile, url);
-          console.log("Received AI suggestions");
+          console.log("Received AI suggestions: ", aiSuggestions.length);
+          // Fill in any missing fields from allSiteFields with empty string
+          Object.keys(allSiteFields).forEach(key => {
+            if (!aiSuggestions.hasOwnProperty(key)) {
+              aiSuggestions[key] = '';
+            }
+          });
           
           // Merge AI suggestions into our combined suggestions
           allSuggestions = {
@@ -357,7 +363,7 @@ const formProcessor = (() => {
         
         // Store this mapping for future use
         const existingIndex = updatedSiteMapping.findIndex(mapping => 
-          (fieldId && mapping.id === fieldId) || (mapping.name && mapping.name === fieldName)
+          (fieldId && mapping.id === fieldId) || (mapping.name && mapping.name === fieldName) || (mapping.label && mapping.label === fieldLabel)
           );
 
         // If we found a suggestion, process it according to field type
