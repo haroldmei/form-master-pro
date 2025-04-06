@@ -45,6 +45,7 @@
   "web_accessible_resources": [
     {
       "resources": [
+        "modules/defaultsDialog-popup.js",
         "styles/injector-ui.css",
         "lib/*"
       ],

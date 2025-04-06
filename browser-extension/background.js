@@ -4,7 +4,6 @@ importScripts('auth.js');
 // Import other modules
 importScripts(
   'modules/userProfile.js',
-  'modules/defaultsDialog.js', // Add the new module
   'modules/formProcessor.js',
   'modules/aiService.js',
   'modules/formFiller.js',
@@ -267,6 +266,17 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     console.log('Received dialog response:', message);
     // This message should be processed by defaultsDialog
     // Implement handling here or ensure defaultsDialog is properly listening
+    return true;
+  }
+
+  if (message.action === 'get-defaults-dialog-data') {
+    console.log('Received get-defaults-dialog-data:', message);
+    return true;
+  }
+
+  if (message.action === 'defaults-dialog-submit') { 
+    console.log('Received defaults-dialog-submit');
+    // Open the defaults dialog
     return true;
   }
 

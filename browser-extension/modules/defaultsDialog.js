@@ -6,6 +6,19 @@
 const defaultsDialog = (() => {
   // Add function to display a dialog for collecting default field values
   async function showDefaultValueDialog(missingFields, rootUrl) {
+    // Add handler for popup window response messages
+    chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+      if (message.action === 'defaults-dialog-submit' && message.rootUrl === rootUrl) {
+        // Save values to storage if requested
+        if (message.result === 'save' && Object.keys(message.values).length > 0) {
+          saveDefaultFieldValues(rootUrl, message.values);
+        }
+        // Send acknowledgment
+        sendResponse({ received: true });
+        return true;
+      }
+    });
+    
     return new Promise((resolve, reject) => {      
       // Get the active tab in a way that works in both contexts
       function getActiveTab() {
@@ -163,6 +176,9 @@ const defaultsDialog = (() => {
           }).then(() => {
             // Set up a message listener for this specific dialog
             const messageListener = (message, sender, sendResponse) => {
+              
+              console.log(`Received message: ${message.type}`);
+
               if (sender.tab && sender.tab.id === tabId && 
                   message.type === 'defaults-dialog-response' 
                   //&& message.channelId === channelId
