@@ -1,6 +1,6 @@
 {
   "name": "formmaster-extension",
-  "version": "0.1.17",
+  "version": "0.1.18",
   "description": "FormMasterPro - Browser extension for form automation",
   "private": true,
   "scripts": {
