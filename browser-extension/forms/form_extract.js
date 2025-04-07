@@ -58,20 +58,73 @@ function extractInputs(container) {
   const inputElements = container.querySelectorAll('input:not([type="submit"]):not([type="button"]):not([type="image"]):not([type="reset"]):not([type="file"]):not([type="radio"]):not([type="checkbox"]):not([type="hidden"])');
   
   inputElements.forEach(input => {
+    // Determine if this is a date input
+    const isDateInput = detectDateInput(input);
+    
     inputs.push({
-      type: input.type || 'text',
+      type: isDateInput ? 'date' : input.type || 'text',
       id: input.id || '',
       name: input.name || '',
       placeholder: input.placeholder || '',
       className: input.className || '',
       value: input.value || '',
-      label: getElementLabel(input)
+      label: getElementLabel(input),
+      isDateInput: isDateInput // Additional flag to mark date inputs
     });
   });
   
   return inputs;
 }
 
+// New function to detect date inputs based on various indicators
+function detectDateInput(input) {
+  // Check if element has datepicker-related classes
+  if (input.className.match(/date|datepicker|hasDatepicker|calendar-input/i)) {
+    return true;
+  }
+  
+  // Check if there's a calendar icon nearby
+  const parent = input.parentElement;
+  if (parent) {
+    // Check for calendar icon in input group
+    if (parent.className.match(/input-group|date-group|sv-input-group/i)) {
+      // Look for calendar icon or addon with calendar
+      const calendarIcon = parent.querySelector('.ui-datepicker-trigger, .calendar-icon, [class*="calendar"], img[src*="calendar"]');
+      if (calendarIcon) {
+        return true;
+      }
+      
+      // Check for input group addon with icon
+      const addon = parent.querySelector('.input-group-addon, .sv-input-group-addon');
+      if (addon && (addon.innerHTML.includes('calendar') || addon.querySelector('img'))) {
+        return true;
+      }
+    }
+  }
+  
+  // Check for date-related placeholder or pattern
+  if (input.placeholder && input.placeholder.match(/date|dd[^a-z]mm|mm[^a-z]dd|yyyy|^\d{1,2}[/-]\d{1,2}[/-]\d{2,4}$/i)) {
+    return true;
+  }
+  
+  // Check for date format pattern attribute
+  if (input.getAttribute('pattern') && input.getAttribute('pattern').match(/\d{1,2}[/-]\d{1,2}[/-]\d{2,4}/)) {
+    return true;
+  }
+  
+  // Check for date-related label
+  const label = getElementLabel(input);
+  if (label && label.match(/\bdate\b|\bday\b|birthday|birth date|start date|end date|arrival|departure|check[ -]?in|check[ -]?out|(dd|mm)[ /-](mm|dd)[ /-](yy|yyyy)/i)) {
+    return true;
+  }
+  
+  // Check for data attributes related to date functionality
+  if (input.getAttribute('data-date') || input.getAttribute('data-provide') === 'datepicker') {
+    return true;
+  }
+  
+  return false;
+}
 
 function extractSelects(container) {
   const selects = [];

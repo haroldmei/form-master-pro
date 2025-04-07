@@ -113,7 +113,7 @@
             } else {
                 input = document.createElement('input');
                 input.type = field.type || 'text';
-                input.placeholder = `Enter value for ${field.label || field.name || field.id}`;
+                input.placeholder = `Enter value for ${field.label || field.name || field.id}, ${field.options}`;
             }
             
             // Add common input attributes
