@@ -33,6 +33,7 @@ module.exports = (env, argv) => {
       'ui-injector': './browser-extension/ui-injector.js',
       // Form extraction script
       'forms/form_extract': './browser-extension/forms/form_extract.js',
+      'forms/form_checkboxgroup': './browser-extension/forms/form_checkboxgroup.js',
       'forms/form_radios': './browser-extension/forms/form_radios.js',
       'auth': './browser-extension/auth.js',
       'libs/jszip.min': './browser-extension/libs/jszip.min.js',

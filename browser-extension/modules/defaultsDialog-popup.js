@@ -32,15 +32,15 @@
     function initializeDialog(missingFields, rootUrl) {
         // Update title and description
         document.querySelector('.title').textContent = `Missing Field Values (${missingFields.length})`;
-        document.getElementById('message-description').textContent = 
-            `We couldn't automatically determine values for ${missingFields.length} fields on this form on ${rootUrl}.`;
+        //document.getElementById('message-description').textContent = 
+        //    `We couldn't automatically determine values for ${missingFields.length} fields on this form on ${rootUrl}.`;
         
         // Count mandatory fields
         const mandatoryCount = missingFields.filter(f => f.mandatory).length;
         const mandatoryMsg = document.getElementById('mandatory-message');
         
         if (mandatoryCount > 0) {
-            mandatoryMsg.innerHTML = `<span class="mandatory-field">${mandatoryCount} fields marked with * are mandatory</span> and must be filled to submit the form.`;
+            mandatoryMsg.innerHTML = `${mandatoryCount} fields marked with * are required and need non empty value, the rest are optional and can be left empty.`;
         } else {
             mandatoryMsg.textContent = 'None of these fields are mandatory, but providing values will help complete the form.';
         }

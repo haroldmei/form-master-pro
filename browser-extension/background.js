@@ -345,7 +345,7 @@ async function analyzeFormInTab(tabId, url) {
     // Inject the form extraction scripts
     await chrome.scripting.executeScript({
       target: { tabId },
-      files: ['forms/form_radios.js', 'forms/form_extract.js']
+      files: ['forms/form_radios.js', 'forms/form_checkboxgroup.js', 'forms/form_extract.js']
     });
     
     // Execute the form extraction
@@ -434,7 +434,7 @@ async function extractFormData(tabId) {
   // Inject the form extraction scripts
   await chrome.scripting.executeScript({
     target: { tabId },
-    files: ['forms/form_radios.js', 'forms/form_extract.js']
+    files: ['forms/form_radios.js', 'forms/form_checkboxgroup.js', 'forms/form_extract.js']
   });
   
   // Execute the form extraction

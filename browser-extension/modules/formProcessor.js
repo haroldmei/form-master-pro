@@ -153,8 +153,8 @@ const formProcessor = (() => {
       for (const fieldKey of Object.keys(currentFormFields)) {
         if (!allSuggestions || !(fieldKey in allSuggestions)) {
           needApiCall = true;
-          console.log("Need API call for field:", fieldKey);
-          break;
+          console.log("Need API call for field:", fieldKey, currentFormFields[fieldKey]);
+          //break;
         }
       }
       

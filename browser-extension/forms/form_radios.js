@@ -88,6 +88,133 @@ function getRadioElementLabel(element) {
   return element.value || ''; // Fall back to value as last resort
 }
 
+function detectStructuredRadioGroup(radioElement) {
+  try {
+    if (!radioElement.name) return null;
+    
+    // Find all radio buttons with the same name
+    const radioName = radioElement.name;
+    const allRadios = Array.from(
+      document.querySelectorAll(`input[type="radio"][name="${CSS.escape(radioName)}"]`)
+    );
+    
+    if (allRadios.length === 0) return null;
+    
+    // Find common ancestor for all these radio buttons
+    let commonAncestor = allRadios[0].parentElement;
+    let foundCommon = false;
+    
+    // Search up to 6 levels for a common container
+    for (let level = 0; level < 6 && !foundCommon && commonAncestor; level++) {
+      // Check if this container contains all radio buttons
+      if (allRadios.every(radio => commonAncestor.contains(radio))) {
+        foundCommon = true;
+      } else {
+        commonAncestor = commonAncestor.parentElement;
+      }
+    }
+    
+    if (!commonAncestor) return null;
+    
+    console.log(`Found common ancestor for radio group "${radioName}":`, commonAncestor);
+    
+    // Look for a direct child label that isn't associated with any specific radio
+    const directLabels = Array.from(commonAncestor.children).filter(child => 
+      child.tagName === 'LABEL' && 
+      (!child.getAttribute('for') || 
+       !allRadios.some(radio => radio.id === child.getAttribute('for')))
+    );
+    
+    if (directLabels.length > 0) {
+      const labelText = directLabels[0].textContent.trim();
+      console.log(`Found direct label for structured radio group: "${labelText}"`);
+      return labelText;
+    }
+    
+    // NEW: Look for label in parent structure (for form groups with nested divs)
+    // This handles cases like <div><label>Group Label</label><div><!-- radios here --></div></div>
+    const parentElement = commonAncestor.parentElement;
+    if (parentElement) {
+      // Check for direct label children of the parent
+      const parentLabelElements = Array.from(parentElement.children).filter(child => 
+        child.tagName === 'LABEL' &&
+        (!child.getAttribute('for') || 
+         !allRadios.some(radio => radio.id === child.getAttribute('for')))
+      );
+      
+      if (parentLabelElements.length > 0) {
+        const labelText = parentLabelElements[0].textContent.trim();
+        console.log(`Found parent-level label for structured radio group: "${labelText}"`);
+        return labelText;
+      }
+      
+      // Look for a grandparent container (handles double-nested inline radio groups)
+      const grandParentElement = parentElement.parentElement;
+      if (grandParentElement) {
+        // Try to find labels that are siblings to the parent element
+        const children = Array.from(grandParentElement.children);
+        const parentIndex = children.indexOf(parentElement);
+        
+        if (parentIndex > 0) {
+          // Check if any previous siblings are labels
+          for (let i = 0; i < parentIndex; i++) {
+            const sibling = children[i];
+            if (sibling.tagName === 'LABEL' && 
+                (!sibling.getAttribute('for') || 
+                 !allRadios.some(radio => radio.id === sibling.getAttribute('for')))) {
+              const labelText = sibling.textContent.trim();
+              console.log(`Found grandparent-level label for structured radio group: "${labelText}"`);
+              return labelText;
+            }
+          }
+        }
+      }
+    }
+    
+    // Pattern: Look for a text node or element before the first container with a radio
+    // This handles cases where the label is a sibling of the containers that hold radios
+    const radioContainers = allRadios.map(radio => {
+      let container = radio;
+      // Find the immediate child of the common ancestor that contains this radio
+      while (container.parentElement !== commonAncestor && container.parentElement) {
+        container = container.parentElement;
+      }
+      return container;
+    });
+    
+    // Get unique containers (might be the same for multiple radios)
+    const uniqueContainers = [...new Set(radioContainers)];
+    
+    // Now check all children of the common ancestor
+    const allChildren = Array.from(commonAncestor.children);
+    for (let i = 0; i < allChildren.length; i++) {
+      const child = allChildren[i];
+      
+      // If this child contains a radio, skip it
+      if (uniqueContainers.includes(child)) continue;
+      
+      // If this child is a text element or label before the first radio container
+      if (child.tagName === 'LABEL' || 
+          child.tagName === 'SPAN' || 
+          child.tagName === 'DIV' && !child.querySelector('input[type="radio"]')) {
+        const text = child.textContent.trim();
+        if (text && text.length < 150) {  // Limit to reasonable label length
+          console.log(`Found potential label preceding radio containers: "${text}"`);
+          return text;
+        }
+      }
+      
+      // If we've passed the first radio container, stop looking
+      if (i > 0 && uniqueContainers.includes(allChildren[i])) break;
+    }
+    
+    return null;
+  } catch (error) {
+    console.error('Error in detectStructuredRadioGroup:', error);
+    return null;
+  }
+}
+
 function getRadioGroupLabel(radioElement) {
   try {
     console.log('Trying to find label for radio group:', radioElement.name);
@@ -109,6 +236,13 @@ function getRadioGroupLabel(radioElement) {
       }
       parent = parent.parentElement;
       depth++;
+    }
+    
+    // Try to detect structured radio group (like the example)
+    const structuredGroupLabel = detectStructuredRadioGroup(radioElement);
+    if (structuredGroupLabel) {
+      console.log(`Found structured group label: "${structuredGroupLabel}"`);
+      return structuredGroupLabel;
     }
     
     // Look for Bootstrap form-group pattern with label preceding radio group

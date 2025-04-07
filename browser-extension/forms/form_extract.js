@@ -7,16 +7,28 @@ function extractFormControls(formSelector = null) {
       return {};
     }
     
+    // Extract checkbox groups first to ensure we don't duplicate checkboxes
+    const checkboxGroups = self.FormCheckboxGroups ? self.FormCheckboxGroups.extractCheckboxGroups(container) : [];
+    
+    // Get IDs of checkboxes that are part of groups to avoid duplication
+    const groupedCheckboxIds = new Set();
+    if (checkboxGroups.length > 0 && self.FormCheckboxGroups) {
+      const ids = self.FormCheckboxGroups.getGroupedCheckboxIds(checkboxGroups);
+      ids.forEach(id => groupedCheckboxIds.add(id));
+    }
+    
     // Extract different control types
     const controls = {
       inputs: extractInputs(container),
       selects: extractSelects(container),
       textareas: extractTextareas(container),
       buttons: extractButtons(container),
-      radios: extractRadioGroups(container), // Now using the updated function
-      checkboxes: extractCheckboxes(container)
+      radios: self.FormRadios ? self.FormRadios.extractRadioGroups(container) : [], 
+      checkboxGroups: checkboxGroups,
+      checkboxes: extractCheckboxes(container, groupedCheckboxIds)
     };
     
+    console.log('Extracted controls:', controls.checkboxGroups);
     // Create a label-to-control mapping for easier reference
     controls.label_mapping = createLabelMapping(controls);
     
@@ -126,56 +138,16 @@ function extractButtons(container) {
 }
 
 
-function extractRadioGroups(container) {
-  console.log('FormExtract.extractRadioGroups called', self.FormRadios ? 'FormRadios exists' : 'FormRadios missing');
-  
-  // Use FormRadios if available (from form_radios.js), otherwise fall back to internal implementation
-  if (self.FormRadios && typeof self.FormRadios.extractRadioGroups === 'function') {
-    try {
-      const radioGroups = self.FormRadios.extractRadioGroups(container);
-      console.log('FormRadios.extractRadioGroups returned', radioGroups);
-      return radioGroups;
-    } catch (error) {
-      console.error('Error using FormRadios.extractRadioGroups:', error);
-      // Fall through to fallback implementation
-    }
-  }
-  
-  // Fallback implementation if FormRadios is not available or failed
-  console.warn('Using fallback extractRadioGroups implementation');
-  const groups = {};
-  const radioButtons = container.querySelectorAll('input[type="radio"]');
-  
-  radioButtons.forEach(radio => {
-    const name = radio.name || '';
-    if (!name) return;
-    
-    if (!groups[name]) {
-      groups[name] = {
-        type: 'radio',
-        name: name,
-        label: getGroupLabel(radio) || name,
-        options: []
-      };
-    }
-    
-    groups[name].options.push({
-      value: radio.value,
-      id: radio.id,
-      checked: radio.checked,
-      label: getElementLabel(radio)
-    });
-  });
-  
-  return Object.values(groups);
-}
-
-
-function extractCheckboxes(container) {
+function extractCheckboxes(container, groupedIds = new Set()) {
   const checkboxes = [];
   const checkboxElements = container.querySelectorAll('input[type="checkbox"]');
   
   checkboxElements.forEach(checkbox => {
+    // Skip checkboxes that are part of a group
+    if (checkbox.id && groupedIds.has(checkbox.id)) {
+      return;
+    }
+    
     checkboxes.push({
       type: 'checkbox',
       id: checkbox.id || '',
@@ -279,29 +251,21 @@ function getElementLabel(element) {
 }
 
 
-function getGroupLabel(radioElement) {
-  // Try to find a fieldset legend
-  let parent = radioElement.parentElement;
-  while (parent) {
-    if (parent.tagName === 'FIELDSET') {
-      const legend = parent.querySelector('legend');
-      if (legend) {
-        return legend.textContent.trim();
-      }
-      break;
-    }
-    parent = parent.parentElement;
-  }
-  
-  return '';
-}
-
-
 function createLabelMapping(controls) {
   const mapping = {};
   
+  // Process checkbox groups first
+  if (controls.checkboxGroups && controls.checkboxGroups.length) {
+    // Add checkbox groups to the mapping
+    controls.checkboxGroups.forEach(group => {
+      if (group.label) {
+        mapping[group.label] = group;
+      }
+    });
+  }
+  
   // Process each type of control
-  ['inputs', 'selects', 'textareas', 'radios', 'checkboxes'].forEach(type => {
+  ['inputs', 'selects', 'textareas', 'radios', 'checkbox', 'checkboxes'].forEach(type => {
     if (!controls[type]) return;
     
     controls[type].forEach(control => {

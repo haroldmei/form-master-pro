@@ -44,6 +44,7 @@ document.addEventListener('DOMContentLoaded', function() {
       if (formData.data.selects) totalFields += formData.data.selects.length;
       if (formData.data.textareas) totalFields += formData.data.textareas.length;
       if (formData.data.radios) totalFields += formData.data.radios.length;
+      if (formData.data.checkboxGroups) totalFields += formData.data.checkboxGroups.length;
       if (formData.data.checkboxes) totalFields += formData.data.checkboxes.length;
     }
     
@@ -64,6 +65,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if (formData.data.selects) allFields.push(...formData.data.selects);
     if (formData.data.textareas) allFields.push(...formData.data.textareas);
     if (formData.data.radios) allFields.push(...formData.data.radios);
+    if (formData.data.checkboxGroups) allFields.push(...formData.data.checkboxGroups);
     if (formData.data.checkboxes) allFields.push(...formData.data.checkboxes);
     
     // Display the flattened fields in the table

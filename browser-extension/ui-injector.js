@@ -81,8 +81,8 @@
     // Add buttons to panel
     const buttons = [
       { id: 'load-data', text: 'Load Data', icon: '📂' },
-      { id: 'auto-fill', text: 'Auto Fill', icon: '✏️' },
-      { id: 'clear-data', text: 'Clear Data', icon: '🗑️' }  // New Clear Data button
+      { id: 'auto-fill', text: 'Auto Fill', icon: '✏️' }
+      // Clear Data button removed from here
     ];
     
     // Make sure buttons are added with the correct structure
