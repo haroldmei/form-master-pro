@@ -78,8 +78,8 @@ const aiService = (() => {
       console.log("User profile JSON (first 100 bytes):", profileJson.substring(0, 100));
       
       // Make the API call to bargain4me.com
-      //const response = await fetch(`https://bargain4me.com/api/formmaster`, {
-      const response = await fetch(`http://localhost:3001/api/formmaster`, {
+      const response = await fetch(`https://bargain4me.com/api/formmaster`, {
+      //const response = await fetch(`http://localhost:3001/api/formmaster`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
