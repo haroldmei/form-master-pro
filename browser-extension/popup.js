@@ -29,7 +29,6 @@ document.addEventListener('DOMContentLoaded', function() {
   const analyzeFormBtn = document.getElementById('analyze-form');
   
   // Form analysis panel
-  const formAnalysisPanel = document.getElementById('form-analysis');
   const fieldCount = document.getElementById('field-count');
   const fieldsContainer = document.getElementById('fields-container');
   
@@ -55,6 +54,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
   // Set up event listeners
   addSafeEventListener('analyze-form', 'click', analyzeCurrentForm);
+  addSafeEventListener('clear-data', 'click', clearSavedData);
 
   // Add verification-related event listeners
   if (resendVerificationBtn) resendVerificationBtn.addEventListener('click', resendVerificationEmail);
@@ -339,7 +339,7 @@ document.addEventListener('DOMContentLoaded', function() {
       // First inject both script files in the correct order
       chrome.scripting.executeScript({
         target: { tabId: tabs[0].id },
-        files: ['forms/form_radios.js', 'forms/form_extract.js']
+        files: ['forms/form_radios.js', 'forms/form_checkboxgroup.js', 'forms/form_extract.js']
       }, () => {
         // Then execute a function that uses the injected scripts
         chrome.scripting.executeScript({
@@ -369,6 +369,11 @@ document.addEventListener('DOMContentLoaded', function() {
             // Process radio groups
             if (formData.radios) {
               fields.push(...formData.radios);
+            }
+            
+            // Process checkboxes
+            if (formData.checkboxGroups) {
+              fields.push(...formData.checkboxGroups);
             }
             
             // Process checkboxes
@@ -833,5 +838,32 @@ document.addEventListener('DOMContentLoaded', function() {
         expiryElem.classList.add('hidden');
       }
     }
+  }
+
+  // Function to clear saved data
+  function clearSavedData() {
+    const clearDataBtn = document.getElementById('clear-data');
+    if (!clearDataBtn) return;
+
+    // Store original text
+    const originalText = clearDataBtn.textContent;
+    
+    // Show loading state
+    clearDataBtn.textContent = 'Clearing...';
+    clearDataBtn.disabled = true;
+    
+    // Send message to clear suggestions data
+    chrome.runtime.sendMessage({ action: 'clearSuggestions' }, function(response) {
+      // Reset button state
+      clearDataBtn.disabled = false;
+      clearDataBtn.textContent = originalText;
+      
+      if (response && response.success) {
+        const profileText = response.profileCount === 1 ? 'profile' : 'profiles';
+        showToast(`Form data cleared successfully (${response.profileCount} ${profileText})`, 'success');
+      } else {
+        showToast(response?.error || 'Error clearing form data', 'error');
+      }
+    });
   }
 });

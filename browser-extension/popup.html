@@ -161,7 +161,7 @@
       margin-bottom: 16px;
       background-color: white;
       border-radius: var(--border-radius);
-      border: 1px solid var(--medium-gray);
+      border: 1px solid var (--medium-gray);
     }
     
     .user-info {
@@ -254,20 +254,6 @@
       flex-direction: column;
       gap: 8px;
       margin-bottom: 16px;
-    }
-    
-    /* Form analysis styles */
-    #form-analysis {
-      border: 1px solid var(--primary-color);
-    }
-    
-    #form-analysis h3 {
-      font-size: 16px;
-      margin-bottom: 12px;
-      color: var(--primary-color);
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
     }
     
     #field-count {
@@ -484,7 +470,7 @@
   <div class="container">
     <header>
       <img src="images/icon16.png" alt="FormMaster Logo">
-      <h1>FormMasterPro <span class="version">v0.1.16</span></h1>
+      <h1>FormMasterPro <span class="version">v0.1.17</span></h1>
     </header>
     
     <!-- Auth Container -->
@@ -517,6 +503,7 @@
     <!-- Add the analyze form button here -->
     <div class="main-actions panel">
       <button id="analyze-form">Analyze Current Form</button>
+      <button id="clear-data">Clear Saved Data</button>
       <!-- Note: The analysis results will now appear in a dialog on the page -->
     </div>
     
@@ -538,6 +525,7 @@
   </div>
   
   <script src="forms/form_radios.js"></script>
+  <script src="forms/form_checkboxgroup.js"></script>
   <script src="forms/form_extract.js"></script>
   <script src="popup.js"></script>
 </body>

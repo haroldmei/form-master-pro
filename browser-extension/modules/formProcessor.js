@@ -10,7 +10,87 @@ const formProcessor = (() => {
     return 'profile_' + userProfile.filename;
   }
   
-  // Moved dialog functions to defaultsDialog.js
+  // Helper function to get default field values directly
+  async function getDefaultFieldValues(url) {
+    return new Promise((resolve) => {
+      chrome.storage.local.get(['defaultFieldValues'], function(result) {
+        const defaultFieldValues = result.defaultFieldValues || {};
+        resolve(defaultFieldValues[url] || {});
+      });
+    });
+  }
+  
+  // Helper function to save default field values directly  
+  async function saveDefaultFieldValues(url, values) {
+    return new Promise((resolve) => {
+      chrome.storage.local.get(['defaultFieldValues'], function(result) {
+        const defaultFieldValues = result.defaultFieldValues || {};
+        
+        // Merge new values with existing ones
+        const existingValues = defaultFieldValues[url] || {};
+        defaultFieldValues[url] = {
+          ...existingValues,
+          ...values
+        };
+        
+        chrome.storage.local.set({ defaultFieldValues }, function() {
+          console.log(`Updated default values for ${url}, now have ${Object.keys(defaultFieldValues[url]).length} fields`);
+          resolve();
+        });
+      });
+    });
+  }
+  
+  // Helper function to show default value dialog via window popup
+  async function showDefaultsDialogViaWindow(missingFields, rootUrl) {
+    return new Promise((resolve) => {
+      // Create the popup window without storing data in local storage
+      chrome.windows.create({
+        url: 'defaultsDialog.html',
+        type: 'popup',
+        width: 600,
+        height: 600,
+        focused: true
+      }, function(popupWindow) {
+        if (chrome.runtime.lastError) {
+          console.error("Error creating popup:", chrome.runtime.lastError);
+          resolve({});
+          return;
+        }
+        
+        // Set up a listener for the popup's response
+        const messageListener = function(message, sender, sendResponse) {
+          if (message.action === 'defaults-dialog-submit') {
+            // Remove this listener once we get a response
+            chrome.runtime.onMessage.removeListener(messageListener);
+            
+            // Return the values from the dialog
+            if (message.result === 'save') {
+              resolve(message.values || {});
+            } else {
+              resolve({});
+            }
+            
+            // Send acknowledgment
+            sendResponse({ received: true });
+            return true;
+          }
+          
+          // Handle requests for dialog data
+          if (message.action === 'get-defaults-dialog-data') {
+            sendResponse({ 
+              missingFields: missingFields,
+              rootUrl: rootUrl
+            });
+            return true;
+          }
+        };
+        
+        // Add the message listener
+        chrome.runtime.onMessage.addListener(messageListener);
+      });
+    });
+  }
   
   async function processForm(formFields, url) {
     try {
@@ -73,8 +153,8 @@ const formProcessor = (() => {
       for (const fieldKey of Object.keys(currentFormFields)) {
         if (!allSuggestions || !(fieldKey in allSuggestions)) {
           needApiCall = true;
-          console.log("Need API call for field:", fieldKey);
-          break;
+          console.log("Need API call for field:", fieldKey, currentFormFields[fieldKey]);
+          //break;
         }
       }
       
@@ -105,7 +185,13 @@ const formProcessor = (() => {
         try {
           // Make ONE comprehensive API call for all fields
           const aiSuggestions = await aiService.getAiSuggestions(allSiteFields, userProfile, url);
-          console.log("Received AI suggestions");
+          console.log("Received AI suggestions: ", aiSuggestions.length);
+          // Fill in any missing fields from allSiteFields with empty string
+          Object.keys(allSiteFields).forEach(key => {
+            if (!aiSuggestions.hasOwnProperty(key)) {
+              aiSuggestions[key] = '';
+            }
+          });
           
           // Merge AI suggestions into our combined suggestions
           allSuggestions = {
@@ -120,8 +206,8 @@ const formProcessor = (() => {
         console.log("Using cached suggestions - no API call needed");
       }
       
-      // Load any saved default field values for this URL
-      const savedDefaultValues = await defaultsDialog.getDefaultFieldValues(rootUrl);
+      // Load any saved default field values directly from storage rather than from defaultsDialog
+      const savedDefaultValues = await getDefaultFieldValues(rootUrl);
       console.log(`Loaded ${Object.keys(savedDefaultValues).length} saved default values for ${rootUrl}`);
       
       // Step 2: Apply rule-based matches for any remaining fields without answers
@@ -198,16 +284,14 @@ const formProcessor = (() => {
         dialogActive = true;
         
         try {
-          // Use the extracted defaultsDialog module
-          // Wrap in timeout to ensure Chrome API is ready
-          const userDefaultValues = await defaultsDialog.showDefaultValueDialog(missingFields, rootUrl);
-
+          // Try to open a popup window for defaults dialog
+          const userDefaultValues = await showDefaultsDialogViaWindow(missingFields, rootUrl);
+          
           console.log("User provided default values:", userDefaultValues);
           
           if (Object.keys(userDefaultValues).length > 0) {
-            // Save these values for future form filling using the defaultsDialog module
-            // They will be merged with existing values in saveDefaultFieldValues
-            await defaultsDialog.saveDefaultFieldValues(rootUrl, userDefaultValues);
+            // Save these values for future form filling directly to storage
+            await saveDefaultFieldValues(rootUrl, userDefaultValues);
             
             // Update our current suggestions with the user-provided values
             missingFields.forEach(field => {
@@ -221,7 +305,7 @@ const formProcessor = (() => {
           console.error("Error showing default values dialog:", dialogError);
           // Continue with temporary default values we already set
         } finally {
-          //dialogActive = false;
+          dialogActive = false;
         }
       }
       
@@ -279,7 +363,7 @@ const formProcessor = (() => {
         
         // Store this mapping for future use
         const existingIndex = updatedSiteMapping.findIndex(mapping => 
-          (fieldId && mapping.id === fieldId) || (mapping.name && mapping.name === fieldName)
+          (fieldId && mapping.id === fieldId) || (mapping.name && mapping.name === fieldName) || (mapping.label && mapping.label === fieldLabel)
           );
 
         // If we found a suggestion, process it according to field type
@@ -398,6 +482,9 @@ const formProcessor = (() => {
    */
   async function clearSuggestions() {
     try {
+      // Count the number of profile caches before clearing
+      const profileCount = Object.keys(allSuggestionsCache).length;
+      
       // Clear in-memory cache
       Object.keys(allSuggestionsCache).forEach(key => {
         delete allSuggestionsCache[key];
@@ -414,8 +501,8 @@ const formProcessor = (() => {
         });
       });
       
-      console.log("All form suggestions data cleared");
-      return { success: true };
+      console.log(`All form suggestions data cleared (${profileCount} profile caches)`);
+      return { success: true, profileCount: profileCount };
     } catch (error) {
       console.error("Error clearing suggestions:", error);
       return { success: false, error: error.message || "Unknown error clearing data" };
@@ -434,7 +521,6 @@ const formProcessor = (() => {
   return {
     processForm,
     clearSuggestions
-    // No longer exporting the defaults dialog functions as they've been moved
   };
 })();
 

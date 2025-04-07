@@ -41,6 +41,11 @@ const formFiller = (() => {
           }
           
           // Process checkboxes
+          if (formData.checkboxGroups) {
+            fields.push(...formData.checkboxGroups);
+          }
+          
+          // Process checkboxes
           if (formData.checkboxes) {
             fields.push(...formData.checkboxes);
           }

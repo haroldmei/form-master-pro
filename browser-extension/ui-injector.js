@@ -5,7 +5,7 @@
 
 (function() {
   // Version information - should match manifest.json
-  const VERSION = "0.1.16";
+  const VERSION = "0.1.17";
   
   // Check if we're in a frame - only inject in the main frame
   if (self !== self.top) return;
@@ -46,21 +46,17 @@
     toggleButton.textContent = 'FM';
     toggleButton.title = `FormMasterPro v${VERSION}`;
     
-    // Track if we've already added the mouseleave handler to avoid duplicates
-    let mouseLeaveHandlerAdded = false;
-    
-    // Replace click event with hover events
-    toggleButton.addEventListener('mouseenter', showPanel);
+    // Change from hover to click toggle
+    toggleButton.addEventListener('click', togglePanel);
     
     // Create panel for buttons
     const panel = document.createElement('div');
     panel.className = 'formmaster-panel';
     
-    // Add mouse enter/leave events to keep panel open when hovering
-    panel.addEventListener('mouseenter', () => {
-      clearTimeout(panel.hideTimeout);
+    // Prevent panel clicks from closing the panel
+    panel.addEventListener('click', (e) => {
+      e.stopPropagation();
     });
-    panel.addEventListener('mouseleave', hidePanel);
     
     // Add panel header
     const panelHeader = document.createElement('div');
@@ -81,8 +77,8 @@
     // Add buttons to panel
     const buttons = [
       { id: 'load-data', text: 'Load Data', icon: '📂' },
-      { id: 'auto-fill', text: 'Auto Fill', icon: '✏️' },
-      { id: 'clear-data', text: 'Clear Data', icon: '🗑️' }  // New Clear Data button
+      { id: 'auto-fill', text: 'Auto Fill', icon: '✏️' }
+      // Clear Data button removed from here
     ];
     
     // Make sure buttons are added with the correct structure
@@ -141,6 +137,20 @@
     toast.className = 'formmaster-toast';
     shadow.appendChild(toast);
     
+    // Add document click handler to close panel when clicking outside
+    document.addEventListener('click', (e) => {
+      // Close panel if it's open and the click is outside the panel
+      if (panel.classList.contains('show') && e.target !== toggleButton) {
+        panel.classList.remove('show');
+        toggleButton.classList.remove('active');
+      }
+    });
+    
+    // Prevent clicks on the container from closing the panel
+    mainContainer.addEventListener('click', (e) => {
+      e.stopPropagation();
+    });
+    
     // Helper function to load CSS from external file
     function loadCSS(shadowRoot) {
       const link = document.createElement('link');
@@ -150,50 +160,28 @@
       shadowRoot.appendChild(link);
     }
     
-    // Replace toggle function with show/hide functions
-    function showPanel() {
-      panel.classList.add('show');
-      toggleButton.classList.add('active');
-      loadProfileInfo();
+    // Replace hover functions with toggle function
+    function togglePanel(e) {
+      e.stopPropagation(); // Prevent document click handler from firing
       
-      // Reset animation for panel border glow
-      panel.style.animation = 'none';
-      panel.offsetHeight; // Trigger reflow
-      panel.style.animation = null;
-      
-      // Clear any existing hide timeout when showing the panel
-      clearTimeout(panel.hideTimeout);
-      
-      // Only add the mouseleave handler once to prevent multiple bindings
-      if (!mouseLeaveHandlerAdded) {
-        toggleButton.addEventListener('mouseleave', function(e) {
-          // Check if the mouse is moving toward the panel
-          const toElement = e.relatedTarget;
-          if (toElement && (toElement === panel || panel.contains(toElement))) {
-            // Mouse moved directly to the panel, no need to set timeout
-            return;
-          }
-          
-          // Set a delay before hiding to allow mouse movement to the panel
-          panel.hideTimeout = setTimeout(hidePanel, 400); // Increased delay for smoother experience
-        });
-        mouseLeaveHandlerAdded = true;
+      if (panel.classList.contains('show')) {
+        // Hide panel
+        panel.classList.remove('show');
+        toggleButton.classList.remove('active');
+      } else {
+        // Show panel
+        panel.classList.add('show');
+        toggleButton.classList.add('active');
+        loadProfileInfo();
+        
+        // Reset animation for panel border glow
+        panel.style.animation = 'none';
+        panel.offsetHeight; // Trigger reflow
+        panel.style.animation = null;
       }
     }
     
-    function hidePanel() {
-      // Add a small delay to allow moving between elements
-      panel.hideTimeout = setTimeout(() => {
-        // Check if mouse is over panel or toggle before hiding
-        const isMouseOverPanel = panel.matches(':hover');
-        const isMouseOverToggle = toggleButton.matches(':hover');
-        
-        if (!isMouseOverPanel && !isMouseOverToggle) {
-          panel.classList.remove('show');
-          toggleButton.classList.remove('active');
-        }
-      }, 400); // Increased delay for smoother experience
-    }
+    // Remove the showPanel and hidePanel functions as they're replaced by togglePanel
     
     function handleButtonClick(action, buttonElement) {
       // Don't proceed if an API call is already in progress

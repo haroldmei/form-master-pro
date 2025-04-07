@@ -7,16 +7,28 @@ function extractFormControls(formSelector = null) {
       return {};
     }
     
+    // Extract checkbox groups first to ensure we don't duplicate checkboxes
+    const checkboxGroups = self.FormCheckboxGroups ? self.FormCheckboxGroups.extractCheckboxGroups(container) : [];
+    
+    // Get IDs of checkboxes that are part of groups to avoid duplication
+    const groupedCheckboxIds = new Set();
+    if (checkboxGroups.length > 0 && self.FormCheckboxGroups) {
+      const ids = self.FormCheckboxGroups.getGroupedCheckboxIds(checkboxGroups);
+      ids.forEach(id => groupedCheckboxIds.add(id));
+    }
+    
     // Extract different control types
     const controls = {
       inputs: extractInputs(container),
       selects: extractSelects(container),
       textareas: extractTextareas(container),
       buttons: extractButtons(container),
-      radios: extractRadioGroups(container), // Now using the updated function
-      checkboxes: extractCheckboxes(container)
+      radios: self.FormRadios ? self.FormRadios.extractRadioGroups(container) : [], 
+      checkboxGroups: checkboxGroups,
+      checkboxes: extractCheckboxes(container, groupedCheckboxIds)
     };
     
+    console.log('Extracted controls:', controls.checkboxGroups);
     // Create a label-to-control mapping for easier reference
     controls.label_mapping = createLabelMapping(controls);
     
@@ -46,20 +58,113 @@ function extractInputs(container) {
   const inputElements = container.querySelectorAll('input:not([type="submit"]):not([type="button"]):not([type="image"]):not([type="reset"]):not([type="file"]):not([type="radio"]):not([type="checkbox"]):not([type="hidden"])');
   
   inputElements.forEach(input => {
+    // Skip inputs that are part of enhanced UI widgets like Chosen, Select2, etc.
+    if (isEnhancedSelectComponent(input)) {
+      return;
+    }
+    
+    // Determine if this is a date input
+    const isDateInput = detectDateInput(input);
+    
     inputs.push({
-      type: input.type || 'text',
+      type: isDateInput ? 'date' : input.type || 'text',
       id: input.id || '',
       name: input.name || '',
       placeholder: input.placeholder || '',
       className: input.className || '',
       value: input.value || '',
-      label: getElementLabel(input)
+      label: getElementLabel(input),
+      isDateInput: isDateInput // Additional flag to mark date inputs
     });
   });
   
   return inputs;
 }
 
+// Helper function to identify inputs that are part of enhanced select widgets
+function isEnhancedSelectComponent(input) {
+  // Check for Chosen search inputs
+  if (input.classList.contains('chosen-search-input')) {
+    return true;
+  }
+  
+  // Check if input is inside a Chosen container
+  if (input.closest('.chosen-container')) {
+    return true;
+  }
+  
+  // Check for Select2 search box
+  if (input.classList.contains('select2-search__field')) {
+    return true;
+  }
+  
+  // Check if input is inside a Select2 container
+  if (input.closest('.select2-container')) {
+    return true;
+  }
+  
+  // Check for other common enhanced select libraries
+  const parent = input.parentElement;
+  if (parent && (
+      parent.classList.contains('selectize-input') || 
+      parent.classList.contains('ui-select-search') ||
+      parent.classList.contains('bootstrap-select-searchbox')
+    )) {
+    return true;
+  }
+  
+  return false;
+}
+
+// New function to detect date inputs based on various indicators
+function detectDateInput(input) {
+  // Check if element has datepicker-related classes
+  if (input.className.match(/date|datepicker|hasDatepicker|calendar-input/i)) {
+    return true;
+  }
+  
+  // Check if there's a calendar icon nearby
+  const parent = input.parentElement;
+  if (parent) {
+    // Check for calendar icon in input group
+    if (parent.className.match(/input-group|date-group|sv-input-group/i)) {
+      // Look for calendar icon or addon with calendar
+      const calendarIcon = parent.querySelector('.ui-datepicker-trigger, .calendar-icon, [class*="calendar"], img[src*="calendar"]');
+      if (calendarIcon) {
+        return true;
+      }
+      
+      // Check for input group addon with icon
+      const addon = parent.querySelector('.input-group-addon, .sv-input-group-addon');
+      if (addon && (addon.innerHTML.includes('calendar') || addon.querySelector('img'))) {
+        return true;
+      }
+    }
+  }
+  
+  // Check for date-related placeholder or pattern
+  if (input.placeholder && input.placeholder.match(/date|dd[^a-z]mm|mm[^a-z]dd|yyyy|^\d{1,2}[/-]\d{1,2}[/-]\d{2,4}$/i)) {
+    return true;
+  }
+  
+  // Check for date format pattern attribute
+  if (input.getAttribute('pattern') && input.getAttribute('pattern').match(/\d{1,2}[/-]\d{1,2}[/-]\d{2,4}/)) {
+    return true;
+  }
+  
+  // Check for date-related label
+  const label = getElementLabel(input);
+  if (label && label.match(/\bdate\b|\bday\b|birthday|birth date|start date|end date|arrival|departure|check[ -]?in|check[ -]?out|(dd|mm)[ /-](mm|dd)[ /-](yy|yyyy)/i)) {
+    return true;
+  }
+  
+  // Check for data attributes related to date functionality
+  if (input.getAttribute('data-date') || input.getAttribute('data-provide') === 'datepicker') {
+    return true;
+  }
+  
+  return false;
+}
 
 function extractSelects(container) {
   const selects = [];
@@ -126,56 +231,16 @@ function extractButtons(container) {
 }
 
 
-function extractRadioGroups(container) {
-  console.log('FormExtract.extractRadioGroups called', self.FormRadios ? 'FormRadios exists' : 'FormRadios missing');
-  
-  // Use FormRadios if available (from form_radios.js), otherwise fall back to internal implementation
-  if (self.FormRadios && typeof self.FormRadios.extractRadioGroups === 'function') {
-    try {
-      const radioGroups = self.FormRadios.extractRadioGroups(container);
-      console.log('FormRadios.extractRadioGroups returned', radioGroups);
-      return radioGroups;
-    } catch (error) {
-      console.error('Error using FormRadios.extractRadioGroups:', error);
-      // Fall through to fallback implementation
-    }
-  }
-  
-  // Fallback implementation if FormRadios is not available or failed
-  console.warn('Using fallback extractRadioGroups implementation');
-  const groups = {};
-  const radioButtons = container.querySelectorAll('input[type="radio"]');
-  
-  radioButtons.forEach(radio => {
-    const name = radio.name || '';
-    if (!name) return;
-    
-    if (!groups[name]) {
-      groups[name] = {
-        type: 'radio',
-        name: name,
-        label: getGroupLabel(radio) || name,
-        options: []
-      };
-    }
-    
-    groups[name].options.push({
-      value: radio.value,
-      id: radio.id,
-      checked: radio.checked,
-      label: getElementLabel(radio)
-    });
-  });
-  
-  return Object.values(groups);
-}
-
-
-function extractCheckboxes(container) {
+function extractCheckboxes(container, groupedIds = new Set()) {
   const checkboxes = [];
   const checkboxElements = container.querySelectorAll('input[type="checkbox"]');
   
   checkboxElements.forEach(checkbox => {
+    // Skip checkboxes that are part of a group
+    if (checkbox.id && groupedIds.has(checkbox.id)) {
+      return;
+    }
+    
     checkboxes.push({
       type: 'checkbox',
       id: checkbox.id || '',
@@ -279,29 +344,21 @@ function getElementLabel(element) {
 }
 
 
-function getGroupLabel(radioElement) {
-  // Try to find a fieldset legend
-  let parent = radioElement.parentElement;
-  while (parent) {
-    if (parent.tagName === 'FIELDSET') {
-      const legend = parent.querySelector('legend');
-      if (legend) {
-        return legend.textContent.trim();
-      }
-      break;
-    }
-    parent = parent.parentElement;
-  }
-  
-  return '';
-}
-
-
 function createLabelMapping(controls) {
   const mapping = {};
   
+  // Process checkbox groups first
+  if (controls.checkboxGroups && controls.checkboxGroups.length) {
+    // Add checkbox groups to the mapping
+    controls.checkboxGroups.forEach(group => {
+      if (group.label) {
+        mapping[group.label] = group;
+      }
+    });
+  }
+  
   // Process each type of control
-  ['inputs', 'selects', 'textareas', 'radios', 'checkboxes'].forEach(type => {
+  ['inputs', 'selects', 'textareas', 'radios', 'checkbox', 'checkboxes'].forEach(type => {
     if (!controls[type]) return;
     
     controls[type].forEach(control => {

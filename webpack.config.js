@@ -26,11 +26,14 @@ module.exports = (env, argv) => {
       'modules/aiService': './browser-extension/modules/aiService.js',
       'modules/formFiller': './browser-extension/modules/formFiller.js',
       'modules/formProcessor': './browser-extension/modules/formProcessor.js',
+      'modules/defaultsDialog-popup': './browser-extension/modules/defaultsDialog-popup.js',
+      'modules/defaultsDialog': './browser-extension/modules/defaultsDialog.js',
       'modules/utils': './browser-extension/modules/utils.js',
       // UI injection script
       'ui-injector': './browser-extension/ui-injector.js',
       // Form extraction script
       'forms/form_extract': './browser-extension/forms/form_extract.js',
+      'forms/form_checkboxgroup': './browser-extension/forms/form_checkboxgroup.js',
       'forms/form_radios': './browser-extension/forms/form_radios.js',
       'auth': './browser-extension/auth.js',
       'libs/jszip.min': './browser-extension/libs/jszip.min.js',

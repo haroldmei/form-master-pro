@@ -4,7 +4,6 @@ importScripts('auth.js');
 // Import other modules
 importScripts(
   'modules/userProfile.js',
-  'modules/defaultsDialog.js', // Add the new module
   'modules/formProcessor.js',
   'modules/aiService.js',
   'modules/formFiller.js',
@@ -270,6 +269,17 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
 
+  if (message.action === 'get-defaults-dialog-data') {
+    console.log('Received get-defaults-dialog-data:', message);
+    return true;
+  }
+
+  if (message.action === 'defaults-dialog-submit') { 
+    console.log('Received defaults-dialog-submit');
+    // Open the defaults dialog
+    return true;
+  }
+
   // If we reach here, the message wasn't handled
   console.warn('Unhandled message:', message);
   sendResponse({ success: false, error: 'Unhandled message type or action' });
@@ -335,7 +345,7 @@ async function analyzeFormInTab(tabId, url) {
     // Inject the form extraction scripts
     await chrome.scripting.executeScript({
       target: { tabId },
-      files: ['forms/form_radios.js', 'forms/form_extract.js']
+      files: ['forms/form_radios.js', 'forms/form_checkboxgroup.js', 'forms/form_extract.js']
     });
     
     // Execute the form extraction
@@ -424,7 +434,7 @@ async function extractFormData(tabId) {
   // Inject the form extraction scripts
   await chrome.scripting.executeScript({
     target: { tabId },
-    files: ['forms/form_radios.js', 'forms/form_extract.js']
+    files: ['forms/form_radios.js', 'forms/form_checkboxgroup.js', 'forms/form_extract.js']
   });
   
   // Execute the form extraction
