@@ -482,6 +482,9 @@ const formProcessor = (() => {
    */
   async function clearSuggestions() {
     try {
+      // Count the number of profile caches before clearing
+      const profileCount = Object.keys(allSuggestionsCache).length;
+      
       // Clear in-memory cache
       Object.keys(allSuggestionsCache).forEach(key => {
         delete allSuggestionsCache[key];
@@ -498,8 +501,8 @@ const formProcessor = (() => {
         });
       });
       
-      console.log("All form suggestions data cleared");
-      return { success: true };
+      console.log(`All form suggestions data cleared (${profileCount} profile caches)`);
+      return { success: true, profileCount: profileCount };
     } catch (error) {
       console.error("Error clearing suggestions:", error);
       return { success: false, error: error.message || "Unknown error clearing data" };

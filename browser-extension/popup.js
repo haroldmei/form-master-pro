@@ -859,7 +859,8 @@ document.addEventListener('DOMContentLoaded', function() {
       clearDataBtn.textContent = originalText;
       
       if (response && response.success) {
-        showToast('Form data cleared successfully', 'success');
+        const profileText = response.profileCount === 1 ? 'profile' : 'profiles';
+        showToast(`Form data cleared successfully (${response.profileCount} ${profileText})`, 'success');
       } else {
         showToast(response?.error || 'Error clearing form data', 'error');
       }
