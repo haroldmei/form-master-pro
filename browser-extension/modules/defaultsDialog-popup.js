@@ -189,8 +189,8 @@
         // Add blank option
         const blankOption = document.createElement('option');
         blankOption.value = '';
-        blankOption.textContent = '-- Select --';
-        select.appendChild(blankOption);
+        //blankOption.textContent = '-- Select --';
+        //select.appendChild(blankOption);
         
         // Add options from field
         if (field.options && Array.isArray(field.options)) {

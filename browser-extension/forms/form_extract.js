@@ -58,6 +58,11 @@ function extractInputs(container) {
   const inputElements = container.querySelectorAll('input:not([type="submit"]):not([type="button"]):not([type="image"]):not([type="reset"]):not([type="file"]):not([type="radio"]):not([type="checkbox"]):not([type="hidden"])');
   
   inputElements.forEach(input => {
+    // Skip inputs that are part of enhanced UI widgets like Chosen, Select2, etc.
+    if (isEnhancedSelectComponent(input)) {
+      return;
+    }
+    
     // Determine if this is a date input
     const isDateInput = detectDateInput(input);
     
@@ -74,6 +79,41 @@ function extractInputs(container) {
   });
   
   return inputs;
+}
+
+// Helper function to identify inputs that are part of enhanced select widgets
+function isEnhancedSelectComponent(input) {
+  // Check for Chosen search inputs
+  if (input.classList.contains('chosen-search-input')) {
+    return true;
+  }
+  
+  // Check if input is inside a Chosen container
+  if (input.closest('.chosen-container')) {
+    return true;
+  }
+  
+  // Check for Select2 search box
+  if (input.classList.contains('select2-search__field')) {
+    return true;
+  }
+  
+  // Check if input is inside a Select2 container
+  if (input.closest('.select2-container')) {
+    return true;
+  }
+  
+  // Check for other common enhanced select libraries
+  const parent = input.parentElement;
+  if (parent && (
+      parent.classList.contains('selectize-input') || 
+      parent.classList.contains('ui-select-search') ||
+      parent.classList.contains('bootstrap-select-searchbox')
+    )) {
+    return true;
+  }
+  
+  return false;
 }
 
 // New function to detect date inputs based on various indicators
