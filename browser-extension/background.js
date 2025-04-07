@@ -745,8 +745,45 @@ function performFormFilling(fieldValues) {
     return true;
   }
   
-  // Handle text inputs and textareas
+  // Handle text inputs and textareas with special handling for tag/autocomplete fields
   function fillTextField(element, value) {
+    // Special handling for fields that might trigger popups/tags
+    if (element.getAttribute('role') === 'combobox' || 
+        element.classList.contains('tags-input') || 
+        element.classList.contains('autocomplete') ||
+        element.getAttribute('autocomplete') === 'off') {
+        
+      console.log(`Detected potential tag/autocomplete field: ${element.id || element.name}`);
+        
+      // First focus the field to activate any attached behaviors
+      element.focus();
+        
+      // Set the value
+      element.value = value;
+        
+      // Dispatch events in the right order to simulate typing
+      element.dispatchEvent(new Event('focus', { bubbles: true }));
+      element.dispatchEvent(new Event('input', { bubbles: true }));
+        
+      // Small delay to let any dropdown/suggestions appear
+      setTimeout(() => {
+        // Press Enter key to potentially confirm the value
+        element.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', bubbles: true }));
+        element.dispatchEvent(new KeyboardEvent('keypress', { key: 'Enter', code: 'Enter', bubbles: true }));
+        element.dispatchEvent(new KeyboardEvent('keyup', { key: 'Enter', code: 'Enter', bubbles: true }));
+        
+        // Then blur the field
+        element.dispatchEvent(new Event('change', { bubbles: true }));
+        element.dispatchEvent(new Event('blur', { bubbles: true }));
+        
+        // Visual indicator
+        element.style.borderLeft = '3px solid #4285f4';
+      }, 200);
+      
+      return true;
+    }
+    
+    // Standard behavior for regular inputs
     element.value = value;
     element.dispatchEvent(new Event('input', { bubbles: true }));
     element.dispatchEvent(new Event('change', { bubbles: true }));
