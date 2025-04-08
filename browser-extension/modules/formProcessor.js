@@ -319,7 +319,7 @@ const formProcessor = (() => {
       });
       
       // Match form fields with mappings and retrieve values
-      const fieldValues = {};
+      const fieldValues = [];
       const updatedSiteMapping = [...siteFieldMappings[rootUrl]]; // Clone existing mappings
       let mappingsUpdated = false;
       
@@ -369,19 +369,19 @@ const formProcessor = (() => {
         // If we found a suggestion, process it according to field type
         if (suggestionValue !== null) {
           // Format the value based on field type
-          let formattedValue = utils.formatValueForFieldType(suggestionValue, fieldType, field);
-          fieldValues[fieldId || fieldName] = formattedValue;
+          let formattedValue = utils.formatValueForFieldType(suggestionValue, fieldType, field);          
+          const newMapping = {
+            id: fieldId, 
+            label: fieldLabel, 
+            name: fieldName, 
+            type: fieldType, 
+            value: formattedValue, 
+            aiGenerated: isAiGenerated,
+            lastUsed: new Date().toISOString()
+          };
           
+          fieldValues.push(newMapping);
           if (existingIndex < 0) {
-            const newMapping = {
-              id: fieldId, 
-              label: fieldLabel, 
-              name: fieldName, 
-              type: fieldType, 
-              value: formattedValue, 
-              aiGenerated: isAiGenerated,
-              lastUsed: new Date().toISOString()
-            };
             updatedSiteMapping.push(newMapping);
             mappingsUpdated = true;
           } else {

@@ -2,22 +2,72 @@
  * Form filling module
  */
 const formFiller = (() => {
-  
+
   function performFormFilling(fieldValues) {
-    
+
     console.log("Filling form with data:", fieldValues);
 
-    function findFillableElement(identifier) {
-      // Try by ID first
-      let element = document.getElementById(identifier);
-      if (element) return element;
+    function findFillableElement(field) {
+      const { id, label, name, type, value, aiGenerated } = field;
 
-      // Try by name
-      element = document.querySelector(`[name="${identifier}"]`);
-      if (element) return element;
+      // console.log(`Processing field: id=${id}, label=${label}, name=${name}, type=${type}, value=${value}`);
 
+      // Skip if value is missing or null
+      if (value === null || value === undefined) {
+        console.warn(`Skipping field with missing value: ${id || name || label}`);
+        return null;
+      }
+
+      // Try to find the element using available information
+      let element = null;
+
+      // Try by ID first (most reliable)
+      if (id) {
+        element = document.getElementById(id);
+      }
+
+      // Try by name if no element found by ID
+      if (!element && name) {
+        element = document.querySelector(`[name="${name}"]`);
+      }
+
+      // Try by label for element lookup
+      if (!element && label) {
+        // Find label elements containing our text
+        const labels = Array.from(document.querySelectorAll('label')).filter(
+          l => l.textContent.trim().toLowerCase().includes(label.toLowerCase())
+        );
+
+        // Try to get the element associated with the label
+        for (const foundLabel of labels) {
+          if (foundLabel.htmlFor) {
+            const labeledElement = document.getElementById(foundLabel.htmlFor);
+            if (labeledElement) {
+              element = labeledElement;
+              break;
+            }
+          }
+        }
+      }
+
+      // If we still don't have an element, try more aggressive approaches
+      if (!element) {
+        // Try by matching placeholder attribute
+        element = document.querySelector(`input[placeholder*="${label}"], textarea[placeholder*="${label}"]`);
+
+        // Try by aria-label
+        if (!element) {
+          element = document.querySelector(`[aria-label*="${label}"]`);
+        }
+      }
+
+      // Element not found
+      if (!element) {
+        console.warn(`Element not found for: ${id || name || label}`);
+        return null;
+      }
       // Try by other common selectors
-      return null;
+      return element;
     }
 
     function findRadioButton(name, value) {
@@ -57,16 +107,16 @@ const formFiller = (() => {
             .map(attr => attr.value.toLowerCase());
 
           // If any data attribute contains our value, this is likely the match
-          if (dataAttributes.some(attr => 
-              attr.includes(value.toLowerCase()) || 
-              value.toLowerCase().includes(attr))) {
+          if (dataAttributes.some(attr =>
+            attr.includes(value.toLowerCase()) ||
+            value.toLowerCase().includes(attr))) {
             console.log(`Found radio match through data attribute: ${radio.id}`);
             return radio;
           }
 
           // Also check if the analytics ID or similar attributes contain our text
-          if (radio.dataset.analyticsid && 
-              radio.dataset.analyticsid.toLowerCase().includes(value.toLowerCase())) {
+          if (radio.dataset.analyticsid &&
+            radio.dataset.analyticsid.toLowerCase().includes(value.toLowerCase())) {
             console.log(`Found radio match through analytics ID: ${radio.dataset.analyticsid}`);
             return radio;
           }
@@ -126,9 +176,9 @@ const formFiller = (() => {
           if (!label) {
             // Check if radio is wrapped in a label
             let parent = radio.parentElement;
-            while (parent && parent.tagName !== 'LABEL' && 
-                   !parent.classList.contains('form-check') && 
-                   !parent.classList.contains('radio')) {
+            while (parent && parent.tagName !== 'LABEL' &&
+              !parent.classList.contains('form-check') &&
+              !parent.classList.contains('radio')) {
               parent = parent.parentElement;
             }
 
@@ -175,9 +225,9 @@ const formFiller = (() => {
       } else {
         // Regular select handling
         const options = Array.from(element.options);
-        const option = options.find(opt => 
-          opt.value === value || 
-          opt.text === value || 
+        const option = options.find(opt =>
+          opt.value === value ||
+          opt.text === value ||
           opt.textContent.trim() === value
         );
 
@@ -191,7 +241,7 @@ const formFiller = (() => {
     }
 
     function fillCheckboxOrRadio(element, inputType, value) {
-      if (inputType === 'radio') {  
+      if (inputType === 'radio') {
         console.log(`Handling radio button: ${element.name} with value: ${value}`);
 
         // Check if value looks like an option value rather than a boolean/state
@@ -214,8 +264,8 @@ const formFiller = (() => {
             // Try to find a "Yes" option among the radio group
             for (const option of yesOptions) {
               if (['yes', 'y', '1', 'true'].includes(option.value.toLowerCase()) ||
-                  option.id.toLowerCase().includes('yes') ||
-                  option.id.toLowerCase().includes('y')) {
+                option.id.toLowerCase().includes('yes') ||
+                option.id.toLowerCase().includes('y')) {
                 option.checked = true;
                 option.dispatchEvent(new Event('change', { bubbles: true }));
                 console.log(`Selected radio yes option: ${option.value}`);
@@ -240,8 +290,8 @@ const formFiller = (() => {
             // Try to find a "No" option among the radio group
             for (const option of noOptions) {
               if (['no', 'n', '0', 'false'].includes(option.value.toLowerCase()) ||
-                  option.id.toLowerCase().includes('no') ||
-                  option.id.toLowerCase().includes('n')) {
+                option.id.toLowerCase().includes('no') ||
+                option.id.toLowerCase().includes('n')) {
                 option.checked = true;
                 option.dispatchEvent(new Event('change', { bubbles: true }));
                 console.log(`Selected radio no option: ${option.value}`);
@@ -267,11 +317,11 @@ const formFiller = (() => {
       if (typeof value === 'boolean') {
         element.checked = value;
       } else if (typeof value === 'string') {
-        element.checked = value.toLowerCase() === 'true' || 
-                         value === '1' || 
-                         value.toLowerCase() === 'yes' ||
-                         value === element.value ||
-                         value.toLowerCase() === 'checked';
+        element.checked = value.toLowerCase() === 'true' ||
+          value === '1' ||
+          value.toLowerCase() === 'yes' ||
+          value === element.value ||
+          value.toLowerCase() === 'checked';
       }
       element.dispatchEvent(new Event('change', { bubbles: true }));
       return true;
@@ -279,23 +329,23 @@ const formFiller = (() => {
 
     function fillTextField(element, value) {
       // Special handling for fields that might trigger popups/tags
-      if (element.getAttribute('role') === 'combobox' || 
-          element.classList.contains('tags-input') || 
-          element.classList.contains('autocomplete') ||
-          element.getAttribute('autocomplete') === 'off') {
-          
+      if (element.getAttribute('role') === 'combobox' ||
+        element.classList.contains('tags-input') ||
+        element.classList.contains('autocomplete') ||
+        element.getAttribute('autocomplete') === 'off') {
+
         console.log(`Detected potential tag/autocomplete field: ${element.id || element.name}`);
-          
+
         // First focus the field to activate any attached behaviors
         element.focus();
-          
+
         // Set the value
         element.value = value;
-          
+
         // Dispatch events in the right order to simulate typing
         element.dispatchEvent(new Event('focus', { bubbles: true }));
         element.dispatchEvent(new Event('input', { bubbles: true }));
-          
+
         // Small delay to let any dropdown/suggestions appear
         setTimeout(() => {
           // Press Enter key to potentially confirm the value
@@ -329,9 +379,9 @@ const formFiller = (() => {
 
       // First update the native select element
       const options = Array.from(selectElement.options);
-      const option = options.find(opt => 
-        opt.value === value || 
-        opt.text.trim() === value || 
+      const option = options.find(opt =>
+        opt.value === value ||
+        opt.text.trim() === value ||
         opt.textContent.trim() === value
       );
 
@@ -399,28 +449,34 @@ const formFiller = (() => {
       return false;
     }
 
-  
+
     // Track stats
     const stats = {
       filled: 0,
       failed: 0,
       total: Object.keys(fieldValues).length
     };
-    
+
     // Fill each field
-    for (const [identifier, value] of Object.entries(fieldValues)) {
+    // Perform form filling
+    console.log("Filling form with data:", fieldValues);
+    // Iterate through fieldValues array
+    for (const field of fieldValues) {
+      // Extract field properties
+
       try {
-        const element = findFillableElement(identifier);
-        
+        const element = findFillableElement(field);
         if (!element) {
-          console.warn(`No element found for key: ${identifier}`);
+          console.warn(`No element found for field: ${field.id || field.name || field.label}`);
           stats.failed++;
           continue;
         }
-        
+
+        console.log(`Found element for field: ${field.id}, ${field.name}, ${field.label}, ${field.type}, ${field.value}`);
         const tagName = element.tagName.toLowerCase();
         const inputType = element.type ? element.type.toLowerCase() : '';
-        
+        const value = field.value;
+
         if (fillField(element, tagName, inputType, value)) {
           stats.filled++;
         } else {
@@ -431,28 +487,28 @@ const formFiller = (() => {
         stats.failed++;
       }
     }
-    
+
     // Special handling for radio groups by name
     // This finds all radio groups and then sets the right one based on value
     const processedRadioGroups = new Set();
-    
+
     for (const key in fieldValues) {
       // Skip already processed items
       if (processedRadioGroups.has(key)) continue;
-      
+
       const value = fieldValues[key];
       if (value === null || value === undefined) continue;
-      
+
       // Look for radio buttons with this name
       const radioGroup = document.querySelectorAll(`input[type="radio"][name="${CSS.escape(key)}"]`);
-      
+
       if (radioGroup.length > 1) {
         console.log(`Processing radio group: ${key} with value: ${value}`);
         processedRadioGroups.add(key);
-        
+
         // Try to find the radio with matching value
         let foundMatch = false;
-        
+
         // First try exact match
         for (const radio of radioGroup) {
           if (radio.value === String(value)) {
@@ -462,7 +518,7 @@ const formFiller = (() => {
             break;
           }
         }
-        
+
         // If no exact match, try case-insensitive
         if (!foundMatch) {
           const lcValue = String(value).toLowerCase();
@@ -475,19 +531,19 @@ const formFiller = (() => {
             }
           }
         }
-        
+
         // If still no match, try matching against labels
         if (!foundMatch) {
           for (const radio of radioGroup) {
             // Try to get the label text
             let labelText = '';
-            
+
             // By "for" attribute
             if (radio.id) {
               const labelElement = document.querySelector(`label[for="${radio.id}"]`);
               if (labelElement) labelText = labelElement.textContent.trim();
             }
-            
+
             // By parent label
             if (!labelText) {
               let parent = radio.parentElement;
@@ -499,7 +555,7 @@ const formFiller = (() => {
                 parent = parent.parentElement;
               }
             }
-            
+
             // By next sibling text node
             if (!labelText) {
               let nextSibling = radio.nextSibling;
@@ -514,10 +570,10 @@ const formFiller = (() => {
                 nextSibling = nextSibling.nextSibling;
               }
             }
-            
+
             // Compare if we found any label text
-            if (labelText && 
-               (labelText.toLowerCase() === String(value).toLowerCase() ||
+            if (labelText &&
+              (labelText.toLowerCase() === String(value).toLowerCase() ||
                 labelText.toLowerCase().includes(String(value).toLowerCase()))) {
               radio.checked = true;
               foundMatch = true;
@@ -526,26 +582,26 @@ const formFiller = (() => {
             }
           }
         }
-        
+
         if (!foundMatch) {
           console.log(`Could not find matching radio button for ${key} with value ${value}`);
         }
       }
     }
-    
+
     // Process radio groups passed as objects with name and options
     for (const key in fieldValues) {
       const value = fieldValues[key];
-      
+
       // Check if this is a radio group object from our extraction
-      if (value && typeof value === 'object' && value.type === 'radio' && 
-          value.name && Array.isArray(value.options)) {
-        
+      if (value && typeof value === 'object' && value.type === 'radio' &&
+        value.name && Array.isArray(value.options)) {
+
         const groupName = value.name;
         const selectedValue = value.selectedValue || '';
-        
+
         if (!selectedValue) continue;
-        
+
         const radioButtons = document.querySelectorAll(`input[type="radio"][name="${CSS.escape(groupName)}"]`);
         for (const radio of radioButtons) {
           if (radio.value === selectedValue) {
@@ -556,7 +612,7 @@ const formFiller = (() => {
         }
       }
     }
-    
+
     return stats;
   }
 
