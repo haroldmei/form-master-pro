@@ -32,7 +32,6 @@ if (typeof pdfjsLib !== 'undefined') {
   console.error('Failed to load PDF.js library');
 }
 
-
 // Consolidated message listener for all extension communications
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   const tabId = sender.tab?.id;
