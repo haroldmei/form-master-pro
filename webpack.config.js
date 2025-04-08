@@ -90,6 +90,10 @@ module.exports = (env, argv) => {
         process: 'process/browser',
         Buffer: ['buffer', 'Buffer'],
       }),
+      // Add this DefinePlugin to set API_BASE_URL based on environment
+      new webpack.DefinePlugin({
+        'API_BASE_URL': JSON.stringify(isProduction ? 'https://bargain4me.com' : 'http://localhost:3001')
+      }),
       new CleanWebpackPlugin(),
       new CopyPlugin({
         patterns: [

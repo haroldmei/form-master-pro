@@ -77,9 +77,8 @@ const aiService = (() => {
       const profileJson = JSON.stringify(processedProfile);
       console.log("User profile JSON (first 100 bytes):", profileJson.substring(0, 100));
       
-      // Make the API call to bargain4me.com
-      const response = await fetch(`https://bargain4me.com/api/formmaster`, {
-      //const response = await fetch(`http://localhost:3001/api/formmaster`, {
+      // Make the API call using the API_BASE_URL constant with fallback to local development URL
+      const response = await fetch(`${typeof API_BASE_URL !== 'undefined' ? API_BASE_URL : 'http://localhost:3001'}/api/formmaster`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

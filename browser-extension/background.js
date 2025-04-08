@@ -310,7 +310,7 @@ async function resendVerificationEmail() {
     const userInfo = await auth0Service.getUserInfo();
 
     // Call Auth0 Management API to resend verification email
-    const response = await fetch(`https://bargain4me.com/api/auth/send-email-verification`, {
+    const response = await fetch(`${typeof API_BASE_URL !== 'undefined' ? API_BASE_URL : 'http://localhost:3001'}/api/auth/send-email-verification`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -885,9 +885,8 @@ async function checkSubscriptionStatus() {
       return { success: false, error: 'Could not retrieve access token', isSubscribed: false };
     }
     
-    // Call the subscription status API
-    const response = await fetch('https://bargain4me.com/api/auth/subscription-status', {
-    //const response = await fetch('http://localhost:3001/api/auth/subscription-status', {
+    // Call the subscription status API using the API_BASE_URL constant with fallback
+    const response = await fetch(`${typeof API_BASE_URL !== 'undefined' ? API_BASE_URL : 'http://localhost:3001'}/api/auth/subscription-status`, {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${token}`,
