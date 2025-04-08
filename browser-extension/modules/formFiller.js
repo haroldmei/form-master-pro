@@ -2,270 +2,434 @@
  * Form filling module
  */
 const formFiller = (() => {
-
-  function injectAndFillForm(message, sendResponse) {
-    // First inject the form_extract.js file
-    chrome.scripting.executeScript({
-      target: { tabId: message.tabId },
-      files: ['forms/form_extract.js']
-    }).then(() => {
-      // Then execute a function that uses the injected form_extract.js
-      chrome.scripting.executeScript({
-        target: { tabId: message.tabId },
-        function: () => {
-          // Use the FormExtract object exposed by form_extract.js
-          const formData = self.FormExtract.extractFormControls();
-          console.log("Extracted form data:", formData);
-
-          // Flatten the structure to match what processForm expects
-          const fields = [];
-          
-          // Process inputs
-          if (formData.inputs) {
-            fields.push(...formData.inputs);
-          }
-          
-          // Process selects
-          if (formData.selects) {
-            fields.push(...formData.selects);
-          }
-          
-          // Process textareas
-          if (formData.textareas) {
-            fields.push(...formData.textareas);
-          }
-          
-          // Process radio groups
-          if (formData.radios) {
-            fields.push(...formData.radios);
-          }
-          
-          // Process checkboxes
-          if (formData.checkboxGroups) {
-            fields.push(...formData.checkboxGroups);
-          }
-          
-          // Process checkboxes
-          if (formData.checkboxes) {
-            fields.push(...formData.checkboxes);
-          }
-          
-          // Transform fields into simplified format with consistent properties
-          const simplifiedFields = fields.map(field => {
-            const result = {
-              'label': field.label || '',
-              'name': field.name || '',
-              'type': field.type || 'text',
-              'id': field.id || '',
-              'value': '',
-              'options': field.options || []
-            };
-            
-            // Handle value based on field type
-            if (field.type === 'select' || field.type === 'radio') {
-              // For select/radio, show selected option
-              const selectedOpt = field.options?.find(opt => opt.selected || opt.checked);
-              result.value = selectedOpt ? (selectedOpt.value || selectedOpt.text || '') : '';
-            } else if (field.type === 'checkbox') {
-              result.value = field.checked ? 'Checked' : 'Unchecked';
-            } else {
-              result.value = field.value || '';
-            }
-            
-            return result;
-          });
-          
-          return {
-            originalFields: fields,       // Keep original format for compatibility
-            simplifiedFields: simplifiedFields  // New simplified format
-          };
-        }
-      }).then(results => {
-        if (!results || !results[0] || !results[0].result) {
-          sendResponse({ success: false, error: "Could not extract form fields" });
-          return;
-        }
-
-        const extractedData = results[0].result;
-        const formFields = extractedData.simplifiedFields;
-        
-        // Store simplified data for potential future use
-        chrome.storage.local.set({ 
-          lastFormData: extractedData.simplifiedFields 
-        });
-        
-        // Continue with existing process using the original format for compatibility
-        formProcessor.processForm(formFields, message.url).then(result => {
-          console.log("Processing result:", result);
-
-          if (result.success) {
-            // Fill the form with the values
-            chrome.scripting.executeScript({
-              target: { tabId: message.tabId },
-              function: fillFormWithData,
-              args: [result.fields]
-            }).then(() => {
-              sendResponse({ success: true });
-            }).catch(error => {
-              sendResponse({ success: false, error: error.message });
-            });
-          } else {
-            sendResponse({ success: false, error: result.error });
-          }
-        });
-      }).catch(error => {
-        sendResponse({ success: false, error: error.message });
-      });
-    }).catch(error => {
-      sendResponse({ success: false, error: "Failed to inject form extraction script: " + error.message });
-    });
-  }
   
-  function showPageNotification(tabId, userName) {
-    chrome.scripting.executeScript({
-      target: { tabId: tabId },
-      function: (userName) => {
-        // Create a small notification in the page
-        const notification = document.createElement('div');
-        notification.style.cssText = `
-          position: fixed;
-          top: 10px;
-          right: 10px;
-          background: rgba(66, 133, 244, 0.9);
-          color: white;
-          padding: 10px 15px;
-          border-radius: 4px;
-          font-family: Arial, sans-serif;
-          z-index: 9999;
-          box-shadow: 0 2px 10px rgba(0,0,0,0.2);
-        `;
-        notification.textContent = 'FormMaster data ready! Click extension icon to fill form for: ' + userName;
-        document.body.appendChild(notification);
-        
-        // Remove after a few seconds
-        setTimeout(() => {
-          notification.style.opacity = '0';
-          notification.style.transition = 'opacity 0.5s';
-          setTimeout(() => notification.remove(), 500);
-        }, 5000);
-      },
-      args: [userName]
-    });
-  }
-  
-  function scanFormFields() {
-    const fields = [];
+  function performFormFilling(fieldValues) {
     
-    // Get all input elements
-    const inputs = document.querySelectorAll('input, select, textarea');
-    
-    inputs.forEach(input => {
-      // Skip hidden, submit, button, and other non-data fields
-      if (['submit', 'button', 'image', 'reset', 'file'].includes(input.type)) {
-        return;
-      }
-      
-      const fieldInfo = {
-        type: input.type || 'text',
-        id: input.id || '',
-        name: input.name || '',
-        placeholder: input.placeholder || '',
-        className: input.className || '',
-        value: input.value || ''
-      };
-      
-      // Get label text if available
-      const labelElement = document.querySelector(`label[for="${input.id}"]`);
-      if (labelElement) {
-        fieldInfo.label = labelElement.textContent.trim();
-      }
-      
-      fields.push(fieldInfo);
-    });
-    
-    return fields;
-  }
-  
-function fillFormWithData(fieldValues) {
     console.log("Filling form with data:", fieldValues);
-    
-    // First, process all non-radio controls
-    for (const key in fieldValues) {
-      const value = fieldValues[key];
-      
-      // Skip if no value to fill
-      if (value === null || value === undefined) continue;
-      
-      // Find elements by ID or name (ID takes precedence)
-      const elementsByIdOrName = document.querySelectorAll(
-        `#${CSS.escape(key)}, [name="${CSS.escape(key)}"]`
-      );
-      
-      if (elementsByIdOrName.length === 0) {
-        console.log(`No element found for key: ${key}`);
-        continue;
-      }
-      
-      elementsByIdOrName.forEach(element => {
-        // Handle different input types
-        switch(element.type) {
-          case 'checkbox':
-            // Convert various truthy/falsy values for checkboxes
-            if (typeof value === 'boolean') {
-              element.checked = value;
-            } else if (typeof value === 'string') {
-              const lowercaseValue = value.toLowerCase();
-              element.checked = ['true', 'yes', 'on', '1', 'checked'].includes(lowercaseValue);
-            } else {
-              element.checked = !!value;
+
+    function findFillableElement(identifier) {
+      // Try by ID first
+      let element = document.getElementById(identifier);
+      if (element) return element;
+
+      // Try by name
+      element = document.querySelector(`[name="${identifier}"]`);
+      if (element) return element;
+
+      // Try by other common selectors
+      return null;
+    }
+
+    function findRadioButton(name, value) {
+      // First try exact match
+      const exactMatch = document.querySelector(`input[type="radio"][name="${name}"][value="${value}"]`);
+      if (exactMatch) return exactMatch;
+
+      // If no exact match, try case-insensitive match for common yes/no patterns
+      if (typeof value === 'string') {
+        // Handle common yes/no patterns
+        if (value.toLowerCase() === 'yes' || value.toLowerCase() === 'y') {
+          // Look for yes, y, true, 1
+          const yesRadio = document.querySelector(`input[type="radio"][name="${name}"][value="yes"], 
+                                                 input[type="radio"][name="${name}"][value="Yes"], 
+                                                 input[type="radio"][name="${name}"][value="Y"], 
+                                                 input[type="radio"][name="${name}"][value="y"], 
+                                                 input[type="radio"][name="${name}"][value="true"], 
+                                                 input[type="radio"][name="${name}"][value="1"]`);
+          if (yesRadio) return yesRadio;
+        } else if (value.toLowerCase() === 'no' || value.toLowerCase() === 'n') {
+          // Look for no, n, false, 0
+          const noRadio = document.querySelector(`input[type="radio"][name="${name}"][value="no"], 
+                                                input[type="radio"][name="${name}"][value="No"], 
+                                                input[type="radio"][name="${name}"][value="N"], 
+                                                input[type="radio"][name="${name}"][value="n"], 
+                                                input[type="radio"][name="${name}"][value="false"], 
+                                                input[type="radio"][name="${name}"][value="0"]`);
+          if (noRadio) return noRadio;
+        }
+
+        // NEW: Try to find options by data-* attributes which often contain descriptive text
+        const allRadios = document.querySelectorAll(`input[type="radio"][name="${name}"]`);
+        for (const radio of allRadios) {
+          // Check all data-* attributes for matches with the value
+          const dataAttributes = Array.from(radio.attributes)
+            .filter(attr => attr.name.startsWith('data-'))
+            .map(attr => attr.value.toLowerCase());
+
+          // If any data attribute contains our value, this is likely the match
+          if (dataAttributes.some(attr => 
+              attr.includes(value.toLowerCase()) || 
+              value.toLowerCase().includes(attr))) {
+            console.log(`Found radio match through data attribute: ${radio.id}`);
+            return radio;
+          }
+
+          // Also check if the analytics ID or similar attributes contain our text
+          if (radio.dataset.analyticsid && 
+              radio.dataset.analyticsid.toLowerCase().includes(value.toLowerCase())) {
+            console.log(`Found radio match through analytics ID: ${radio.dataset.analyticsid}`);
+            return radio;
+          }
+        }
+
+        // NEW: For complex nested structures with role="radiogroup"
+        // First try to find the radio group container
+        const radioGroups = document.querySelectorAll('[role="radiogroup"]');
+        for (const group of radioGroups) {
+          // Find all radio buttons within this group with our name
+          const groupRadios = group.querySelectorAll(`input[type="radio"][name="${name}"]`);
+          if (groupRadios.length === 0) continue;
+
+          // Try to match by label text within this group
+          for (const radio of groupRadios) {
+            // Look for the label associated with this radio
+            let label = null;
+
+            // Try by 'for' attribute first
+            if (radio.id) {
+              label = group.querySelector(`label[for="${radio.id}"]`);
             }
-            break;
-            
-          case 'radio':
-            // For radio buttons, only check it if the value matches
-            if (element.value === String(value)) {
-              element.checked = true;
-            }
-            break;
-            
-          case 'select-one':
-          case 'select-multiple':
-            // For select elements, find the matching option
-            const options = Array.from(element.options);
-            const matchingOption = options.find(option => 
-              option.value === String(value) || 
-              option.text === String(value)
-            );
-            
-            if (matchingOption) {
-              matchingOption.selected = true;
-            } else {
-              // If no exact match, try case-insensitive or partial matching
-              const lcValue = String(value).toLowerCase();
-              const altOption = options.find(option => 
-                option.value.toLowerCase() === lcValue || 
-                option.text.toLowerCase() === lcValue ||
-                option.text.toLowerCase().includes(lcValue) ||
-                lcValue.includes(option.value.toLowerCase())
-              );
-              
-              if (altOption) {
-                altOption.selected = true;
-              } else {
-                console.log(`No matching option found for select ${key} with value ${value}`);
+
+            // If no label found, find label in parent structure (common pattern)
+            if (!label) {
+              const radioParent = radio.parentElement;
+              if (radioParent) {
+                label = radioParent.querySelector('label');
               }
             }
-            break;
-            
-          default:
-            // For text inputs, textareas, etc.
-            element.value = value;
+
+            // If we have a label and its text matches our value
+            if (label && label.textContent.trim().toLowerCase() === value.toLowerCase()) {
+              console.log(`Found radio match in ARIA radiogroup by label: ${label.textContent}`);
+              return radio;
+            }
+
+            // If label doesn't match but contains our value
+            if (label && label.textContent.trim().toLowerCase().includes(value.toLowerCase())) {
+              console.log(`Found partial radio match in ARIA radiogroup: ${label.textContent}`);
+              return radio;
+            }
+          }
+        }
+
+        // Try finding by label text when no match by value
+        for (const radio of allRadios) {
+          // Check the radio's associated label
+          let label = null;
+
+          // First try to find label by 'for' attribute
+          if (radio.id) {
+            label = document.querySelector(`label[for="${radio.id}"]`);
+          }
+
+          // If no label found, check parent or next sibling
+          if (!label) {
+            // Check if radio is wrapped in a label
+            let parent = radio.parentElement;
+            while (parent && parent.tagName !== 'LABEL' && 
+                   !parent.classList.contains('form-check') && 
+                   !parent.classList.contains('radio')) {
+              parent = parent.parentElement;
+            }
+
+            if (parent) {
+              // Find label inside this container
+              label = parent.tagName === 'LABEL' ? parent : parent.querySelector('label');
+            }
+
+            // If still no label, try next sibling
+            if (!label) {
+              let sibling = radio.nextElementSibling;
+              if (sibling && sibling.tagName === 'LABEL') {
+                label = sibling;
+              }
+            }
+          }
+
+          // If we found a label and its text matches our value
+          if (label && label.textContent.trim().toLowerCase() === value.toLowerCase()) {
+            return radio;
+          }
+        }
+      }
+
+      return null;
+    }
+
+    function fillField(element, tagName, inputType, value) {
+      // Handle different element types
+      if (tagName === 'select') {
+        return fillSelectField(element, value);
+      } else if (tagName === 'input' && (inputType === 'checkbox' || inputType === 'radio')) {
+        return fillCheckboxOrRadio(element, inputType, value);
+      } else {
+        return fillTextField(element, value);
+      }
+    }
+
+    function fillSelectField(element, value) {
+      if (element.style.display === 'none') {
+        // This is likely an enhanced select with a UI widget replacement
+        console.log(`Hidden select detected with id: ${element.id}, trying enhanced handling`);
+        return updateEnhancedSelect(element, value);
+      } else {
+        // Regular select handling
+        const options = Array.from(element.options);
+        const option = options.find(opt => 
+          opt.value === value || 
+          opt.text === value || 
+          opt.textContent.trim() === value
+        );
+
+        if (option) {
+          element.value = option.value;
+          element.dispatchEvent(new Event('change', { bubbles: true }));
+          return true;
+        }
+        return false;
+      }
+    }
+
+    function fillCheckboxOrRadio(element, inputType, value) {
+      if (inputType === 'radio') {  
+        console.log(`Handling radio button: ${element.name} with value: ${value}`);
+
+        // Check if value looks like an option value rather than a boolean/state
+        if (typeof value === 'string') {
+          // For bootstrap form-check-inline structure, first try to find the specific radio button
+          const radioButton = findRadioButton(element.name, value);
+          if (radioButton) {
+            // Select this specific radio button
+            radioButton.checked = true;
+            radioButton.dispatchEvent(new Event('change', { bubbles: true }));
+            console.log(`Selected radio option with value: ${value}`);
+            return true;
+          } else {
+            console.warn(`Could not find radio button with name ${element.name} and value ${value}`);
+          }
+
+          // Handle Yes/No or Y/N patterns for radio buttons
+          if (['yes', 'y', 'true', '1'].includes(value.toLowerCase())) {
+            const yesOptions = document.querySelectorAll(`input[type="radio"][name="${element.name}"]`);
+            // Try to find a "Yes" option among the radio group
+            for (const option of yesOptions) {
+              if (['yes', 'y', '1', 'true'].includes(option.value.toLowerCase()) ||
+                  option.id.toLowerCase().includes('yes') ||
+                  option.id.toLowerCase().includes('y')) {
+                option.checked = true;
+                option.dispatchEvent(new Event('change', { bubbles: true }));
+                console.log(`Selected radio yes option: ${option.value}`);
+                return true;
+              }
+
+              // Check if the label indicates this is a "Yes" option
+              if (option.id) {
+                const label = document.querySelector(`label[for="${option.id}"]`);
+                if (label && ['yes', 'y'].includes(label.textContent.trim().toLowerCase())) {
+                  option.checked = true;
+                  option.dispatchEvent(new Event('change', { bubbles: true }));
+                  console.log(`Selected radio yes option by label: ${label.textContent}`);
+                  return true;
+                }
+              }
+            }
+          }
+
+          if (['no', 'n', 'false', '0'].includes(value.toLowerCase())) {
+            const noOptions = document.querySelectorAll(`input[type="radio"][name="${element.name}"]`);
+            // Try to find a "No" option among the radio group
+            for (const option of noOptions) {
+              if (['no', 'n', '0', 'false'].includes(option.value.toLowerCase()) ||
+                  option.id.toLowerCase().includes('no') ||
+                  option.id.toLowerCase().includes('n')) {
+                option.checked = true;
+                option.dispatchEvent(new Event('change', { bubbles: true }));
+                console.log(`Selected radio no option: ${option.value}`);
+                return true;
+              }
+
+              // Check if the label indicates this is a "No" option
+              if (option.id) {
+                const label = document.querySelector(`label[for="${option.id}"]`);
+                if (label && ['no', 'n'].includes(label.textContent.trim().toLowerCase())) {
+                  option.checked = true;
+                  option.dispatchEvent(new Event('change', { bubbles: true }));
+                  console.log(`Selected radio no option by label: ${label.textContent}`);
+                  return true;
+                }
+              }
+            }
+          }
+        }
+      }
+
+      // Regular checkbox/radio handling for cases not covered above
+      if (typeof value === 'boolean') {
+        element.checked = value;
+      } else if (typeof value === 'string') {
+        element.checked = value.toLowerCase() === 'true' || 
+                         value === '1' || 
+                         value.toLowerCase() === 'yes' ||
+                         value === element.value ||
+                         value.toLowerCase() === 'checked';
+      }
+      element.dispatchEvent(new Event('change', { bubbles: true }));
+      return true;
+    }
+
+    function fillTextField(element, value) {
+      // Special handling for fields that might trigger popups/tags
+      if (element.getAttribute('role') === 'combobox' || 
+          element.classList.contains('tags-input') || 
+          element.classList.contains('autocomplete') ||
+          element.getAttribute('autocomplete') === 'off') {
+          
+        console.log(`Detected potential tag/autocomplete field: ${element.id || element.name}`);
+          
+        // First focus the field to activate any attached behaviors
+        element.focus();
+          
+        // Set the value
+        element.value = value;
+          
+        // Dispatch events in the right order to simulate typing
+        element.dispatchEvent(new Event('focus', { bubbles: true }));
+        element.dispatchEvent(new Event('input', { bubbles: true }));
+          
+        // Small delay to let any dropdown/suggestions appear
+        setTimeout(() => {
+          // Press Enter key to potentially confirm the value
+          element.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', bubbles: true }));
+          element.dispatchEvent(new KeyboardEvent('keypress', { key: 'Enter', code: 'Enter', bubbles: true }));
+          element.dispatchEvent(new KeyboardEvent('keyup', { key: 'Enter', code: 'Enter', bubbles: true }));
+
+          // Then blur the field
+          element.dispatchEvent(new Event('change', { bubbles: true }));
+          element.dispatchEvent(new Event('blur', { bubbles: true }));
+
+          // Visual indicator
+          element.style.borderLeft = '3px solid #4285f4';
+        }, 200);
+
+        return true;
+      }
+
+      // Standard behavior for regular inputs
+      element.value = value;
+      element.dispatchEvent(new Event('input', { bubbles: true }));
+      element.dispatchEvent(new Event('change', { bubbles: true }));
+
+      // Add a visual indicator that the field was filled
+      element.style.borderLeft = '3px solid #4285f4';
+      return true;
+    }
+
+    function updateEnhancedSelect(selectElement, value) {
+      if (!selectElement) return false;
+
+      // First update the native select element
+      const options = Array.from(selectElement.options);
+      const option = options.find(opt => 
+        opt.value === value || 
+        opt.text.trim() === value || 
+        opt.textContent.trim() === value
+      );
+
+      if (option) {
+        // Update the native select element
+        selectElement.value = option.value;
+
+        // Trigger native change event
+        selectElement.dispatchEvent(new Event('change', { bubbles: true }));
+
+        // Check for enhanced dropdown implementations
+        // 1. Chosen.js
+        const chosenId = `${selectElement.id}_chosen`;
+        const chosenContainer = document.getElementById(chosenId);
+
+        if (chosenContainer) {
+          console.log(`Found enhanced Chosen.js dropdown: ${chosenId}`);
+
+          try {
+            // Update Chosen's display text
+            const chosenSpan = chosenContainer.querySelector('.chosen-single span');
+            if (chosenSpan) {
+              chosenSpan.textContent = option.text || option.value;
+            }
+
+            // Update the result-selected class in the dropdown list
+            const resultItems = chosenContainer.querySelectorAll('.chosen-results li');
+            resultItems.forEach(item => item.classList.remove('result-selected'));
+
+            // Find the matching item in the dropdown and mark it as selected
+            const selectedIndex = options.indexOf(option);
+            if (selectedIndex >= 0) {
+              const resultItem = chosenContainer.querySelector(`.chosen-results li:nth-child(${selectedIndex + 1})`);
+              if (resultItem) {
+                resultItem.classList.add('result-selected');
+              }
+            }
+
+            // If the library is available, try to update using its API
+            if (window.jQuery && window.jQuery(selectElement).chosen) {
+              window.jQuery(selectElement).trigger('chosen:updated');
+            }
+
+            return true;
+          } catch (error) {
+            console.error(`Error updating Chosen dropdown: ${error.message}`);
+          }
+        }
+
+        // 2. Select2
+        if (window.jQuery && window.jQuery(selectElement).data('select2')) {
+          console.log(`Found enhanced Select2 dropdown: ${selectElement.id}`);
+          try {
+            window.jQuery(selectElement).trigger('change');
+            return true;
+          } catch (error) {
+            console.error(`Error updating Select2 dropdown: ${error.message}`);
+          }
+        }
+
+        // If we made it here, we at least updated the native select
+        return true;
+      }
+
+      return false;
+    }
+
+  
+    // Track stats
+    const stats = {
+      filled: 0,
+      failed: 0,
+      total: Object.keys(fieldValues).length
+    };
+    
+    // Fill each field
+    for (const [identifier, value] of Object.entries(fieldValues)) {
+      try {
+        const element = findFillableElement(identifier);
+        
+        if (!element) {
+          console.warn(`No element found for key: ${identifier}`);
+          stats.failed++;
+          continue;
         }
         
-        // Trigger change event to notify the page
-        element.dispatchEvent(new Event('change', { bubbles: true }));
-        element.dispatchEvent(new Event('input', { bubbles: true }));
-      });
+        const tagName = element.tagName.toLowerCase();
+        const inputType = element.type ? element.type.toLowerCase() : '';
+        
+        if (fillField(element, tagName, inputType, value)) {
+          stats.filled++;
+        } else {
+          stats.failed++;
+        }
+      } catch (error) {
+        console.error(`Error filling field ${identifier}:`, error);
+        stats.failed++;
+      }
     }
     
     // Special handling for radio groups by name
@@ -393,15 +557,12 @@ function fillFormWithData(fieldValues) {
       }
     }
     
-    return true;
+    return stats;
   }
 
   // Return public API
   return {
-    injectAndFillForm,
-    showPageNotification,
-    scanFormFields,
-    fillFormWithData
+    performFormFilling
   };
 })();
 
