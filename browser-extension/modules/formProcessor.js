@@ -376,6 +376,7 @@ const formProcessor = (() => {
             name: fieldName, 
             type: fieldType, 
             value: formattedValue, 
+            className: field.className || '',
             aiGenerated: isAiGenerated,
             lastUsed: new Date().toISOString()
           };

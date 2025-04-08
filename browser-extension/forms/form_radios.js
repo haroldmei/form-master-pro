@@ -9,7 +9,7 @@ function extractRadioGroups(container) {
     
     console.log(`Found ${radioButtons.length} radio buttons in container`);
     
-    // First pass: gather all radio buttons by name
+    // First pass: gather all radio buttons by name and find common container for each group
     radioButtons.forEach(radio => {
       const name = radio.name || '';
       if (!name) {
@@ -18,10 +18,14 @@ function extractRadioGroups(container) {
       }
       
       if (!groups[name]) {
+        // Create new radio group and capture all identifying attributes
         groups[name] = {
           type: 'radio',
           name: name,
+          id: `radio_group_${name}`, // Generate group ID from name
           label: getRadioGroupLabel(radio) || name,
+          className: '', // Initialize className for the group
+          class: '', // Initialize class attribute for the group
           options: []
         };
         console.log(`Created new radio group with name "${name}"`);
@@ -29,14 +33,56 @@ function extractRadioGroups(container) {
       
       // Add this radio button to its group
       groups[name].options.push({
-        value: radio.value || '',
+        type: 'radio', // Add explicit type
         id: radio.id || '',
+        name: radio.name || '',
+        value: radio.value || '',
+        className: radio.className || '',
+        class: radio.getAttribute('class') || '', // Add explicit class attribute
         checked: radio.checked,
         label: getRadioElementLabel(radio)
       });
       
+      // Update the group's classes - collect classes from all radio buttons
+      if (radio.className && !groups[name].className.includes(radio.className)) {
+        groups[name].className += (groups[name].className ? ' ' : '') + radio.className;
+        groups[name].class += (groups[name].class ? ' ' : '') + (radio.getAttribute('class') || '');
+      }
+      
       console.log(`Added option "${radio.value}" to group "${name}", total options: ${groups[name].options.length}`);
     });
+    
+    // Try to find a common container ID for each radio group
+    for (const name in groups) {
+      const group = groups[name];
+      
+      // Try to find common container for all radio buttons in this group
+      const radios = Array.from(document.querySelectorAll(`input[type="radio"][name="${CSS.escape(name)}"]`));
+      if (radios.length > 1) {
+        // Find common ancestor element for these radio buttons
+        let commonAncestor = radios[0].parentElement;
+        let foundCommon = false;
+        
+        // Search up to 5 levels for a common container
+        for (let level = 0; level < 5 && !foundCommon && commonAncestor; level++) {
+          if (radios.every(radio => commonAncestor.contains(radio))) {
+            foundCommon = true;
+            // If common ancestor has ID, use it for the group
+            if (commonAncestor.id) {
+              group.id = commonAncestor.id;
+            }
+            
+            // Add classes from the common container
+            if (commonAncestor.className) {
+              group.className += (group.className ? ' ' : '') + commonAncestor.className;
+              group.class += (group.class ? ' ' : '') + (commonAncestor.getAttribute('class') || '');
+            }
+          } else {
+            commonAncestor = commonAncestor.parentElement;
+          }
+        }
+      }
+    }
     
     // Convert the groups object to an array
     const result = Object.values(groups);

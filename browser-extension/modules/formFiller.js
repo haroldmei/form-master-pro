@@ -334,7 +334,7 @@ const formFiller = (() => {
         element.classList.contains('autocomplete') ||
         element.getAttribute('autocomplete') === 'off') {
 
-        console.log(`Detected potential tag/autocomplete field: ${element.id || element.name}`);
+        //console.log(`Detected potential tag/autocomplete field: ${element.id || element.name}`);
 
         // First focus the field to activate any attached behaviors
         element.focus();
@@ -472,7 +472,7 @@ const formFiller = (() => {
           continue;
         }
 
-        console.log(`Found element for field: ${field.id}, ${field.name}, ${field.label}, ${field.type}, ${field.value}`);
+        //console.log(`Found element: id: ${field.id}, name: ${field.name}, label: ${field.label}, type: ${field.type}, value: ${field.value}, class: ${field.className}`);
         const tagName = element.tagName.toLowerCase();
         const inputType = element.type ? element.type.toLowerCase() : '';
         const value = field.value;
