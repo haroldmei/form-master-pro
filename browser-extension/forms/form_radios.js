@@ -118,6 +118,30 @@ function detectStructuredRadioGroup(radioElement) {
     
     console.log(`Found common ancestor for radio group "${radioName}":`, commonAncestor);
     
+    // ENHANCEMENT: Look for parent with role="radiogroup" and aria-labelledby
+    let currentAncestor = commonAncestor;
+    for (let i = 0; i < 3 && currentAncestor; i++) { // Check up to 3 levels up
+      if (currentAncestor.getAttribute('role') === 'radiogroup') {
+        const labelledById = currentAncestor.getAttribute('aria-labelledby');
+        if (labelledById) {
+          const labelElement = document.getElementById(labelledById);
+          if (labelElement) {
+            const text = labelElement.textContent.trim();
+            console.log(`Found role="radiogroup" with aria-labelledby element: "${text}"`);
+            return text;
+          }
+        }
+        
+        // If no aria-labelledby but has aria-label
+        const ariaLabel = currentAncestor.getAttribute('aria-label');
+        if (ariaLabel) {
+          console.log(`Found role="radiogroup" with aria-label: "${ariaLabel}"`);
+          return ariaLabel;
+        }
+      }
+      currentAncestor = currentAncestor.parentElement;
+    }
+    
     // Look for a direct child label that isn't associated with any specific radio
     const directLabels = Array.from(commonAncestor.children).filter(child => 
       child.tagName === 'LABEL' && 
@@ -208,6 +232,20 @@ function detectStructuredRadioGroup(radioElement) {
       if (i > 0 && uniqueContainers.includes(allChildren[i])) break;
     }
     
+    // NEW: Check if any element within the common ancestor has the role="radiogroup"
+    const radioGroup = commonAncestor.querySelector('[role="radiogroup"]');
+    if (radioGroup) {
+      const labelledById = radioGroup.getAttribute('aria-labelledby');
+      if (labelledById) {
+        const labelElement = document.getElementById(labelledById);
+        if (labelElement) {
+          const text = labelElement.textContent.trim();
+          console.log(`Found nested role="radiogroup" with aria-labelledby: "${text}"`);
+          return text;
+        }
+      }
+    }
+    
     return null;
   } catch (error) {
     console.error('Error in detectStructuredRadioGroup:', error);
@@ -233,6 +271,26 @@ function getRadioGroupLabel(radioElement) {
           return text;
         }
         break;
+      }
+      parent = parent.parentElement;
+      depth++;
+    }
+    
+    // ENHANCEMENT: Try to find ARIA labelledby directly on parent elements
+    parent = radioElement.parentElement;
+    depth = 0;
+    while (parent && depth < 4) {
+      // Check if this element or any parent has role="radiogroup"
+      if (parent.getAttribute('role') === 'radiogroup') {
+        const labelledById = parent.getAttribute('aria-labelledby');
+        if (labelledById) {
+          const labelElement = document.getElementById(labelledById);
+          if (labelElement) {
+            const text = labelElement.textContent.trim();
+            console.log(`Found direct role="radiogroup" with aria-labelledby: "${text}"`);
+            return text;
+          }
+        }
       }
       parent = parent.parentElement;
       depth++;
@@ -330,7 +388,7 @@ function getRadioGroupLabel(radioElement) {
         }
         
         // Look for any element with "label" or "title" in its class or role
-        const potentialLabelElements = Array.from(parent.querySelectorAll('*')).filter(
+        const potentialLabelElements = Array.from(parent.querySelectorAll('*')). filter(
           el => Array.from(el.classList).some(cls => /label|title|caption|head/i.test(cls)) ||
                el.getAttribute('role') === 'heading' ||
                el.getAttribute('aria-labelledby')
@@ -488,7 +546,7 @@ function getRadioGroupLabel(radioElement) {
             const parentContainer = commonParent.parentElement;
             if (parentContainer) {
               // Try to find label as a direct child of parent container
-              const containerLabels = Array.from(parentContainer.children).filter(
+              const containerLabels = Array.from(parentContainer.children). filter(
                 child => child.tagName === 'LABEL'
               );
               

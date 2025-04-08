@@ -59,15 +59,37 @@
             // Create label
             const label = document.createElement('label');
             label.className = 'field-label';
-            if (field.mandatory) {
+            if (field.mandatory || field.required) {
                 label.classList.add('mandatory-field');
             }
             
-            // Set label text
-            label.textContent = field.label || field.name || field.id;
+            // ENHANCEMENT: Handle HTML in label while preserving mandatory indicator
+            const labelText = field.label || field.name || field.id;
             
-            // Add mandatory indicator
-            if (field.mandatory) {
+            // Check if label contains HTML (look for tags or entities)
+            if (/<[a-z][\s\S]*>|&[a-z]+;/i.test(labelText)) {
+                // Create a temporary element to safely parse the HTML
+                const tempDiv = document.createElement('div');
+                tempDiv.innerHTML = labelText;
+                
+                // Extract text content
+                label.textContent = tempDiv.textContent;
+                
+                // Check if we lost any mandatory indicators in the process
+                if (labelText.includes('*') && !tempDiv.textContent.includes('*')) {
+                    // Add mandatory indicator if it was in the HTML but not in text
+                    const indicator = document.createElement('span');
+                    indicator.className = 'mandatory-indicator';
+                    indicator.textContent = ' *';
+                    label.appendChild(indicator);
+                }
+            } else {
+                // Regular text label
+                label.textContent = labelText;
+            }
+            
+            // Add mandatory indicator if not already present in the label
+            if ((field.mandatory || field.required) && !label.textContent.includes('*')) {
                 const indicator = document.createElement('span');
                 indicator.className = 'mandatory-indicator';
                 indicator.textContent = ' *';
@@ -149,7 +171,12 @@
         }
         
         // Handle radio groups
-        if (field.type === 'radio' && field.options && field.options.length > 0) {
+        if ((field.type === 'radio' && field.options && field.options.length > 0) ||
+            field.isRadioGroup || field.role === 'radiogroup') {
+            // Check if the original class contained 'form-check-input' for styling purposes
+            if (field.className && field.className.includes('form-check-input')) {
+                field.useFormCheck = true;
+            }
             return 'radioGroup';
         }
         
@@ -231,7 +258,7 @@
         const container = document.createElement('div');
         container.className = 'radio-group field-input';
         
-        if (field.mandatory) {
+        if (field.mandatory || field.required) {
             container.classList.add('mandatory-input');
         }
         
@@ -240,11 +267,21 @@
                 const wrapper = document.createElement('div');
                 wrapper.className = 'radio-option';
                 
+                // ENHANCEMENT: Add Bootstrap form-check class for consistency with original structure
+                if (field.useFormCheck || field.originalClass === 'form-check-input') {
+                    wrapper.classList.add('form-check');
+                }
+                
                 const radio = document.createElement('input');
                 radio.type = 'radio';
                 radio.name = `radio_${field.id || field.name || index}`;
                 radio.value = option.value || '';
                 radio.id = `radio_${field.id || field.name || ''}_${index}`;
+                
+                // ENHANCEMENT: Add form-check-input class if the original had it
+                if (field.useFormCheck || field.originalClass === 'form-check-input') {
+                    radio.classList.add('form-check-input');
+                }
                 
                 if (option.checked || (field.value && field.value === option.value)) {
                     radio.checked = true;
@@ -253,6 +290,11 @@
                 const optionLabel = document.createElement('label');
                 optionLabel.htmlFor = radio.id;
                 optionLabel.textContent = option.text || option.label || option.value || '';
+                
+                // ENHANCEMENT: Add form-check-label class if needed
+                if (field.useFormCheck || field.originalClass === 'form-check-input') {
+                    optionLabel.classList.add('form-check-label');
+                }
                 
                 wrapper.appendChild(radio);
                 wrapper.appendChild(optionLabel);
