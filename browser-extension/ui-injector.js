@@ -76,9 +76,9 @@
     
     // Add buttons to panel
     const buttons = [
-      { id: 'load-data', text: 'Load Data', icon: '📂' },
+      { id: 'load-data', text: 'Load File', icon: '📂' },
+      { id: 'load-folder', text: 'Load Folder', icon: '📁' },
       { id: 'auto-fill', text: 'Auto Fill', icon: '✏️' }
-      // Clear Data button removed from here
     ];
     
     // Make sure buttons are added with the correct structure
@@ -217,7 +217,7 @@
         return;
       }
       
-      // Special handling for load-data action
+      // Special handling for load-data action (single file)
       if (action === 'load-data') {
         // First check email verification
         chrome.runtime.sendMessage({ action: 'checkEmailVerification' }, function(response) {
@@ -279,8 +279,8 @@
         return; // Exit the function early
       }
       
-      // Add loading state for auto-fill since it's potentially slow
-      if (action === 'auto-fill') {
+      // Special handling for load-folder action
+      if (action === 'load-folder') {
         // First check email verification
         chrome.runtime.sendMessage({ action: 'checkEmailVerification' }, function(response) {
           if (!response || !response.isVerified) {
@@ -288,50 +288,59 @@
             return;
           }
           
-          // Store original HTML before applying loading state
+          // Create a file input element with directory attribute
+          const input = document.createElement('input');
+          input.type = 'file';
+          input.webkitdirectory = true; // Allow selecting directories
+          input.multiple = true; // Allow selecting multiple files
+          
+          // Store original HTML before showing loading state
           const originalHTML = buttonElement.innerHTML;
           
-          buttonElement.classList.add('loading');
-          buttonElement.disabled = true;
-          setToggleBusy(true); // Set FM toggle to busy state
-          
-          // Check if Chrome extension API is available
-          if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.sendMessage) {
-            // Send message to the extension's background script
-            chrome.runtime.sendMessage({ 
-              action: action,
-              url: self.location.href
-            }, response => {
-              // Remove loading state regardless of success or failure
+          // Handle folder selection
+          input.onchange = async e => {
+            const files = Array.from(e.target.files || []);
+            if (!files.length) return;
+            
+            // Filter for supported file types
+            const supportedFiles = files.filter(file => {
+              const ext = file.name.split('.').pop().toLowerCase();
+              return ext === 'pdf' || ext === 'docx';
+            });
+            
+            if (!supportedFiles.length) {
+              showToast('No supported files found in folder. Please use PDF or DOCX files.', 'error');
+              return;
+            }
+            
+            // Show loading state on both button and toggle
+            buttonElement.classList.add('loading');
+            buttonElement.disabled = true;
+            setToggleBusy(true);
+            
+            try {
+              // Process the files in the folder
+              await processFilesFromFolder(supportedFiles);
+              showToast(`Loaded ${supportedFiles.length} files from folder`, 'success');
+              
+              // Refresh profile info
+              loadProfileInfo();
+            } catch (error) {
+              showToast(`Error processing folder: ${error.message}`, 'error');
+              console.error('Folder processing error:', error);
+            } finally {
+              // Reset button state using the stored original HTML
               buttonElement.classList.remove('loading');
               buttonElement.disabled = false;
-              setToggleBusy(false); // Clear FM toggle busy state
-              
-              // Restore original HTML
               buttonElement.innerHTML = originalHTML;
-              
-              if (response && response.success) {
-                showToast(response.message || 'Action completed successfully', 'success');
-              } else if (response && response.requiresVerification) {
-                showToast('Email verification required to use this feature', 'error');
-              } else {
-                showToast(response?.error || 'Error performing action', 'error');
-              }
-            });
-          } else {
-            // Chrome API not available - show error and remove loading state
-            console.error('Chrome extension API not available');
-            buttonElement.classList.remove('loading');
-            buttonElement.disabled = false;
-            setToggleBusy(false); // Clear FM toggle busy state
-            
-            // Restore original HTML
-            buttonElement.innerHTML = originalHTML;
-            
-            showToast('Extension API not available. Please refresh the page.', 'error');
-          }
+              setToggleBusy(false); // Ensure toggle is reset
+            }
+          };
+          
+          // Trigger the file dialog
+          input.click();
         });
-        return;
+        return; // Exit the function early
       }
       
       // For all other actions, show toggle loading state
@@ -516,6 +525,143 @@
         setToggleBusy(false); // Clear loading state on error
         throw error;
       }
+    }
+    
+    // Process multiple files from a folder
+    async function processFilesFromFolder(files) {
+      // Group files by type for better processing
+      const pdfFiles = files.filter(file => file.name.toLowerCase().endsWith('.pdf'));
+      const docxFiles = files.filter(file => file.name.toLowerCase().endsWith('.docx'));
+      
+      console.log(`Processing folder with ${pdfFiles.length} PDF and ${docxFiles.length} DOCX files`);
+      
+      // Extract content from all files
+      const fileContents = [];
+      let folderName = "";
+      
+      // First, try to extract common folder path from files
+      if (files.length > 0 && files[0].webkitRelativePath) {
+        const parts = files[0].webkitRelativePath.split('/');
+        if (parts.length >= 2) {
+          folderName = parts[0]; // Get the top-level folder name
+        }
+      }
+      
+      if (!folderName) {
+        folderName = "Combined Files"; // Fallback name if folder structure not found
+      }
+      
+      // Create progress indicators
+      const progressToast = document.createElement('div');
+      progressToast.className = 'formmaster-progress-toast';
+      progressToast.innerHTML = `<div>Processing 0/${files.length} files...</div><div class="progress-bar"><div class="progress"></div></div>`;
+      document.body.appendChild(progressToast);
+      
+      // Process each file and gather content
+      let processedCount = 0;
+      
+      // Process PDF files - using processPDFFile for consistency
+      for (const file of pdfFiles) {
+        try {
+          // Use the same processing function as single file upload
+          const result = await processPDFFileForFolder(file);
+          fileContents.push({
+            filename: file.name,
+            content: result.base64Data,
+            isBase64: true,
+            type: 'pdf'
+          });
+        } catch (error) {
+          console.error(`Error processing PDF file ${file.name}:`, error);
+          // Continue with other files
+        }
+        
+        // Update progress
+        processedCount++;
+        updateProgress(processedCount, files.length, progressToast);
+      }
+      
+      // Process DOCX files
+      for (const file of docxFiles) {
+        try {
+          const result = await extractDocxContent(file, file.name);
+          fileContents.push({
+            filename: file.name,
+            content: result,
+            type: 'docx'
+          });
+        } catch (error) {
+          console.error(`Error processing DOCX file ${file.name}:`, error);
+          // Continue with other files
+        }
+        
+        // Update progress
+        processedCount++;
+        updateProgress(processedCount, files.length, progressToast);
+      }
+      
+      // Remove progress indicator
+      document.body.removeChild(progressToast);
+      
+      // Send the combined content to background script
+      return new Promise((resolve, reject) => {
+        const timeoutId = setTimeout(() => {
+          reject(new Error('Request timed out - background process may be busy'));
+        }, 30000); // 30-second timeout
+        
+        chrome.runtime.sendMessage({
+          action: 'processFolderFiles',
+          folderName: folderName,
+          files: fileContents
+        }, (response) => {
+          clearTimeout(timeoutId);
+          
+          if (chrome.runtime.lastError) {
+            reject(new Error(chrome.runtime.lastError.message || 'Chrome runtime error'));
+            return;
+          }
+          
+          if (!response || !response.success) {
+            reject(new Error(response?.error || 'Failed to process files from folder'));
+          } else {
+            resolve(response);
+          }
+        });
+      });
+    }
+    
+    // Helper function to process PDF for folder - adapted from processPDFFile
+    async function processPDFFileForFolder(pdfFile) {
+      return new Promise((resolve, reject) => {
+        try {
+          const reader = new FileReader();
+          reader.onload = function(event) {
+            const arrayBuffer = event.target.result;
+            
+            // Convert ArrayBuffer to base64 string just like processPDFFile does
+            const base64 = arrayBufferToBase64(arrayBuffer);
+            
+            // Return the base64 data and size directly without sending to background
+            resolve({
+              base64Data: base64,
+              size: arrayBuffer.byteLength
+            });
+          };
+          reader.onerror = function(error) {
+            reject(new Error(`Error reading file: ${error}`));
+          };
+          reader.readAsArrayBuffer(pdfFile);
+        } catch (error) {
+          reject(error);
+        }
+      });
+    }
+    
+    // Update progress indicator helper
+    function updateProgress(current, total, toastElement) {
+      const percent = (current / total) * 100;
+      toastElement.querySelector('.progress').style.width = `${percent}%`;
+      toastElement.querySelector('div:first-child').textContent = `Processing ${current}/${total} files...`;
     }
     
     // Keep the extractDocxContent function in ui-injector.js as it handles DOM operations

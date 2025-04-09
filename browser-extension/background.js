@@ -248,6 +248,20 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
 
+  // Add handler for processing multiple files from a folder
+  if (message.action === 'processFolderFiles') {
+    processFolderFiles(message.folderName, message.files)
+      .then(result => sendResponse(result))
+      .catch(error => {
+        console.error('Error processing folder files:', error);
+        sendResponse({
+          success: false,
+          error: error.message || 'Failed to process files from folder'
+        });
+      });
+    return true;
+  }
+
   if (message.action === 'formatFileSize') {
     if (typeof message.size === 'number') {
       sendResponse({ success: true, formattedSize: formatFileSize(message.size) });
@@ -684,6 +698,165 @@ async function processDocx(docxContent, fileName) {
       success: false,
       error: error.message || 'Failed to process DOCX file'
     };
+  }
+}
+
+// Process multiple files from a folder
+async function processFolderFiles(folderName, files) {
+  try {
+    console.log(`Processing folder: ${folderName} with ${files.length} files`);
+    
+    // Arrays to hold extracted content
+    let allTextContent = [];
+    let allParagraphs = [];
+    
+    // Process each file and extract content
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      console.log(`Processing ${i+1}/${files.length}: ${file.filename}`);
+      
+      try {
+        if (file.type === 'pdf') {
+          let pdfTextContent;
+          
+          if (file.isBase64) {
+            // Process PDF data using the same function as single file uploads
+            // This converts base64 back to binary data and extracts text
+            console.log('Processing PDF from base64 data');
+            const binaryString = atob(file.content);
+            const len = binaryString.length;
+            const bytes = new Uint8Array(len);
+            for (let i = 0; i < len; i++) {
+              bytes[i] = binaryString.charCodeAt(i);
+            }
+            
+            // Use the standard processPDF function but extract just the text content
+            const pdfResult = await pdfjsLib.getDocument({data: bytes}).promise;
+            pdfTextContent = await extractTextFromPdfDocument(pdfResult);
+          } else {
+            // Fallback for any existing code that might provide non-base64 content
+            console.log('Processing PDF from binary data');
+            pdfTextContent = await extractTextFromPDF(file.content);
+          }
+          
+          // Add the extracted text to our content collection
+          allTextContent.push(`--- From ${file.filename} ---\n${pdfTextContent}\n`);
+          
+          // Split into paragraphs for structured data
+          const paragraphs = pdfTextContent.split(/\r?\n\r?\n/)
+            .filter(para => para.trim().length > 0)
+            .map(para => ({ text: para.trim(), source: file.filename }));
+          
+          allParagraphs = allParagraphs.concat(paragraphs);
+        } else if (file.type === 'docx') {
+          if (file.content.strings && Array.isArray(file.content.strings)) {
+            allTextContent.push(`--- From ${file.filename} ---\n${file.content.strings.join('\n')}\n`);
+            
+            // Add all strings as paragraphs
+            const paragraphs = file.content.strings
+              .filter(text => text.trim().length > 0)
+              .map(text => ({ text: text.trim(), source: file.filename }));
+            
+            allParagraphs = allParagraphs.concat(paragraphs);
+          } else if (file.content.paragraphs && Array.isArray(file.content.paragraphs)) {
+            // Handle paragraphs directly if available
+            const textContent = file.content.paragraphs
+              .map(p => typeof p === 'object' ? p.text : p)
+              .join('\n');
+            
+            allTextContent.push(`--- From ${file.filename} ---\n${textContent}\n`);
+            
+            // Process paragraphs
+            const paragraphs = file.content.paragraphs
+              .map(p => {
+                const text = typeof p === 'object' ? p.text : p;
+                return { text: text.trim(), source: file.filename };
+              })
+              .filter(p => p.text.length > 0);
+            
+            allParagraphs = allParagraphs.concat(paragraphs);
+          }
+        }
+      } catch (fileError) {
+        console.warn(`Error processing file ${file.filename}:`, fileError);
+        // Continue with other files
+      }
+    }
+    
+    // Create combined user profile
+    const combinedTextContent = allTextContent.join('\n\n');
+    
+    // Create a user profile structure from the combined content
+    const userProfile = {
+      source: 'folder',
+      filename: folderName,
+      fileCount: files.length,
+      extractedContent: combinedTextContent,
+      // For structured access
+      folderData: {
+        paragraphs: allParagraphs,
+        files: files.map(f => ({ name: f.filename, type: f.type }))
+      },
+      size: combinedTextContent.length,
+      timeLoaded: new Date().toISOString()
+    };
+    
+    // Save to storage
+    await userProfileManager.saveUserProfile(userProfile);
+    
+    return {
+      success: true,
+      message: `Processed ${files.length} files from ${folderName}`,
+      profile: userProfile
+    };
+  } catch (error) {
+    console.error('Error processing folder files:', error);
+    return {
+      success: false,
+      error: error.message || 'Failed to process files from folder'
+    };
+  }
+}
+
+// Helper function to extract text from a PDF document
+async function extractTextFromPdfDocument(pdfDocument) {
+  try {
+    // Extract text from all pages
+    let textContent = '';
+    for (let i = 1; i <= pdfDocument.numPages; i++) {
+      const page = await pdfDocument.getPage(i);
+      const content = await page.getTextContent();
+      const pageText = content.items.map(item => item.str).join(' ');
+      textContent += `${pageText}\n\n`;
+    }
+    
+    return textContent;
+  } catch (error) {
+    console.error('Error extracting text from PDF document:', error);
+    throw error;
+  }
+}
+
+// Helper function to extract text from PDF data
+async function extractTextFromPDF(pdfData) {
+  try {
+    // If the data is an ArrayBuffer, use it directly
+    const loadingTask = pdfjsLib.getDocument({ data: pdfData });
+    const pdfDocument = await loadingTask.promise;
+    
+    // Extract text from all pages
+    let textContent = '';
+    for (let i = 1; i <= pdfDocument.numPages; i++) {
+      const page = await pdfDocument.getPage(i);
+      const content = await page.getTextContent();
+      const pageText = content.items.map(item => item.str).join(' ');
+      textContent += `${pageText}\n\n`;
+    }
+    console.log('Text extraction complete. Sample:', textContent.substring(0, 200) + '...');
+    return textContent;
+  } catch (error) {
+    console.error('Error extracting text from PDF:', error);
+    throw error;
   }
 }
 
