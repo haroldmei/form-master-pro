@@ -1,5 +1,6 @@
 // Add function to check if an element is hidden
 function isElementHidden(element) {
+  // Function kept for reference but will no longer be used to filter elements
   if (!element) return true;
   
   // Check element's own visibility
@@ -95,13 +96,11 @@ function extractInputs(container) {
       return;
     }
     
-    // Skip hidden inputs
-    if (isElementHidden(input)) {
-      return;
-    }
-    
     // Determine if this is a date input
     const isDateInput = detectDateInput(input);
+    
+    // Include visibility state in the extracted data
+    const isHidden = isElementHidden(input);
     
     inputs.push({
       type: isDateInput ? 'date' : input.type || 'text',
@@ -112,8 +111,8 @@ function extractInputs(container) {
       class: input.getAttribute('class') || '',
       value: input.value || '',
       label: getElementLabel(input),
-      hidden: false, // It's visible since we're filtering hidden elements
-      isDateInput: isDateInput // Additional flag to mark date inputs
+      hidden: isHidden, // Include visibility info but don't filter
+      isDateInput: isDateInput
     });
   });
   
@@ -210,10 +209,7 @@ function extractSelects(container) {
   const selectElements = container.querySelectorAll('select');
   
   selectElements.forEach(select => {
-    // Skip hidden selects
-    if (isElementHidden(select)) {
-      return;
-    }
+    const isHidden = isElementHidden(select);
     
     const options = Array.from(select.options).map(opt => ({
       value: opt.value,
@@ -229,7 +225,7 @@ function extractSelects(container) {
       class: select.getAttribute('class') || '',
       value: select.value || '',
       label: getElementLabel(select),
-      hidden: false,
+      hidden: isHidden, // Include visibility info but don't filter
       options: options
     });
   });
@@ -242,10 +238,7 @@ function extractTextareas(container) {
   const textareaElements = container.querySelectorAll('textarea');
   
   textareaElements.forEach(textarea => {
-    // Skip hidden textareas
-    if (isElementHidden(textarea)) {
-      return;
-    }
+    const isHidden = isElementHidden(textarea);
     
     textareas.push({
       type: 'textarea',
@@ -256,7 +249,7 @@ function extractTextareas(container) {
       class: textarea.getAttribute('class') || '',
       value: textarea.value || '',
       label: getElementLabel(textarea),
-      hidden: false
+      hidden: isHidden // Include visibility info but don't filter
     });
   });
   
@@ -268,10 +261,7 @@ function extractButtons(container) {
   const buttonElements = container.querySelectorAll('button, input[type="button"], input[type="submit"], input[type="reset"]');
   
   buttonElements.forEach(button => {
-    // Skip hidden buttons
-    if (isElementHidden(button)) {
-      return;
-    }
+    const isHidden = isElementHidden(button);
     
     buttons.push({
       type: button.tagName.toLowerCase() === 'button' ? 'button' : button.type,
@@ -281,7 +271,7 @@ function extractButtons(container) {
       class: button.getAttribute('class') || '',
       value: button.value || button.textContent || '',
       label: button.textContent || button.value || '',
-      hidden: false
+      hidden: isHidden // Include visibility info but don't filter
     });
   });
   
@@ -298,10 +288,7 @@ function extractCheckboxes(container, groupedIds = new Set()) {
       return;
     }
     
-    // Skip hidden checkboxes
-    if (isElementHidden(checkbox)) {
-      return;
-    }
+    const isHidden = isElementHidden(checkbox);
     
     checkboxes.push({
       type: 'checkbox',
@@ -312,7 +299,7 @@ function extractCheckboxes(container, groupedIds = new Set()) {
       value: checkbox.value || '',
       checked: checkbox.checked,
       label: getElementLabel(checkbox),
-      hidden: false
+      hidden: isHidden // Include visibility info but don't filter
     });
   });
   

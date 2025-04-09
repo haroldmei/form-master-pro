@@ -9,6 +9,104 @@ const formFiller = (() => {
     // Add visual effects styles to the page
     addVisualEffectStyles();
     
+    // Define field types for priority ordering (checkboxes first, then radios, etc.)
+    const fieldTypes = {
+      checkbox: 1,  // Highest priority - may show/hide other fields
+      radio: 2,     // High priority - may affect form sections
+      select: 3,    // Medium priority
+      date: 4,      // Lower priority
+      text: 5       // Lowest priority
+    };
+    
+    // Sort fields by priority - checkboxes and radio buttons first
+    const sortedFieldValues = [...fieldValues].sort((a, b) => {
+      const priorityA = getFieldTypePriority(a, fieldTypes);
+      const priorityB = getFieldTypePriority(b, fieldTypes);
+      return priorityA - priorityB; // Lower number = higher priority
+    });
+    
+    // Log the processing order
+    console.log("Form filling order:", sortedFieldValues.map(f => 
+      `${f.label || f.name || f.id || 'unnamed'} (${f.type || 'unknown'}) [priority: ${getFieldTypePriority(f, fieldTypes)}]`
+    ));
+    
+    // Helper function to determine field type priority
+    function getFieldTypePriority(field, priorityMap) {
+      // Get field type from field object
+      const fieldType = (field.type || '').toLowerCase();
+      
+      // Exact match for known types
+      if (fieldType in priorityMap) {
+        return priorityMap[fieldType];
+      }
+      
+      // Check for date-type inputs
+      if (field.isDateInput || fieldType.includes('date')) {
+        return priorityMap.date;
+      }
+      
+      // For input fields, check by input type
+      if (fieldType.startsWith('text') || 
+          fieldType === 'email' || 
+          fieldType === 'number' || 
+          fieldType === 'password' || 
+          fieldType === 'textarea') {
+        return priorityMap.text;
+      }
+      
+      // Check field identifiers for clues if type is ambiguous
+      const identifiers = [
+        field.id, 
+        field.name, 
+        field.label
+      ].filter(Boolean).map(str => str.toLowerCase());
+      
+      // Look for type hints in identifiers
+      for (const id of identifiers) {
+        if (id.includes('checkbox')) return priorityMap.checkbox;
+        if (id.includes('radio')) return priorityMap.radio;
+        if (id.includes('select') || id.includes('dropdown')) return priorityMap.select;
+        if (id.includes('date')) return priorityMap.date;
+      }
+      
+      // Default to text (lowest priority)
+      return priorityMap.text;
+    }
+
+    // Helper function to check if an element is hidden
+    function isElementHidden(element) {
+      if (!element) return true;
+      
+      // Check element's own visibility
+      const style = window.getComputedStyle(element);
+      if (style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0') {
+        return true;
+      }
+      
+      // Check if element has zero dimensions
+      const rect = element.getBoundingClientRect();
+      if (rect.width === 0 || rect.height === 0) {
+        return true;
+      }
+      
+      // Check if element is detached from DOM
+      if (!document.body.contains(element)) {
+        return true;
+      }
+      
+      // Check if any parent is hidden
+      let parent = element.parentElement;
+      while (parent) {
+        const parentStyle = window.getComputedStyle(parent);
+        if (parentStyle.display === 'none' || parentStyle.visibility === 'hidden' || parentStyle.opacity === '0') {
+          return true;
+        }
+        parent = parent.parentElement;
+      }
+      
+      return false;
+    }
+
     function findFillableElement(field) {
       const { id, label, name, type, value, aiGenerated } = field;
 
@@ -615,10 +713,12 @@ const formFiller = (() => {
     const stats = {
       filled: 0,
       failed: 0,
+      skipped: 0,  // New counter for skipped hidden fields
       total: fieldValues.length
     };
 
-    for (const field of fieldValues) {
+    // Process fields in priority order rather than original order
+    for (const field of sortedFieldValues) {
       try {
         console.log(`Processing field: ${field.label || field.name || field.id}`);
         
@@ -626,6 +726,13 @@ const formFiller = (() => {
         if (!element) {
           console.warn(`No element found for field: ${field.id || field.name || field.label}`);
           stats.failed++;
+          continue;
+        }
+        
+        // Check if the element is hidden - if so, skip it
+        if (isElementHidden(element)) {
+          console.log(`Skipping hidden field: ${field.label || field.name || field.id}`);
+          stats.skipped++;
           continue;
         }
 

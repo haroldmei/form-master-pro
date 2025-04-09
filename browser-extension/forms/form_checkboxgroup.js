@@ -5,6 +5,7 @@
 
 // Add helper function to check if an element is hidden
 function isElementHidden(element) {
+  // Function kept for reference but will no longer be used to filter elements
   if (!element) return true;
   
   // Check element's own visibility
@@ -55,11 +56,9 @@ function extractCheckboxGroups(container) {
   checkboxElements.forEach(checkbox => {
     const name = checkbox.name || '';
     if (name) {
-      // Skip hidden checkboxes
-      if (isElementHidden(checkbox)) {
-        console.log(`Skipping hidden checkbox: ${checkbox.id || checkbox.name}`);
-        return;
-      }
+      // REMOVED: Skip hidden checkboxes condition
+      // Instead, track visibility state in the data
+      const isHidden = isElementHidden(checkbox);
       
       if (!checkboxGroups[name]) {
         checkboxGroups[name] = [];
@@ -73,7 +72,7 @@ function extractCheckboxGroups(container) {
         value: checkbox.value || '',
         checked: checkbox.checked,
         label: optionLabel,
-        hidden: false // It's visible since we're filtering hidden elements
+        hidden: isHidden // Include visibility info but don't filter
       });
       
       console.log(`Added checkbox with name: ${name}, id: ${checkbox.id}, label: ${optionLabel}`);
@@ -91,17 +90,17 @@ function extractCheckboxGroups(container) {
       checkboxGroups[group.name] = [];
     }
     
-    // Add any checkboxes not already included (that are visible)
+    // Add any checkboxes not already included (including hidden ones)
     for (const option of group.options) {
       const existingOption = checkboxGroups[group.name].find(o => o.id === option.id);
-      if (!existingOption && !option.hidden) {
+      if (!existingOption) {
         checkboxGroups[group.name].push(option);
       }
     }
   }
   
   // Convert to array and determine the group label
-  // Only include groups that have at least one visible checkbox
+  // Include all groups (even those with all hidden checkboxes)
   const result = [];
   for (const [name, options] of Object.entries(checkboxGroups)) {
     if (options.length > 1) { // Only consider it a group if there are multiple options
@@ -126,6 +125,10 @@ function extractCheckboxGroups(container) {
       
       console.log(`Group ${name} label determined as: "${groupLabel}"`);
       
+      // Determine if the entire group is hidden (only if all checkboxes are hidden)
+      const allHidden = options.every(opt => opt.hidden === true);
+      
+      // Always include the group, regardless of visibility
       if (groupLabel) {
         result.push({
           type: 'checkboxGroup',
@@ -134,7 +137,7 @@ function extractCheckboxGroups(container) {
           className: (formGroupContainer ? formGroupContainer.className : '') || '',
           class: (formGroupContainer ? formGroupContainer.getAttribute('class') : '') || '',
           options: options,
-          hidden: false // It has visible checkboxes since we're filtering hidden ones
+          hidden: allHidden // Mark as hidden only if ALL checkboxes are hidden
         });
       }
     }
@@ -159,8 +162,8 @@ function extractBootstrapCheckboxGroups(container) {
     // Find all checkbox inputs within this form-group
     const allCheckboxInputs = Array.from(formGroup.querySelectorAll('input[type="checkbox"]'));
     
-    // Filter to only visible checkboxes
-    const checkboxInputs = allCheckboxInputs.filter(checkbox => !isElementHidden(checkbox));
+    // REMOVED: Filtering of hidden checkboxes - include all
+    const checkboxInputs = allCheckboxInputs;
     
     if (checkboxInputs.length < 2) return;
     
@@ -178,13 +181,14 @@ function extractBootstrapCheckboxGroups(container) {
       
       // Get the option label
       const optionLabel = getCheckboxOptionLabel(checkbox);
+      const isHidden = isElementHidden(checkbox);
       
       options.push({
         id: checkbox.id || '',
         value: checkbox.value || '',
         checked: checkbox.checked,
         label: optionLabel,
-        hidden: false // It's visible since we're filtering hidden elements
+        hidden: isHidden // Include visibility info but don't filter
       });
     });
     
@@ -193,6 +197,9 @@ function extractBootstrapCheckboxGroups(container) {
       groupName = `checkbox_group_${result.length + 1}`;
     }
     
+    // Determine if the entire group is hidden (only if all checkboxes are hidden)
+    const allHidden = options.every(opt => opt.hidden === true);
+    
     result.push({
       type: 'checkboxGroup',
       name: groupName,
@@ -200,7 +207,7 @@ function extractBootstrapCheckboxGroups(container) {
       className: formGroup.className || '',
       class: formGroup.getAttribute('class') || '',
       options: options,
-      hidden: false
+      hidden: allHidden // Mark as hidden only if ALL checkboxes are hidden
     });
     
     // Mark this form group as processed
@@ -232,19 +239,15 @@ function extractBootstrapCheckboxGroups(container) {
           groupName = checkbox.name;
         }
         
-        // Skip hidden checkboxes
-        if (isElementHidden(checkbox)) {
-          console.log(`Skipping hidden checkbox in inline group: ${checkbox.id || checkbox.name}`);
-          return;
-        }
-        
         const optionLabel = getCheckboxOptionLabel(checkbox);
+        const isHidden = isElementHidden(checkbox);
+        
         options.push({
           id: checkbox.id || '',
           value: checkbox.value || '',
           checked: checkbox.checked,
           label: optionLabel,
-          hidden: false // It's visible since we're filtering hidden elements
+          hidden: isHidden // Include visibility info but don't filter
         });
       });
       
@@ -256,12 +259,14 @@ function extractBootstrapCheckboxGroups(container) {
         
         console.log(`Found inline checkbox group with label: "${groupLabel.textContent.trim()}" and ${options.length} options`);
         
+        const allHidden = options.every(opt => opt.hidden === true);
+        
         result.push({
           type: 'checkboxGroup',
           name: groupName,
           label: groupLabel.textContent.trim(),
           options: options,
-          hidden: false
+          hidden: allHidden // Mark as hidden only if ALL checkboxes are hidden
         });
         
         // Mark this form group as processed
@@ -301,7 +306,7 @@ function getCheckboxOptionLabel(checkbox) {
   return checkbox.value || '';
 }
 
-// When identifying structural checkbox groups, only include visible checkboxes
+// When identifying structural checkbox groups, include all checkboxes
 function identifyStructuralCheckboxGroups(container) {
   const result = [];
   
@@ -313,33 +318,38 @@ function identifyStructuralCheckboxGroups(container) {
     const groupLabel = findGroupLabel(groupContainer);
     if (!groupLabel) continue;
     
-    // Find checkboxes within this container
+    // Find checkboxes within this container - include ALL checkboxes
     const allCheckboxes = groupContainer.querySelectorAll('input[type="checkbox"]');
-    // Filter to only visible checkboxes
-    const checkboxes = Array.from(allCheckboxes).filter(checkbox => !isElementHidden(checkbox));
+    // REMOVED: Filter to only visible checkboxes
+    const checkboxes = Array.from(allCheckboxes);
     
     if (checkboxes.length < 2) continue;
     
     const options = [];
     for (const checkbox of checkboxes) {
+      const isHidden = isElementHidden(checkbox);
+      
       options.push({
         id: checkbox.id || '',
         name: checkbox.name || '',
         value: checkbox.value || '',
         checked: checkbox.checked,
         label: getCheckboxOptionLabel(checkbox),
-        hidden: false // It's visible since we're filtering hidden elements
+        hidden: isHidden // Include visibility info but don't filter
       });
     }
     
     // Use the first non-empty name, or generate one if needed
     const groupName = options.find(o => o.name)?.name || `checkbox_group_${result.length + 1}`;
     
+    // Determine if the entire group is hidden (only if all checkboxes are hidden)
+    const allHidden = options.every(opt => opt.hidden === true);
+    
     result.push({
       name: groupName,
       label: groupLabel,
       options: options,
-      hidden: false
+      hidden: allHidden // Mark as hidden only if ALL options are hidden
     });
   }
   
