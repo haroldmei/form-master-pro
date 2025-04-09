@@ -465,51 +465,60 @@
       return window.btoa(binary);
     }
 
-    // Process DOCX file - Simplified to send data to background
+    // Process DOCX file - Updated to send data to background script
     async function processDocxFile(file) {
       try {
-        // Load the docx-extractor.js module
-        try {
-          // Extract content from DOCX
-          const docxContent = await extractDocxContent(file, file.name);
-          console.log('Extracted DOCX content:', JSON.stringify(docxContent));
+        // Show the toggle in loading state
+        setToggleBusy(true);
+        
+        // Extract content from DOCX
+        const docxContent = await extractDocxContent(file, file.name);
+        console.log('Extracted DOCX content:', docxContent);
 
-          // Check if docxContent has the expected structure
-          if (!docxContent) {
-            throw new Error('DOCX extraction returned empty result');
-          }
-
-          // Create a user profile structure from the DOCX content
-          const userProfile = {
-            source: 'docx',
-            filename: file.name,
-            extractedContent: docxContent,
-            // Create a simple representation for display - safely handle both old and new formats
-            docxData: {
-              paragraphs: Array.isArray(docxContent.paragraphs) ? docxContent.paragraphs.map(p => p.text || p) : 
-                         Array.isArray(docxContent.strings) ? docxContent.strings : [],
-              tables: Array.isArray(docxContent.tables) ? docxContent.tables : []
-            }
-          };
-          
-          chrome.runtime.sendMessage({ action: 'updateUserProfile', profile: userProfile }, function(response) {
-            if (response && response.success) {
-              console.log('User profile saved successfully:', response);
-            } else {
-              console.error('Error saving user profile:', response?.error);
-            }
-          });
-
-        } catch (moduleError) {
-          console.error("Error loading DOCX extractor module:", moduleError);
-          throw new Error(`Could not load DOCX extractor: ${moduleError.message}`);
+        // Check if docxContent has the expected structure
+        if (!docxContent) {
+          throw new Error('DOCX extraction returned empty result');
         }
+        
+        // Set a timeout to handle potential message timeout errors
+        const timeoutId = setTimeout(() => {
+          setToggleBusy(false); // Clear busy state if timeout occurs
+          throw new Error('Request timed out - background process may be busy');
+        }, 30000); // 30-second timeout
+        
+        // Send to background script for processing, similar to PDF handling
+        chrome.runtime.sendMessage({ 
+          action: 'processDocx', 
+          docxContent: docxContent,
+          fileName: file.name
+        }, (response) => {
+          // Clear the timeout since we received a response
+          clearTimeout(timeoutId);
+          
+          // Clear loading state
+          setToggleBusy(false);
+          
+          // Check for errors with the Chrome runtime first
+          if (chrome.runtime.lastError) {
+            console.error('Chrome runtime error:', chrome.runtime.lastError);
+            throw new Error(chrome.runtime.lastError.message || 'Chrome runtime error');
+          }
+          
+          // Now check the response content
+          if (!response || !response.success) {
+            throw new Error(response?.error || 'Failed to process DOCX file');
+          }
+          
+          // Return the response data
+          return response;
+        });
       } catch (error) {
-        throw new Error(`Error processing DOCX: ${error.message}`);
+        setToggleBusy(false); // Clear loading state on error
+        throw error;
       }
     }
-  
     
+    // Keep the extractDocxContent function in ui-injector.js as it handles DOM operations
     async function extractDocxContent(docxFile, filename) {
       try {
         console.log('DOCX file loaded:', docxFile);

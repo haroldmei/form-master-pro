@@ -234,6 +234,20 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
 
+  // Add handler for DOCX processing
+  if (message.action === 'processDocx') {
+    processDocx(message.docxContent, message.fileName)
+      .then(result => sendResponse(result))
+      .catch(error => {
+        console.error('Error processing DOCX:', error);
+        sendResponse({
+          success: false,
+          error: error.message || 'Failed to process DOCX file'
+        });
+      });
+    return true;
+  }
+
   if (message.action === 'formatFileSize') {
     if (typeof message.size === 'number') {
       sendResponse({ success: true, formattedSize: formatFileSize(message.size) });
@@ -627,6 +641,48 @@ async function processPDF(pdfData, fileName) {
     return {
       success: false,
       error: error.message || 'Failed to process PDF file'
+    };
+  }
+}
+
+// Process DOCX content - moved from ui-injector.js
+async function processDocx(docxContent, fileName) {
+  try {
+    console.log(`Processing DOCX: ${fileName}`, docxContent);
+
+    // Check if docxContent has the expected structure
+    if (!docxContent) {
+      throw new Error('DOCX extraction returned empty result');
+    }
+
+    // Create a user profile structure from the DOCX content
+    const userProfile = {
+      source: 'docx',
+      filename: fileName,
+      extractedContent: docxContent,
+      // Create a simple representation for display
+      docxData: {
+        paragraphs: Array.isArray(docxContent.paragraphs) ? docxContent.paragraphs.map(p => p.text || p) : 
+                   Array.isArray(docxContent.strings) ? docxContent.strings : [],
+        tables: Array.isArray(docxContent.tables) ? docxContent.tables : []
+      },
+      size: JSON.stringify(docxContent).length,
+      timeLoaded: new Date().toISOString()
+    };
+
+    // Save to storage
+    await userProfileManager.saveUserProfile(userProfile);
+    
+    return {
+      success: true,
+      message: `Processed DOCX: ${fileName}`,
+      profile: userProfile
+    };
+  } catch (error) {
+    console.error('Error processing DOCX:', error);
+    return {
+      success: false,
+      error: error.message || 'Failed to process DOCX file'
     };
   }
 }
