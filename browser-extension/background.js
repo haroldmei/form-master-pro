@@ -482,6 +482,8 @@ async function executeFormFilling(tabId, fieldValues) {
     args: [fieldValues]
   });
   
+  console.log('Form filling result:', fillResult);
+  
   // Process and return results
   if (!fillResult || !fillResult[0] || !fillResult[0].result) {
     return { message: 'Error filling form' };

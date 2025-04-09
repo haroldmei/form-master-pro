@@ -276,38 +276,33 @@ const formProcessor = (() => {
         }
       });
 
-      // Add at module level
-      let dialogActive = false;
-      // If we have missing fields, show dialog to get default values from the user
-      if (missingFields.length > 0 && !dialogActive) {
-        console.log("Showing dialog for missing fields:", missingFields);
-        dialogActive = true;
-        
-        try {
-          // Try to open a popup window for defaults dialog
-          const userDefaultValues = await showDefaultsDialogViaWindow(missingFields, rootUrl);
-          
-          console.log("User provided default values:", userDefaultValues);
-          
-          if (Object.keys(userDefaultValues).length > 0) {
-            // Save these values for future form filling directly to storage
-            await saveDefaultFieldValues(rootUrl, userDefaultValues);
-            
-            // Update our current suggestions with the user-provided values
-            missingFields.forEach(field => {
-              const keyName = field.label || field.name || field.id;
-              if (userDefaultValues[keyName]) {
-                allSuggestions[keyName] = userDefaultValues[keyName];
-              }
-            });
-          }
-        } catch (dialogError) {
-          console.error("Error showing default values dialog:", dialogError);
-          // Continue with temporary default values we already set
-        } finally {
+      // Do this later
+      //let dialogActive = false;
+      //if (missingFields.length > 0 && !dialogActive) {
+      //  console.log("Showing dialog for missing fields:", missingFields);
+      //  dialogActive = true;
+      //  
+      //  try {
+      //    const userDefaultValues = await showDefaultsDialogViaWindow(missingFields, rootUrl);
+      //    
+      //    console.log("User provided default values:", userDefaultValues);
+      //    
+      //    if (Object.keys(userDefaultValues).length > 0) {
+      //      await saveDefaultFieldValues(rootUrl, userDefaultValues);
+      //      missingFields.forEach(field => {
+      //        const keyName = field.label || field.name || field.id;
+      //        if (userDefaultValues[keyName]) {
+      //          allSuggestions[keyName] = userDefaultValues[keyName];
+      //        }
+      //      });
+      //    }
+      //  } catch (dialogError) {
+      //    console.error("Error showing default values dialog:", dialogError);
+      //    // Continue with temporary default values we already set
+      //  } finally {
           dialogActive = false;
-        }
-      }
+      //  }
+      //}
       
       // Save all suggestions to cache
       allSuggestionsCache[cacheKey] = {...allSuggestions};

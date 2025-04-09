@@ -1,3 +1,37 @@
+// Add function to check if an element is hidden
+function isElementHidden(element) {
+  if (!element) return true;
+  
+  // Check element's own visibility
+  const style = window.getComputedStyle(element);
+  if (style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0') {
+    return true;
+  }
+  
+  // Check if element has zero dimensions
+  const rect = element.getBoundingClientRect();
+  if (rect.width === 0 || rect.height === 0) {
+    return true;
+  }
+  
+  // Check if element is detached from DOM
+  if (!document.body.contains(element)) {
+    return true;
+  }
+  
+  // Check if any parent is hidden (recursive check)
+  let parent = element.parentElement;
+  while (parent) {
+    const parentStyle = window.getComputedStyle(parent);
+    if (parentStyle.display === 'none' || parentStyle.visibility === 'hidden' || parentStyle.opacity === '0') {
+      return true;
+    }
+    parent = parent.parentElement;
+  }
+  
+  return false;
+}
+
 function extractFormControls(formSelector = null) {
   try {
     // Find target form if selector provided, otherwise use whole document
@@ -40,7 +74,6 @@ function extractFormControls(formSelector = null) {
   }
 }
 
-
 function extractFormStructure(formSelector = null) {
   try {
     const controls = extractFormControls(formSelector);
@@ -52,7 +85,6 @@ function extractFormStructure(formSelector = null) {
   }
 }
 
-
 function extractInputs(container) {
   const inputs = [];
   const inputElements = container.querySelectorAll('input:not([type="submit"]):not([type="button"]):not([type="image"]):not([type="reset"]):not([type="file"]):not([type="radio"]):not([type="checkbox"]):not([type="hidden"])');
@@ -60,6 +92,11 @@ function extractInputs(container) {
   inputElements.forEach(input => {
     // Skip inputs that are part of enhanced UI widgets like Chosen, Select2, etc.
     if (isEnhancedSelectComponent(input)) {
+      return;
+    }
+    
+    // Skip hidden inputs
+    if (isElementHidden(input)) {
       return;
     }
     
@@ -72,8 +109,10 @@ function extractInputs(container) {
       name: input.name || '',
       placeholder: input.placeholder || '',
       className: input.className || '',
+      class: input.getAttribute('class') || '',
       value: input.value || '',
       label: getElementLabel(input),
+      hidden: false, // It's visible since we're filtering hidden elements
       isDateInput: isDateInput // Additional flag to mark date inputs
     });
   });
@@ -171,6 +210,11 @@ function extractSelects(container) {
   const selectElements = container.querySelectorAll('select');
   
   selectElements.forEach(select => {
+    // Skip hidden selects
+    if (isElementHidden(select)) {
+      return;
+    }
+    
     const options = Array.from(select.options).map(opt => ({
       value: opt.value,
       text: opt.text,
@@ -182,8 +226,10 @@ function extractSelects(container) {
       id: select.id || '',
       name: select.name || '',
       className: select.className || '',
+      class: select.getAttribute('class') || '',
       value: select.value || '',
       label: getElementLabel(select),
+      hidden: false,
       options: options
     });
   });
@@ -191,45 +237,56 @@ function extractSelects(container) {
   return selects;
 }
 
-
 function extractTextareas(container) {
   const textareas = [];
   const textareaElements = container.querySelectorAll('textarea');
   
   textareaElements.forEach(textarea => {
+    // Skip hidden textareas
+    if (isElementHidden(textarea)) {
+      return;
+    }
+    
     textareas.push({
       type: 'textarea',
       id: textarea.id || '',
       name: textarea.name || '',
       placeholder: textarea.placeholder || '',
       className: textarea.className || '',
+      class: textarea.getAttribute('class') || '',
       value: textarea.value || '',
-      label: getElementLabel(textarea)
+      label: getElementLabel(textarea),
+      hidden: false
     });
   });
   
   return textareas;
 }
 
-
 function extractButtons(container) {
   const buttons = [];
   const buttonElements = container.querySelectorAll('button, input[type="button"], input[type="submit"], input[type="reset"]');
   
   buttonElements.forEach(button => {
+    // Skip hidden buttons
+    if (isElementHidden(button)) {
+      return;
+    }
+    
     buttons.push({
       type: button.tagName.toLowerCase() === 'button' ? 'button' : button.type,
       id: button.id || '',
       name: button.name || '',
       className: button.className || '',
+      class: button.getAttribute('class') || '',
       value: button.value || button.textContent || '',
-      label: button.textContent || button.value || ''
+      label: button.textContent || button.value || '',
+      hidden: false
     });
   });
   
   return buttons;
 }
-
 
 function extractCheckboxes(container, groupedIds = new Set()) {
   const checkboxes = [];
@@ -241,20 +298,26 @@ function extractCheckboxes(container, groupedIds = new Set()) {
       return;
     }
     
+    // Skip hidden checkboxes
+    if (isElementHidden(checkbox)) {
+      return;
+    }
+    
     checkboxes.push({
       type: 'checkbox',
       id: checkbox.id || '',
       name: checkbox.name || '',
       className: checkbox.className || '',
+      class: checkbox.getAttribute('class') || '',
       value: checkbox.value || '',
       checked: checkbox.checked,
-      label: getElementLabel(checkbox)
+      label: getElementLabel(checkbox),
+      hidden: false
     });
   });
   
   return checkboxes;
 }
-
 
 function getElementLabel(element) {
   // Try to find a label by for attribute
@@ -343,7 +406,6 @@ function getElementLabel(element) {
   return '';
 }
 
-
 function createLabelMapping(controls) {
   const mapping = {};
   
@@ -375,5 +437,6 @@ function createLabelMapping(controls) {
 // Export functions in a way that works in browser context
 self.FormExtract = {
   extractFormControls,
-  extractFormStructure
+  extractFormStructure,
+  isElementHidden // Export for potential reuse
 };

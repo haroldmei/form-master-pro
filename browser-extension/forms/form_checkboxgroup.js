@@ -3,6 +3,40 @@
  * Identifies and extracts groups of related checkboxes in forms
  */
 
+// Add helper function to check if an element is hidden
+function isElementHidden(element) {
+  if (!element) return true;
+  
+  // Check element's own visibility
+  const style = window.getComputedStyle(element);
+  if (style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0') {
+    return true;
+  }
+  
+  // Check if element has zero dimensions
+  const rect = element.getBoundingClientRect();
+  if (rect.width === 0 || rect.height === 0) {
+    return true;
+  }
+  
+  // Check if element is detached from DOM
+  if (!document.body.contains(element)) {
+    return true;
+  }
+  
+  // Check if any parent is hidden
+  let parent = element.parentElement;
+  while (parent) {
+    const parentStyle = window.getComputedStyle(parent);
+    if (parentStyle.display === 'none' || parentStyle.visibility === 'hidden' || parentStyle.opacity === '0') {
+      return true;
+    }
+    parent = parent.parentElement;
+  }
+  
+  return false;
+}
+
 function extractCheckboxGroups(container) {
   // First, try to directly match common patterns like Bootstrap checkbox groups
   const directMatches = extractBootstrapCheckboxGroups(container);
@@ -21,6 +55,12 @@ function extractCheckboxGroups(container) {
   checkboxElements.forEach(checkbox => {
     const name = checkbox.name || '';
     if (name) {
+      // Skip hidden checkboxes
+      if (isElementHidden(checkbox)) {
+        console.log(`Skipping hidden checkbox: ${checkbox.id || checkbox.name}`);
+        return;
+      }
+      
       if (!checkboxGroups[name]) {
         checkboxGroups[name] = [];
       }
@@ -32,7 +72,8 @@ function extractCheckboxGroups(container) {
         id: checkbox.id || '',
         value: checkbox.value || '',
         checked: checkbox.checked,
-        label: optionLabel
+        label: optionLabel,
+        hidden: false // It's visible since we're filtering hidden elements
       });
       
       console.log(`Added checkbox with name: ${name}, id: ${checkbox.id}, label: ${optionLabel}`);
@@ -50,16 +91,17 @@ function extractCheckboxGroups(container) {
       checkboxGroups[group.name] = [];
     }
     
-    // Add any checkboxes not already included
+    // Add any checkboxes not already included (that are visible)
     for (const option of group.options) {
       const existingOption = checkboxGroups[group.name].find(o => o.id === option.id);
-      if (!existingOption) {
+      if (!existingOption && !option.hidden) {
         checkboxGroups[group.name].push(option);
       }
     }
   }
   
   // Convert to array and determine the group label
+  // Only include groups that have at least one visible checkbox
   const result = [];
   for (const [name, options] of Object.entries(checkboxGroups)) {
     if (options.length > 1) { // Only consider it a group if there are multiple options
@@ -89,7 +131,10 @@ function extractCheckboxGroups(container) {
           type: 'checkboxGroup',
           name: name,
           label: groupLabel,
-          options: options
+          className: (formGroupContainer ? formGroupContainer.className : '') || '',
+          class: (formGroupContainer ? formGroupContainer.getAttribute('class') : '') || '',
+          options: options,
+          hidden: false // It has visible checkboxes since we're filtering hidden ones
         });
       }
     }
@@ -112,7 +157,11 @@ function extractBootstrapCheckboxGroups(container) {
     if (!groupLabel) return;
     
     // Find all checkbox inputs within this form-group
-    const checkboxInputs = formGroup.querySelectorAll('input[type="checkbox"]');
+    const allCheckboxInputs = Array.from(formGroup.querySelectorAll('input[type="checkbox"]'));
+    
+    // Filter to only visible checkboxes
+    const checkboxInputs = allCheckboxInputs.filter(checkbox => !isElementHidden(checkbox));
+    
     if (checkboxInputs.length < 2) return;
     
     console.log(`Found Bootstrap checkbox group with label: "${groupLabel.textContent.trim()}" and ${checkboxInputs.length} options`);
@@ -134,7 +183,8 @@ function extractBootstrapCheckboxGroups(container) {
         id: checkbox.id || '',
         value: checkbox.value || '',
         checked: checkbox.checked,
-        label: optionLabel
+        label: optionLabel,
+        hidden: false // It's visible since we're filtering hidden elements
       });
     });
     
@@ -147,7 +197,10 @@ function extractBootstrapCheckboxGroups(container) {
       type: 'checkboxGroup',
       name: groupName,
       label: groupLabel.textContent.trim(),
-      options: options
+      className: formGroup.className || '',
+      class: formGroup.getAttribute('class') || '',
+      options: options,
+      hidden: false
     });
     
     // Mark this form group as processed
@@ -179,12 +232,19 @@ function extractBootstrapCheckboxGroups(container) {
           groupName = checkbox.name;
         }
         
+        // Skip hidden checkboxes
+        if (isElementHidden(checkbox)) {
+          console.log(`Skipping hidden checkbox in inline group: ${checkbox.id || checkbox.name}`);
+          return;
+        }
+        
         const optionLabel = getCheckboxOptionLabel(checkbox);
         options.push({
           id: checkbox.id || '',
           value: checkbox.value || '',
           checked: checkbox.checked,
-          label: optionLabel
+          label: optionLabel,
+          hidden: false // It's visible since we're filtering hidden elements
         });
       });
       
@@ -200,7 +260,8 @@ function extractBootstrapCheckboxGroups(container) {
           type: 'checkboxGroup',
           name: groupName,
           label: groupLabel.textContent.trim(),
-          options: options
+          options: options,
+          hidden: false
         });
         
         // Mark this form group as processed
@@ -240,6 +301,7 @@ function getCheckboxOptionLabel(checkbox) {
   return checkbox.value || '';
 }
 
+// When identifying structural checkbox groups, only include visible checkboxes
 function identifyStructuralCheckboxGroups(container) {
   const result = [];
   
@@ -252,7 +314,10 @@ function identifyStructuralCheckboxGroups(container) {
     if (!groupLabel) continue;
     
     // Find checkboxes within this container
-    const checkboxes = groupContainer.querySelectorAll('input[type="checkbox"]');
+    const allCheckboxes = groupContainer.querySelectorAll('input[type="checkbox"]');
+    // Filter to only visible checkboxes
+    const checkboxes = Array.from(allCheckboxes).filter(checkbox => !isElementHidden(checkbox));
+    
     if (checkboxes.length < 2) continue;
     
     const options = [];
@@ -262,7 +327,8 @@ function identifyStructuralCheckboxGroups(container) {
         name: checkbox.name || '',
         value: checkbox.value || '',
         checked: checkbox.checked,
-        label: getCheckboxOptionLabel(checkbox)
+        label: getCheckboxOptionLabel(checkbox),
+        hidden: false // It's visible since we're filtering hidden elements
       });
     }
     
@@ -272,7 +338,8 @@ function identifyStructuralCheckboxGroups(container) {
     result.push({
       name: groupName,
       label: groupLabel,
-      options: options
+      options: options,
+      hidden: false
     });
   }
   
@@ -561,5 +628,6 @@ function removeDebugLogs() {
 // Export the module functions for use in browser context
 self.FormCheckboxGroups = {
   extractCheckboxGroups,
-  getGroupedCheckboxIds
+  getGroupedCheckboxIds,
+  isElementHidden // Export the visibility check function for potential reuse
 };

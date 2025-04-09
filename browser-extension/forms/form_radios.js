@@ -1,4 +1,39 @@
 // FormRadios.js
+
+// Add function to check if an element is hidden
+function isElementHidden(element) {
+  if (!element) return true;
+  
+  // Check element's own visibility
+  const style = window.getComputedStyle(element);
+  if (style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0') {
+    return true;
+  }
+  
+  // Check if element has zero dimensions
+  const rect = element.getBoundingClientRect();
+  if (rect.width === 0 || rect.height === 0) {
+    return true;
+  }
+  
+  // Check if element is detached from DOM
+  if (!document.body.contains(element)) {
+    return true;
+  }
+  
+  // Check if any parent is hidden
+  let parent = element.parentElement;
+  while (parent) {
+    const parentStyle = window.getComputedStyle(parent);
+    if (parentStyle.display === 'none' || parentStyle.visibility === 'hidden' || parentStyle.opacity === '0') {
+      return true;
+    }
+    parent = parent.parentElement;
+  }
+  
+  return false;
+}
+
 function extractRadioGroups(container) {
   try {
     console.log('FormRadios.extractRadioGroups called with container:', container);
@@ -17,6 +52,12 @@ function extractRadioGroups(container) {
         return;
       }
       
+      // Skip hidden radio buttons
+      if (isElementHidden(radio)) {
+        console.log(`Skipping hidden radio button: ${radio.id || radio.name}`);
+        return;
+      }
+      
       if (!groups[name]) {
         // Create new radio group and capture all identifying attributes
         groups[name] = {
@@ -26,6 +67,7 @@ function extractRadioGroups(container) {
           label: getRadioGroupLabel(radio) || name,
           className: '', // Initialize className for the group
           class: '', // Initialize class attribute for the group
+          hidden: false,
           options: []
         };
         console.log(`Created new radio group with name "${name}"`);
@@ -40,7 +82,8 @@ function extractRadioGroups(container) {
         className: radio.className || '',
         class: radio.getAttribute('class') || '', // Add explicit class attribute
         checked: radio.checked,
-        label: getRadioElementLabel(radio)
+        label: getRadioElementLabel(radio),
+        hidden: false // It's visible since we're filtering hidden elements
       });
       
       // Update the group's classes - collect classes from all radio buttons
@@ -50,6 +93,13 @@ function extractRadioGroups(container) {
       }
       
       console.log(`Added option "${radio.value}" to group "${name}", total options: ${groups[name].options.length}`);
+    });
+    
+    // Only keep groups that have at least one visible radio button
+    Object.keys(groups).forEach(name => {
+      if (groups[name].options.length === 0) {
+        delete groups[name];
+      }
     });
     
     // Try to find a common container ID for each radio group
@@ -640,5 +690,6 @@ self.FormRadios = {
   extractRadioGroups,
   getRadioElementLabel,
   getRadioGroupLabel,
-  getRadioGroupValues
+  getRadioGroupValues,
+  isElementHidden // Export the visibility check function for potential reuse
 };

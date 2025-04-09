@@ -3,42 +3,35 @@
  */
 const formFiller = (() => {
 
-  function performFormFilling(fieldValues) {
-
-    console.log("Filling form with data:", fieldValues);
-
+  async function performFormFilling(fieldValues) {
+    console.log("Starting sequential form filling with", fieldValues.length, "fields");
+    
+    // Add visual effects styles to the page
+    addVisualEffectStyles();
+    
     function findFillableElement(field) {
       const { id, label, name, type, value, aiGenerated } = field;
 
-      // console.log(`Processing field: id=${id}, label=${label}, name=${name}, type=${type}, value=${value}`);
-
-      // Skip if value is missing or null
       if (value === null || value === undefined) {
         console.warn(`Skipping field with missing value: ${id || name || label}`);
         return null;
       }
 
-      // Try to find the element using available information
       let element = null;
 
-      // Try by ID first (most reliable)
       if (id) {
         element = document.getElementById(id);
       }
 
-      // Try by name if no element found by ID
       if (!element && name) {
         element = document.querySelector(`[name="${name}"]`);
       }
 
-      // Try by label for element lookup
       if (!element && label) {
-        // Find label elements containing our text
         const labels = Array.from(document.querySelectorAll('label')).filter(
           l => l.textContent.trim().toLowerCase().includes(label.toLowerCase())
         );
 
-        // Try to get the element associated with the label
         for (const foundLabel of labels) {
           if (foundLabel.htmlFor) {
             const labeledElement = document.getElementById(foundLabel.htmlFor);
@@ -50,36 +43,28 @@ const formFiller = (() => {
         }
       }
 
-      // If we still don't have an element, try more aggressive approaches
       if (!element) {
-        // Try by matching placeholder attribute
         element = document.querySelector(`input[placeholder*="${label}"], textarea[placeholder*="${label}"]`);
 
-        // Try by aria-label
         if (!element) {
           element = document.querySelector(`[aria-label*="${label}"]`);
         }
       }
 
-      // Element not found
       if (!element) {
         console.warn(`Element not found for: ${id || name || label}`);
         return null;
       }
-      // Try by other common selectors
+
       return element;
     }
 
     function findRadioButton(name, value) {
-      // First try exact match
       const exactMatch = document.querySelector(`input[type="radio"][name="${name}"][value="${value}"]`);
       if (exactMatch) return exactMatch;
 
-      // If no exact match, try case-insensitive match for common yes/no patterns
       if (typeof value === 'string') {
-        // Handle common yes/no patterns
         if (value.toLowerCase() === 'yes' || value.toLowerCase() === 'y') {
-          // Look for yes, y, true, 1
           const yesRadio = document.querySelector(`input[type="radio"][name="${name}"][value="yes"], 
                                                  input[type="radio"][name="${name}"][value="Yes"], 
                                                  input[type="radio"][name="${name}"][value="Y"], 
@@ -88,7 +73,6 @@ const formFiller = (() => {
                                                  input[type="radio"][name="${name}"][value="1"]`);
           if (yesRadio) return yesRadio;
         } else if (value.toLowerCase() === 'no' || value.toLowerCase() === 'n') {
-          // Look for no, n, false, 0
           const noRadio = document.querySelector(`input[type="radio"][name="${name}"][value="no"], 
                                                 input[type="radio"][name="${name}"][value="No"], 
                                                 input[type="radio"][name="${name}"][value="N"], 
@@ -98,15 +82,12 @@ const formFiller = (() => {
           if (noRadio) return noRadio;
         }
 
-        // NEW: Try to find options by data-* attributes which often contain descriptive text
         const allRadios = document.querySelectorAll(`input[type="radio"][name="${name}"]`);
         for (const radio of allRadios) {
-          // Check all data-* attributes for matches with the value
           const dataAttributes = Array.from(radio.attributes)
             .filter(attr => attr.name.startsWith('data-'))
             .map(attr => attr.value.toLowerCase());
 
-          // If any data attribute contains our value, this is likely the match
           if (dataAttributes.some(attr =>
             attr.includes(value.toLowerCase()) ||
             value.toLowerCase().includes(attr))) {
@@ -114,7 +95,6 @@ const formFiller = (() => {
             return radio;
           }
 
-          // Also check if the analytics ID or similar attributes contain our text
           if (radio.dataset.analyticsid &&
             radio.dataset.analyticsid.toLowerCase().includes(value.toLowerCase())) {
             console.log(`Found radio match through analytics ID: ${radio.dataset.analyticsid}`);
@@ -122,25 +102,18 @@ const formFiller = (() => {
           }
         }
 
-        // NEW: For complex nested structures with role="radiogroup"
-        // First try to find the radio group container
         const radioGroups = document.querySelectorAll('[role="radiogroup"]');
         for (const group of radioGroups) {
-          // Find all radio buttons within this group with our name
           const groupRadios = group.querySelectorAll(`input[type="radio"][name="${name}"]`);
           if (groupRadios.length === 0) continue;
 
-          // Try to match by label text within this group
           for (const radio of groupRadios) {
-            // Look for the label associated with this radio
             let label = null;
 
-            // Try by 'for' attribute first
             if (radio.id) {
               label = group.querySelector(`label[for="${radio.id}"]`);
             }
 
-            // If no label found, find label in parent structure (common pattern)
             if (!label) {
               const radioParent = radio.parentElement;
               if (radioParent) {
@@ -148,13 +121,11 @@ const formFiller = (() => {
               }
             }
 
-            // If we have a label and its text matches our value
             if (label && label.textContent.trim().toLowerCase() === value.toLowerCase()) {
               console.log(`Found radio match in ARIA radiogroup by label: ${label.textContent}`);
               return radio;
             }
 
-            // If label doesn't match but contains our value
             if (label && label.textContent.trim().toLowerCase().includes(value.toLowerCase())) {
               console.log(`Found partial radio match in ARIA radiogroup: ${label.textContent}`);
               return radio;
@@ -162,19 +133,14 @@ const formFiller = (() => {
           }
         }
 
-        // Try finding by label text when no match by value
         for (const radio of allRadios) {
-          // Check the radio's associated label
           let label = null;
 
-          // First try to find label by 'for' attribute
           if (radio.id) {
             label = document.querySelector(`label[for="${radio.id}"]`);
           }
 
-          // If no label found, check parent or next sibling
           if (!label) {
-            // Check if radio is wrapped in a label
             let parent = radio.parentElement;
             while (parent && parent.tagName !== 'LABEL' &&
               !parent.classList.contains('form-check') &&
@@ -183,11 +149,9 @@ const formFiller = (() => {
             }
 
             if (parent) {
-              // Find label inside this container
               label = parent.tagName === 'LABEL' ? parent : parent.querySelector('label');
             }
 
-            // If still no label, try next sibling
             if (!label) {
               let sibling = radio.nextElementSibling;
               if (sibling && sibling.tagName === 'LABEL') {
@@ -196,7 +160,6 @@ const formFiller = (() => {
             }
           }
 
-          // If we found a label and its text matches our value
           if (label && label.textContent.trim().toLowerCase() === value.toLowerCase()) {
             return radio;
           }
@@ -206,24 +169,224 @@ const formFiller = (() => {
       return null;
     }
 
-    function fillField(element, tagName, inputType, value) {
-      // Handle different element types
+    async function fillField(element, tagName, inputType, value) {
+      // Add visual highlight before filling
+      addVisualEffect(element, tagName, inputType);
+      
+      let result;
       if (tagName === 'select') {
-        return fillSelectField(element, value);
+        result = fillSelectField(element, value);
       } else if (tagName === 'input' && (inputType === 'checkbox' || inputType === 'radio')) {
-        return fillCheckboxOrRadio(element, inputType, value);
+        result = fillCheckboxOrRadio(element, inputType, value);
       } else {
-        return fillTextField(element, value);
+        result = fillTextField(element, value);
+      }
+      
+      if (tagName !== 'select' && 
+          !(tagName === 'input' && (inputType === 'checkbox' || inputType === 'radio')) && 
+          (element.getAttribute('role') === 'combobox' ||
+           element.classList.contains('tags-input') ||
+           element.classList.contains('autocomplete') ||
+           element.getAttribute('autocomplete') === 'off')) {
+        await new Promise(resolve => setTimeout(resolve, 500)); 
+      }
+      
+      return result;
+    }
+
+    // Function to add visual effect styles to the page
+    function addVisualEffectStyles() {
+      if (document.getElementById('form-fill-effects')) return;
+      
+      const styleEl = document.createElement('style');
+      styleEl.id = 'form-fill-effects';
+      styleEl.textContent = `
+        @keyframes formFillPulse {
+          0% { box-shadow: 0 0 0 0 rgba(66, 133, 244, 0.7); }
+          50% { box-shadow: 0 0 0 15px rgba(66, 133, 244, 0); }
+          100% { box-shadow: 0 0 0 0 rgba(66, 133, 244, 0); }
+        }
+        
+        @keyframes formFillHighlight {
+          0% { background-color: rgba(66, 133, 244, 0); }
+          30% { background-color: rgba(66, 133, 244, 0.4); }
+          70% { background-color: rgba(66, 133, 244, 0.4); }
+          100% { background-color: rgba(66, 133, 244, 0); }
+        }
+        
+        @keyframes formFillSuccess {
+          0% { border-left-color: #4285f4; border-left-width: 0px; }
+          100% { border-left-color: #4285f4; border-left-width: 4px; }
+        }
+        
+        @keyframes formFillBorder {
+          0% { outline: 0px solid rgba(66, 133, 244, 0); }
+          25% { outline: 3px solid rgba(66, 133, 244, 0.7); }
+          75% { outline: 3px solid rgba(66, 133, 244, 0.7); }
+          100% { outline: 0px solid rgba(66, 133, 244, 0); }
+        }
+        
+        .form-fill-highlight {
+          animation: formFillHighlight 1.5s ease-out forwards, formFillBorder 1.5s ease-out forwards;
+          transition: all 0.3s ease;
+          z-index: 9999;
+          position: relative;
+        }
+        
+        .form-fill-pulse {
+          animation: formFillPulse 1.2s ease-out forwards;
+          z-index: 9999;
+          position: relative;
+        }
+        
+        .form-fill-success {
+          animation: formFillSuccess 0.5s ease-out forwards;
+          border-left: 4px solid #4285f4;
+        }
+        
+        /* Special styling for select elements */
+        select.form-fill-highlight {
+          transition: all 0.3s ease;
+          background-image: linear-gradient(to bottom, rgba(66, 133, 244, 0.3), rgba(66, 133, 244, 0.1));
+        }
+        
+        /* For checkbox groups */
+        .form-check.active-fill, .checkbox-wrapper.active-fill, label.active-fill {
+          background-color: rgba(66, 133, 244, 0.2) !important;
+          box-shadow: 0 0 8px rgba(66, 133, 244, 0.5) !important;
+          transition: all 0.5s ease;
+        }
+        
+        /* Make sure highlights are visible over everything */
+        .form-fill-highlight:after {
+          content: '';
+          position: absolute;
+          top: -3px;
+          left: -3px;
+          right: -3px;
+          bottom: -3px;
+          border: 2px solid rgba(66, 133, 244, 0.7);
+          border-radius: 5px;
+          pointer-events: none;
+          opacity: 0;
+          animation: formFillBorder 1.5s ease-out forwards;
+        }
+      `;
+      
+      document.head.appendChild(styleEl);
+    }
+
+    // Function to apply visual effects based on element type
+    function addVisualEffect(element, tagName, inputType) {
+      try {
+        // Remove previous animations if any
+        element.classList.remove('form-fill-highlight', 'form-fill-pulse');
+        
+        // Scroll element into view if not already visible
+        const rect = element.getBoundingClientRect();
+        const isInViewport = (
+          rect.top >= 0 &&
+          rect.left >= 0 &&
+          rect.bottom <= (window.innerHeight || document.documentElement.clientHeight) &&
+          rect.right <= (window.innerWidth || document.documentElement.clientWidth)
+        );
+        
+        if (!isInViewport) {
+          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+        
+        // Find container for checkbox/radio for better visual effect
+        let container = null;
+        if (inputType === 'checkbox' || inputType === 'radio') {
+          container = element.closest('.form-check, .checkbox-wrapper, label') || 
+                     element.parentElement;
+        }
+        
+        // Apply specific animation based on element type
+        if (tagName === 'select') {
+          element.classList.add('form-fill-highlight');
+          
+          // Add temporary highlight background for better visibility
+          const originalBackground = element.style.background;
+          element.style.background = 'rgba(66, 133, 244, 0.2)';
+          
+          setTimeout(() => {
+            element.style.background = originalBackground;
+          }, 1500);
+          
+        } else if (inputType === 'checkbox' || inputType === 'radio') {
+          element.classList.add('form-fill-pulse');
+          
+          // Also highlight the container if found
+          if (container) {
+            container.classList.add('form-fill-highlight', 'active-fill');
+            
+            // Store original background to restore later
+            const originalBackground = container.style.background;
+            container.style.background = 'rgba(66, 133, 244, 0.2)';
+            
+            setTimeout(() => {
+              container.classList.remove('active-fill');
+              container.style.background = originalBackground;
+            }, 1500);
+          }
+          
+          // If there's an associated label, highlight it too with a strong effect
+          if (element.id) {
+            const label = document.querySelector(`label[for="${element.id}"]`);
+            if (label) {
+              label.classList.add('form-fill-highlight', 'active-fill');
+              setTimeout(() => label.classList.remove('active-fill'), 1500);
+            }
+          }
+        } else {
+          // For text fields, textareas, etc. - add a stronger highlight
+          element.classList.add('form-fill-highlight');
+          
+          // Store original values to restore later
+          const originalBackground = element.style.background;
+          const originalBoxShadow = element.style.boxShadow;
+          
+          // Apply temporary stronger highlighting
+          element.style.background = 'rgba(66, 133, 244, 0.2)';
+          element.style.boxShadow = '0 0 8px rgba(66, 133, 244, 0.7)';
+          
+          setTimeout(() => {
+            // Restore original styling after animation completes
+            element.style.background = originalBackground;
+            element.style.boxShadow = originalBoxShadow;
+          }, 1500);
+        }
+        
+        // Remove highlight classes after animation completes
+        setTimeout(() => {
+          element.classList.remove('form-fill-highlight', 'form-fill-pulse');
+          
+          // Also remove from container and label
+          if (container) {
+            container.classList.remove('form-fill-highlight');
+          }
+          
+          if (element.id && (inputType === 'checkbox' || inputType === 'radio')) {
+            const label = document.querySelector(`label[for="${element.id}"]`);
+            if (label) label.classList.remove('form-fill-highlight');
+          }
+          
+          // Add success marking
+          if (tagName !== 'select' && !(inputType === 'checkbox' || inputType === 'radio')) {
+            element.classList.add('form-fill-success');
+          }
+        }, 1500);
+      } catch (e) {
+        console.error('Error applying visual effect:', e);
       }
     }
 
     function fillSelectField(element, value) {
       if (element.style.display === 'none') {
-        // This is likely an enhanced select with a UI widget replacement
         console.log(`Hidden select detected with id: ${element.id}, trying enhanced handling`);
         return updateEnhancedSelect(element, value);
       } else {
-        // Regular select handling
         const options = Array.from(element.options);
         const option = options.find(opt =>
           opt.value === value ||
@@ -244,40 +407,37 @@ const formFiller = (() => {
       if (inputType === 'radio') {
         console.log(`Handling radio button: ${element.name} with value: ${value}`);
 
-        // Check if value looks like an option value rather than a boolean/state
         if (typeof value === 'string') {
-          // For bootstrap form-check-inline structure, first try to find the specific radio button
           const radioButton = findRadioButton(element.name, value);
           if (radioButton) {
-            // Select this specific radio button
             radioButton.checked = true;
             radioButton.dispatchEvent(new Event('change', { bubbles: true }));
+            radioButton.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
             console.log(`Selected radio option with value: ${value}`);
             return true;
           } else {
             console.warn(`Could not find radio button with name ${element.name} and value ${value}`);
           }
 
-          // Handle Yes/No or Y/N patterns for radio buttons
           if (['yes', 'y', 'true', '1'].includes(value.toLowerCase())) {
             const yesOptions = document.querySelectorAll(`input[type="radio"][name="${element.name}"]`);
-            // Try to find a "Yes" option among the radio group
             for (const option of yesOptions) {
               if (['yes', 'y', '1', 'true'].includes(option.value.toLowerCase()) ||
                 option.id.toLowerCase().includes('yes') ||
                 option.id.toLowerCase().includes('y')) {
                 option.checked = true;
                 option.dispatchEvent(new Event('change', { bubbles: true }));
+                option.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
                 console.log(`Selected radio yes option: ${option.value}`);
                 return true;
               }
 
-              // Check if the label indicates this is a "Yes" option
               if (option.id) {
                 const label = document.querySelector(`label[for="${option.id}"]`);
                 if (label && ['yes', 'y'].includes(label.textContent.trim().toLowerCase())) {
                   option.checked = true;
                   option.dispatchEvent(new Event('change', { bubbles: true }));
+                  option.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
                   console.log(`Selected radio yes option by label: ${label.textContent}`);
                   return true;
                 }
@@ -287,23 +447,23 @@ const formFiller = (() => {
 
           if (['no', 'n', 'false', '0'].includes(value.toLowerCase())) {
             const noOptions = document.querySelectorAll(`input[type="radio"][name="${element.name}"]`);
-            // Try to find a "No" option among the radio group
             for (const option of noOptions) {
               if (['no', 'n', '0', 'false'].includes(option.value.toLowerCase()) ||
                 option.id.toLowerCase().includes('no') ||
                 option.id.toLowerCase().includes('n')) {
                 option.checked = true;
                 option.dispatchEvent(new Event('change', { bubbles: true }));
+                option.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
                 console.log(`Selected radio no option: ${option.value}`);
                 return true;
               }
 
-              // Check if the label indicates this is a "No" option
               if (option.id) {
                 const label = document.querySelector(`label[for="${option.id}"]`);
                 if (label && ['no', 'n'].includes(label.textContent.trim().toLowerCase())) {
                   option.checked = true;
                   option.dispatchEvent(new Event('change', { bubbles: true }));
+                  option.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
                   console.log(`Selected radio no option by label: ${label.textContent}`);
                   return true;
                 }
@@ -313,7 +473,6 @@ const formFiller = (() => {
         }
       }
 
-      // Regular checkbox/radio handling for cases not covered above
       if (typeof value === 'boolean') {
         element.checked = value;
       } else if (typeof value === 'string') {
@@ -323,61 +482,75 @@ const formFiller = (() => {
           value === element.value ||
           value.toLowerCase() === 'checked';
       }
+      
       element.dispatchEvent(new Event('change', { bubbles: true }));
+      if (inputType === 'radio') {
+        element.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+      }
+
+      // After filling the checkbox/radio, enhance the container styling
+      if (inputType === 'radio') {
+        // Find the radio group container for better visual feedback
+        const radioGroup = element.closest('.radio-group, fieldset, .form-group');
+        if (radioGroup) {
+          radioGroup.style.backgroundColor = 'rgba(66, 133, 244, 0.05)';
+          setTimeout(() => {
+            radioGroup.style.backgroundColor = '';
+          }, 800);
+        }
+      }
+      
       return true;
     }
 
     function fillTextField(element, value) {
-      // Special handling for fields that might trigger popups/tags
       if (element.getAttribute('role') === 'combobox' ||
         element.classList.contains('tags-input') ||
         element.classList.contains('autocomplete') ||
         element.getAttribute('autocomplete') === 'off') {
 
-        //console.log(`Detected potential tag/autocomplete field: ${element.id || element.name}`);
-
-        // First focus the field to activate any attached behaviors
         element.focus();
-
-        // Set the value
         element.value = value;
 
-        // Dispatch events in the right order to simulate typing
         element.dispatchEvent(new Event('focus', { bubbles: true }));
         element.dispatchEvent(new Event('input', { bubbles: true }));
 
-        // Small delay to let any dropdown/suggestions appear
         setTimeout(() => {
-          // Press Enter key to potentially confirm the value
           element.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', bubbles: true }));
           element.dispatchEvent(new KeyboardEvent('keypress', { key: 'Enter', code: 'Enter', bubbles: true }));
           element.dispatchEvent(new KeyboardEvent('keyup', { key: 'Enter', code: 'Enter', bubbles: true }));
 
-          // Then blur the field
           element.dispatchEvent(new Event('change', { bubbles: true }));
           element.dispatchEvent(new Event('blur', { bubbles: true }));
+          console.log(`Filled tag/autocomplete field: ${element.id}, ${element.name}, ${element.value}`);
 
-          // Visual indicator
-          element.style.borderLeft = '3px solid #4285f4';
+          element.style.borderLeft = '4px solid #4285f4';
         }, 200);
 
         return true;
       }
 
-      // Standard behavior for regular inputs
-      element.value = value;
-      element.dispatchEvent(new Event('input', { bubbles: true }));
-      element.dispatchEvent(new Event('change', { bubbles: true }));
-
-      // Add a visual indicator that the field was filled
-      element.style.borderLeft = '3px solid #4285f4';
+      // For standard inputs, add success indicator after setting value
+      if (!(element.getAttribute('role') === 'combobox' ||
+          element.classList.contains('tags-input') ||
+          element.classList.contains('autocomplete') ||
+          element.getAttribute('autocomplete') === 'off')) {
+        element.value = value;
+        element.dispatchEvent(new Event('input', { bubbles: true }));
+        element.dispatchEvent(new Event('change', { bubbles: true }));
+        element.dispatchEvent(new Event('blur', { bubbles: true }));
+        
+        // Visual indicator already applied by addVisualEffect
+        return true;
+      }
+      
+      element.style.borderLeft = '4px solid #4285f4';
       return true;
     }
 
     function updateEnhancedSelect(selectElement, value) {
       if (!selectElement) return false;
 
-      // First update the native select element
       const options = Array.from(selectElement.options);
       const option = options.find(opt =>
         opt.value === value ||
@@ -386,14 +559,10 @@ const formFiller = (() => {
       );
 
       if (option) {
-        // Update the native select element
         selectElement.value = option.value;
 
-        // Trigger native change event
         selectElement.dispatchEvent(new Event('change', { bubbles: true }));
 
-        // Check for enhanced dropdown implementations
-        // 1. Chosen.js
         const chosenId = `${selectElement.id}_chosen`;
         const chosenContainer = document.getElementById(chosenId);
 
@@ -401,17 +570,14 @@ const formFiller = (() => {
           console.log(`Found enhanced Chosen.js dropdown: ${chosenId}`);
 
           try {
-            // Update Chosen's display text
             const chosenSpan = chosenContainer.querySelector('.chosen-single span');
             if (chosenSpan) {
               chosenSpan.textContent = option.text || option.value;
             }
 
-            // Update the result-selected class in the dropdown list
             const resultItems = chosenContainer.querySelectorAll('.chosen-results li');
             resultItems.forEach(item => item.classList.remove('result-selected'));
 
-            // Find the matching item in the dropdown and mark it as selected
             const selectedIndex = options.indexOf(option);
             if (selectedIndex >= 0) {
               const resultItem = chosenContainer.querySelector(`.chosen-results li:nth-child(${selectedIndex + 1})`);
@@ -420,7 +586,6 @@ const formFiller = (() => {
               }
             }
 
-            // If the library is available, try to update using its API
             if (window.jQuery && window.jQuery(selectElement).chosen) {
               window.jQuery(selectElement).trigger('chosen:updated');
             }
@@ -431,7 +596,6 @@ const formFiller = (() => {
           }
         }
 
-        // 2. Select2
         if (window.jQuery && window.jQuery(selectElement).data('select2')) {
           console.log(`Found enhanced Select2 dropdown: ${selectElement.id}`);
           try {
@@ -442,29 +606,22 @@ const formFiller = (() => {
           }
         }
 
-        // If we made it here, we at least updated the native select
         return true;
       }
 
       return false;
     }
 
-
-    // Track stats
     const stats = {
       filled: 0,
       failed: 0,
-      total: Object.keys(fieldValues).length
+      total: fieldValues.length
     };
 
-    // Fill each field
-    // Perform form filling
-    console.log("Filling form with data:", fieldValues);
-    // Iterate through fieldValues array
     for (const field of fieldValues) {
-      // Extract field properties
-
       try {
+        console.log(`Processing field: ${field.label || field.name || field.id}`);
+        
         const element = findFillableElement(field);
         if (!element) {
           console.warn(`No element found for field: ${field.id || field.name || field.label}`);
@@ -472,79 +629,53 @@ const formFiller = (() => {
           continue;
         }
 
-        //console.log(`Found element: id: ${field.id}, name: ${field.name}, label: ${field.label}, type: ${field.type}, value: ${field.value}, class: ${field.className}`);
         const tagName = element.tagName.toLowerCase();
         const inputType = element.type ? element.type.toLowerCase() : '';
         const value = field.value;
 
-        if (fillField(element, tagName, inputType, value)) {
+        if (await fillField(element, tagName, inputType, value)) {
           stats.filled++;
+          console.log(`Successfully filled field: ${field.label || field.name || field.id}`);
         } else {
           stats.failed++;
+          console.warn(`Failed to fill field: ${field.label || field.name || field.id}`);
         }
+        
+        // Add a small delay between fields for better visual effect
+        await new Promise(resolve => setTimeout(resolve, 300));
       } catch (error) {
-        console.error(`Error filling field ${identifier}:`, error);
+        console.error(`Error filling field ${field.id || field.name || field.label}:`, error);
         stats.failed++;
       }
     }
 
-    // Special handling for radio groups by name
-    // This finds all radio groups and then sets the right one based on value
     const processedRadioGroups = new Set();
 
     for (const key in fieldValues) {
-      // Skip already processed items
       if (processedRadioGroups.has(key)) continue;
 
       const value = fieldValues[key];
       if (value === null || value === undefined) continue;
 
-      // Look for radio buttons with this name
       const radioGroup = document.querySelectorAll(`input[type="radio"][name="${CSS.escape(key)}"]`);
 
       if (radioGroup.length > 1) {
         console.log(`Processing radio group: ${key} with value: ${value}`);
         processedRadioGroups.add(key);
-
-        // Try to find the radio with matching value
+        
         let foundMatch = false;
 
-        // First try exact match
-        for (const radio of radioGroup) {
-          if (radio.value === String(value)) {
-            radio.checked = true;
-            foundMatch = true;
-            radio.dispatchEvent(new Event('change', { bubbles: true }));
-            break;
-          }
-        }
-
-        // If no exact match, try case-insensitive
-        if (!foundMatch) {
-          const lcValue = String(value).toLowerCase();
-          for (const radio of radioGroup) {
-            if (radio.value.toLowerCase() === lcValue) {
-              radio.checked = true;
-              foundMatch = true;
-              radio.dispatchEvent(new Event('change', { bubbles: true }));
-              break;
-            }
-          }
-        }
-
-        // If still no match, try matching against labels
-        if (!foundMatch) {
-          for (const radio of radioGroup) {
-            // Try to get the label text
+        for (const strategy of [
+          radio => radio.value === String(value),
+          radio => radio.value.toLowerCase() === String(value).toLowerCase(),
+          radio => {
             let labelText = '';
-
-            // By "for" attribute
+            
             if (radio.id) {
               const labelElement = document.querySelector(`label[for="${radio.id}"]`);
               if (labelElement) labelText = labelElement.textContent.trim();
             }
-
-            // By parent label
+            
             if (!labelText) {
               let parent = radio.parentElement;
               while (parent && parent.tagName !== 'FORM') {
@@ -555,45 +686,51 @@ const formFiller = (() => {
                 parent = parent.parentElement;
               }
             }
-
-            // By next sibling text node
+            
             if (!labelText) {
               let nextSibling = radio.nextSibling;
               while (nextSibling && !labelText) {
-                if (nextSibling.nodeType === 3) { // Text node
+                if (nextSibling.nodeType === 3) {
                   labelText = nextSibling.textContent.trim();
                   if (labelText) break;
-                } else if (nextSibling.nodeType === 1) { // Element node
+                } else if (nextSibling.nodeType === 1) {
                   labelText = nextSibling.textContent.trim();
                   if (labelText) break;
                 }
                 nextSibling = nextSibling.nextSibling;
               }
             }
-
-            // Compare if we found any label text
-            if (labelText &&
+            
+            return labelText && 
               (labelText.toLowerCase() === String(value).toLowerCase() ||
-                labelText.toLowerCase().includes(String(value).toLowerCase()))) {
+               labelText.toLowerCase().includes(String(value).toLowerCase()));
+          }
+        ]) {
+          for (const radio of radioGroup) {
+            if (strategy(radio)) {
               radio.checked = true;
-              foundMatch = true;
               radio.dispatchEvent(new Event('change', { bubbles: true }));
+              radio.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+              foundMatch = true;
+              console.log(`Selected radio option: ${radio.value}`);
               break;
             }
           }
+          
+          if (foundMatch) break;
         }
 
         if (!foundMatch) {
           console.log(`Could not find matching radio button for ${key} with value ${value}`);
         }
+        
+        await new Promise(resolve => setTimeout(resolve, 200));
       }
     }
 
-    // Process radio groups passed as objects with name and options
     for (const key in fieldValues) {
       const value = fieldValues[key];
 
-      // Check if this is a radio group object from our extraction
       if (value && typeof value === 'object' && value.type === 'radio' &&
         value.name && Array.isArray(value.options)) {
 
@@ -607,16 +744,20 @@ const formFiller = (() => {
           if (radio.value === selectedValue) {
             radio.checked = true;
             radio.dispatchEvent(new Event('change', { bubbles: true }));
+            radio.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+            console.log(`Selected radio option from group object: ${radio.value}`);
             break;
           }
         }
+        
+        await new Promise(resolve => setTimeout(resolve, 200));
       }
     }
 
+    console.log("Sequential form filling complete:", stats);
     return stats;
   }
 
-  // Return public API
   return {
     performFormFilling
   };
