@@ -300,7 +300,7 @@ const formProcessor = (() => {
       //    console.error("Error showing default values dialog:", dialogError);
       //    // Continue with temporary default values we already set
       //  } finally {
-          dialogActive = false;
+      //    dialogActive = false;
       //  }
       //}
       

@@ -7,6 +7,10 @@
   // Version information - should match manifest.json
   const VERSION = "0.1.19";
   
+  // Determine development mode based on API_BASE_URL which is set by webpack.DefinePlugin
+  // In development mode it will be http://localhost:3001, in production it will be https://bargain4me.com
+  const DEV_MODE = typeof API_BASE_URL === 'undefined' || API_BASE_URL.includes('localhost');
+  
   // Check if we're in a frame - only inject in the main frame
   if (self !== self.top) return;
 
@@ -76,10 +80,16 @@
     
     // Add buttons to panel
     const buttons = [
-      { id: 'load-data', text: 'Load File', icon: '📂' },
-      { id: 'load-folder', text: 'Load Folder', icon: '📁' },
-      { id: 'auto-fill', text: 'Auto Fill', icon: '✏️' }
+      { id: 'load-data', text: 'Load File', icon: '📂' }
     ];
+    
+    // Add 'Load Folder' button only in development mode
+    if (DEV_MODE) {
+      buttons.push({ id: 'load-folder', text: 'Load Folder', icon: '📁' });
+    }
+    
+    // Add Auto Fill button (always visible)
+    buttons.push({ id: 'auto-fill', text: 'Auto Fill', icon: '✏️' });
     
     // Make sure buttons are added with the correct structure
     buttons.forEach(button => {
