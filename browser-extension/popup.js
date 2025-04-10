@@ -402,57 +402,67 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 
-  // New function to display form fields in a dialog on the page
+  // New function to display form fields in a side panel on the page
   function displayFormFieldsInPageDialog(fields, tabId) {
-    // First inject the CSS for the dialog if it doesn't exist
+    // First inject the CSS for the panel
     chrome.scripting.insertCSS({
       target: { tabId: tabId },
       css: `
-        .formmaster-overlay {
+        .formmaster-side-panel {
           position: fixed;
           top: 0;
-          left: 0;
           right: 0;
-          bottom: 0;
-          background-color: rgba(0, 0, 0, 0.5);
+          width: 450px;
+          max-width: 90vw;
+          height: 100vh;
+          background-color: #ffffff;
+          box-shadow: -5px 0 15px rgba(0, 0, 0, 0.1);
           z-index: 9999;
           display: flex;
-          justify-content: center;
-          align-items: center;
-        }
-        
-        .formmaster-dialog {
-          background-color: #ffffff;
-          border-radius: 8px;
-          box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
-          width: 80%;
-          max-width: 900px;
-          max-height: 80vh;
-          overflow: hidden;
-          display: flex;
           flex-direction: column;
+          transition: transform 0.3s ease;
+          overflow: hidden;
+          animation: formmaster-slidein 0.3s ease-out;
+          border-left: 1px solid #e0e0e0;
+        }
+
+        @keyframes formmaster-slidein {
+          from { transform: translateX(100%); }
+          to { transform: translateX(0); }
         }
         
-        .formmaster-dialog-header {
+        .formmaster-panel-header {
           display: flex;
           justify-content: space-between;
           align-items: center;
           padding: 16px;
           border-bottom: 1px solid #e0e0e0;
           background-color: #f5f5f5;
+          flex-shrink: 0;
         }
         
-        .formmaster-dialog-title {
+        .formmaster-panel-title {
           font-size: 18px;
           font-weight: 600;
           color: #4285f4;
           margin: 0;
+          display: flex;
+          align-items: center;
         }
         
-        .formmaster-dialog-close {
+        .formmaster-field-count {
+          background-color: #4285f4;
+          color: white;
+          border-radius: 16px;
+          padding: 2px 8px;
+          font-size: 14px;
+          margin-left: 8px;
+        }
+        
+        .formmaster-panel-close {
           background: none;
           border: none;
-          font-size: 20px;
+          font-size: 24px;
           cursor: pointer;
           color: #5f6368;
           padding: 0;
@@ -464,13 +474,14 @@ document.addEventListener('DOMContentLoaded', function() {
           justify-content: center;
         }
         
-        .formmaster-dialog-close:hover {
+        .formmaster-panel-close:hover {
           background-color: #e8eaed;
         }
         
-        .formmaster-dialog-body {
+        .formmaster-panel-body {
           padding: 16px;
           overflow-y: auto;
+          flex-grow: 1;
         }
         
         .formmaster-fields-table {
@@ -484,6 +495,7 @@ document.addEventListener('DOMContentLoaded', function() {
           padding: 10px 12px;
           text-align: left;
           border-bottom: 1px solid #e0e0e0;
+          font-size: 13px;
         }
         
         .formmaster-fields-table th {
@@ -492,31 +504,37 @@ document.addEventListener('DOMContentLoaded', function() {
           top: 0;
           font-weight: 600;
           color: #202124;
+          font-size: 12px;
+          white-space: nowrap;
+          z-index: 1;
+        }
+
+        .formmaster-fields-table td {
+          max-width: 180px;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
         }
         
         .formmaster-fields-table tr:hover td {
           background-color: #f0f7ff;
         }
         
-        .formmaster-field-count {
-          background-color: #4285f4;
-          color: white;
-          border-radius: 16px;
-          padding: 2px 8px;
-          font-size: 14px;
-          margin-left: 8px;
-        }
-        
         .formmaster-options-list {
           margin: 0;
           padding: 0;
           list-style: none;
+          font-size: 12px;
         }
         
         .formmaster-option-item {
           padding: 3px 5px;
           margin-bottom: 2px;
           border-radius: 3px;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          max-width: 150px;
         }
         
         .formmaster-selected-option {
@@ -524,32 +542,120 @@ document.addEventListener('DOMContentLoaded', function() {
           font-weight: bold;
           border-left: 3px solid #4285f4;
         }
+        
+        .formmaster-pdf-field-name {
+          font-family: monospace;
+          font-size: 0.9em;
+          color: #666;
+          max-width: 150px;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+
+        /* Add responsive adjustments for small screens */
+        @media (max-width: 768px) {
+          .formmaster-side-panel {
+            width: 100%;
+            max-width: 100%;
+          }
+        }
+
+        /* Add icon for drag handle */
+        .formmaster-drag-handle {
+          position: absolute;
+          left: -15px;
+          top: 50%;
+          transform: translateY(-50%);
+          width: 15px;
+          height: 50px;
+          background: #4285f4;
+          border-radius: 4px 0 0 4px;
+          cursor: ew-resize;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          color: white;
+          font-size: 14px;
+        }
+
+        .formmaster-drag-handle::after {
+          content: "⋮";
+          transform: rotate(90deg);
+        }
+
+        /* Toggle button for mobile view */
+        .formmaster-toggle-panel {
+          position: fixed;
+          top: 50%;
+          right: 0;
+          transform: translateY(-50%);
+          background: #4285f4;
+          color: white;
+          border: none;
+          border-radius: 4px 0 0 4px;
+          padding: 10px;
+          cursor: pointer;
+          z-index: 9998;
+          display: none;
+        }
+
+        @media (max-width: 768px) {
+          .formmaster-toggle-panel {
+            display: block;
+          }
+          
+          .formmaster-side-panel.collapsed {
+            transform: translateX(100%);
+          }
+        }
+
+        /* Adding proper style reset for the panel to avoid conflicts */
+        .formmaster-side-panel, 
+        .formmaster-side-panel * {
+          box-sizing: border-box;
+          font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif;
+        }
       `
     });
 
-    // Then inject and execute the script to create the dialog
+    // Then inject and execute the script to create the panel
     chrome.scripting.executeScript({
       target: { tabId: tabId },
       function: (fieldsData) => {
-        // Remove any existing dialog first
-        const existingDialog = document.querySelector('.formmaster-overlay');
-        if (existingDialog) {
-          document.body.removeChild(existingDialog);
+        // Remove any existing panel first
+        const existingPanel = document.querySelector('.formmaster-side-panel');
+        if (existingPanel) {
+          document.body.removeChild(existingPanel);
         }
         
-        // Create the dialog
-        const overlay = document.createElement('div');
-        overlay.className = 'formmaster-overlay';
+        const existingToggle = document.querySelector('.formmaster-toggle-panel');
+        if (existingToggle) {
+          document.body.removeChild(existingToggle);
+        }
         
-        const dialog = document.createElement('div');
-        dialog.className = 'formmaster-dialog';
+        // Create the toggle button for mobile view
+        const toggleButton = document.createElement('button');
+        toggleButton.className = 'formmaster-toggle-panel';
+        toggleButton.innerHTML = '⟨';
+        toggleButton.setAttribute('aria-label', 'Toggle form analysis panel');
+        document.body.appendChild(toggleButton);
         
-        // Create dialog header
+        // Create the side panel
+        const panel = document.createElement('div');
+        panel.className = 'formmaster-side-panel';
+        panel.id = 'formmaster-side-panel';
+        
+        // Create drag handle for resizing
+        const dragHandle = document.createElement('div');
+        dragHandle.className = 'formmaster-drag-handle';
+        panel.appendChild(dragHandle);
+        
+        // Create panel header
         const header = document.createElement('div');
-        header.className = 'formmaster-dialog-header';
+        header.className = 'formmaster-panel-header';
         
         const title = document.createElement('h2');
-        title.className = 'formmaster-dialog-title';
+        title.className = 'formmaster-panel-title';
         title.textContent = 'FormMasterPro Analysis';
         
         const fieldCount = document.createElement('span');
@@ -558,28 +664,47 @@ document.addEventListener('DOMContentLoaded', function() {
         title.appendChild(fieldCount);
         
         const closeButton = document.createElement('button');
-        closeButton.className = 'formmaster-dialog-close';
+        closeButton.className = 'formmaster-panel-close';
         closeButton.innerHTML = '&times;';
+        closeButton.setAttribute('aria-label', 'Close form analysis panel');
         closeButton.onclick = () => {
-          document.body.removeChild(overlay);
+          panel.classList.add('collapsed');
+          setTimeout(() => {
+            if (document.body.contains(panel)) {
+              document.body.removeChild(panel);
+            }
+          }, 300);
         };
         
         header.appendChild(title);
         header.appendChild(closeButton);
         
-        // Create dialog body
+        // Create panel body
         const body = document.createElement('div');
-        body.className = 'formmaster-dialog-body';
+        body.className = 'formmaster-panel-body';
         
         // Create the table
         const table = document.createElement('table');
         table.className = 'formmaster-fields-table';
         
-        // Create table header
+        // Create table header - Add PDF Field Name column
         const thead = document.createElement('thead');
         const headerRow = document.createElement('tr');
         
-        ['Label/Name', 'Type', 'ID', 'Value', 'Options'].forEach(headerText => {
+        // Check if this is a PDF form (at least one field has rawFieldName property)
+        const isPdfForm = fieldsData.some(field => field.rawFieldName);
+        
+        const columns = ['Label/Name', 'Type', 'ID'];
+        
+        // Add PDF Field Name column if it's a PDF form
+        if (isPdfForm) {
+          columns.push('PDF Field Name');
+        }
+        
+        // Add Value and Options columns
+        columns.push('Value', 'Options');
+        
+        columns.forEach(headerText => {
           const th = document.createElement('th');
           th.textContent = headerText;
           headerRow.appendChild(th);
@@ -608,6 +733,21 @@ document.addEventListener('DOMContentLoaded', function() {
           const idCell = document.createElement('td');
           idCell.textContent = field.id || '-';
           row.appendChild(idCell);
+          
+          // Add PDF Field Name cell if it's a PDF form
+          if (isPdfForm) {
+            const pdfFieldNameCell = document.createElement('td');
+            
+            if (field.rawFieldName) {
+              pdfFieldNameCell.className = 'formmaster-pdf-field-name';
+              pdfFieldNameCell.textContent = field.rawFieldName;
+              pdfFieldNameCell.title = field.rawFieldName; // Show full name on hover
+            } else {
+              pdfFieldNameCell.textContent = '-';
+            }
+            
+            row.appendChild(pdfFieldNameCell);
+          }
           
           // Value cell
           const valueCell = document.createElement('td');
@@ -669,32 +809,58 @@ document.addEventListener('DOMContentLoaded', function() {
         table.appendChild(tbody);
         body.appendChild(table);
         
-        // Assemble the dialog
-        dialog.appendChild(header);
-        dialog.appendChild(body);
-        overlay.appendChild(dialog);
+        // Assemble the panel
+        panel.appendChild(header);
+        panel.appendChild(body);
+        document.body.appendChild(panel);
         
-        // Add to the page
-        document.body.appendChild(overlay);
+        // Implement panel resizing functionality
+        let startX, startWidth;
         
-        // Add event listener to close dialog when clicking outside
-        overlay.addEventListener('click', (event) => {
-          if (event.target === overlay) {
-            document.body.removeChild(overlay);
+        function initResize(e) {
+          startX = e.clientX;
+          startWidth = parseInt(document.defaultView.getComputedStyle(panel).width, 10);
+          document.documentElement.addEventListener('mousemove', resizePanel);
+          document.documentElement.addEventListener('mouseup', stopResize);
+          e.preventDefault();
+        }
+        
+        function resizePanel(e) {
+          const width = startWidth - (e.clientX - startX);
+          if (width > 300 && width < (window.innerWidth * 0.8)) {
+            panel.style.width = `${width}px`;
+          }
+        }
+        
+        function stopResize() {
+          document.documentElement.removeEventListener('mousemove', resizePanel);
+          document.documentElement.removeEventListener('mouseup', stopResize);
+        }
+        
+        dragHandle.addEventListener('mousedown', initResize);
+        
+        // Implement toggle button for mobile view
+        toggleButton.addEventListener('click', () => {
+          if (panel.classList.contains('collapsed')) {
+            panel.classList.remove('collapsed');
+            toggleButton.innerHTML = '⟨';
+          } else {
+            panel.classList.add('collapsed');
+            toggleButton.innerHTML = '⟩';
           }
         });
         
-        // Prevent scrolling of the background content
-        document.body.style.overflow = 'hidden';
-        
-        // Restore scrolling when dialog is closed
-        closeButton.addEventListener('click', () => {
-          document.body.style.overflow = '';
-        });
-        
-        overlay.addEventListener('click', (event) => {
-          if (event.target === overlay) {
-            document.body.style.overflow = '';
+        // Add event listener to close panel when pressing ESC key
+        document.addEventListener('keydown', (event) => {
+          if (event.key === 'Escape') {
+            if (document.body.contains(panel)) {
+              panel.classList.add('collapsed');
+              setTimeout(() => {
+                if (document.body.contains(panel)) {
+                  document.body.removeChild(panel);
+                }
+              }, 300);
+            }
           }
         });
       },
@@ -705,10 +871,7 @@ document.addEventListener('DOMContentLoaded', function() {
     showToast(`Analyzed ${fields.length} form fields`, 'success');
   }
 
-  // Old displayFormFields function can be removed as we're replacing it with the dialog version
-  /* The original displayFormFields function is removed since we now use the dialog version */
-
-// Helper function to show toast messages
+  // Helper function to show toast messages
   function showToast(message, type = 'info') {
     const toast = document.createElement('div');
     toast.className = `toast ${type}`;
