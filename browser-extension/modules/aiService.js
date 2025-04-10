@@ -129,7 +129,7 @@ const aiService = (() => {
         } catch (parseError) {
           console.error("Error parsing FromMasterPro response as JSON:", parseError);
           console.log("Response content:", content);
-          return {};
+          throw new Error("Error parsing FromMasterPro response as JSON:", parseError, content);
         }
       } else {
         // Not JSON, get as text instead
