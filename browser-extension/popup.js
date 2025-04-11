@@ -876,7 +876,7 @@ document.addEventListener('DOMContentLoaded', function() {
           
           // Try to find the element in different ways
           let element = findFieldElement(field);
-          
+          console.log('Found element:', element);
           if (element) {
             scrollElementIntoView(element);
             applyHighlightToElement(element, field.type);
@@ -891,19 +891,6 @@ document.addEventListener('DOMContentLoaded', function() {
             element = document.getElementById(field.id);
             if (element) return element;
           }
-          
-          // Try using name
-          if (field.name) {
-            const nameElements = document.getElementsByName(field.name);
-            if (nameElements.length > 0) return nameElements[0];
-            
-            // For radio buttons and checkboxes, try a more specific selector
-            if (field.type === 'radio' || field.type === 'checkbox') {
-              element = document.querySelector(`input[type="${field.type}"][name="${field.name}"]`);
-              if (element) return element;
-            }
-          }
-          
           // Try label matching
           if (field.label) {
             const labels = Array.from(document.querySelectorAll('label'));
@@ -918,6 +905,25 @@ document.addEventListener('DOMContentLoaded', function() {
                 const labeledElement = label.querySelector('input, select, textarea');
                 if (labeledElement) return labeledElement;
               }
+            }
+          }
+          
+          if (field.ariaLabel){
+            // Try using ARIA label
+            element = document.querySelector(`[aria-label="${field.ariaLabel}"]`);
+            if (element) return element;
+          }
+          
+          
+          // Try using name
+          if (field.name) {
+            const nameElements = document.getElementsByName(field.name);
+            if (nameElements.length > 0) return nameElements[0];
+            
+            // For radio buttons and checkboxes, try a more specific selector
+            if (field.type === 'radio' || field.type === 'checkbox') {
+              element = document.querySelector(`input[type="${field.type}"][name="${field.name}"]`);
+              if (element) return element;
             }
           }
           

@@ -108,7 +108,8 @@ const formFiller = (() => {
     }
 
     function findFillableElement(field) {
-      const { id, label, name, type, value, aiGenerated } = field;
+      const { id, label, ariaLabel, name, type, value, aiGenerated } = field;
+      console.log(`Finding fillable element for: ${id} ${name} ${label}, aria: ${ariaLabel}, value: ${value}`);
 
       if (value === null || value === undefined) {
         console.warn(`Skipping field with missing value: ${id || name || label}`);
@@ -119,10 +120,6 @@ const formFiller = (() => {
 
       if (id) {
         element = document.getElementById(id);
-      }
-
-      if (!element && name) {
-        element = document.querySelector(`[name="${name}"]`);
       }
 
       if (!element && label) {
@@ -139,6 +136,17 @@ const formFiller = (() => {
             }
           }
         }
+      }
+
+      if (!element && ariaLabel) {
+        element = document.querySelector(`[aria-label="${ariaLabel}"]`);
+        if (!element) {
+          element = document.querySelector(`[aria-labelledby="${ariaLabel}"]`);
+        }
+      }
+
+      if (!element && name) {
+        element = document.querySelector(`[name="${name}"]`);
       }
 
       if (!element) {
@@ -739,7 +747,6 @@ const formFiller = (() => {
         const tagName = element.tagName.toLowerCase();
         const inputType = element.type ? element.type.toLowerCase() : '';
         const value = field.value;
-
         if (await fillField(element, tagName, inputType, value)) {
           stats.filled++;
           console.log(`Successfully filled field: ${field.label || field.name || field.id}`);
