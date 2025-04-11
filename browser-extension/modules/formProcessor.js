@@ -130,7 +130,7 @@ const formProcessor = (() => {
       // Create fieldKeywords for current form
       const currentFormFields = {};
       formFields.forEach(field => {
-        const keyName = field.label || field.name || field.id || '';
+        const keyName = field.ariaLabel || field.label || field.name || field.id || '';
         if (keyName.trim() === '') return;
         
         if (field.options && Array.isArray(field.options) && field.options.length > 0) {
@@ -217,7 +217,7 @@ const formProcessor = (() => {
       formFields.forEach(field => {
         const fieldId = field.id || '';
         const fieldName = field.name || '';
-        const fieldLabel = field.label || '';
+        const fieldLabel = field.ariaLabel || field.label || '';
         
         // Skip if we already have a suggestion for this field
         const keyName = fieldLabel || fieldName || fieldId;
@@ -323,7 +323,7 @@ const formProcessor = (() => {
       formFields.forEach(field => {
         const fieldId = field.id || '';
         const fieldName = field.name || '';
-        const fieldLabel = field.label || '';
+        const fieldLabel = field.ariaLabel || field.label || '';
         const fieldType = field.type || 'text';
         
         // Check if we have a suggestion for this field from any source

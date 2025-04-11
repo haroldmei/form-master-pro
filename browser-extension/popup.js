@@ -381,11 +381,13 @@ document.addEventListener('DOMContentLoaded', function() {
               fields.push(...formData.checkboxes);
             }
             
+            console.log('Extracted form data:', fields);
             return fields;
           }
         }, results => {
           if (results && results[0] && results[0].result) {
             // Instead of displaying in popup, send to dialog in the page
+
             displayFormFieldsInPageDialog(results[0].result, tabs[0].id);
             
             if (typeof autoFillBtn !== 'undefined' && autoFillBtn) {
@@ -615,6 +617,33 @@ document.addEventListener('DOMContentLoaded', function() {
           box-sizing: border-box;
           font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif;
         }
+
+        /* Add new highlight effect styles */
+        .formmaster-field-highlight {
+          outline: 3px solid rgba(66, 133, 244, 0.8) !important;
+          box-shadow: 0 0 15px rgba(66, 133, 244, 0.4) !important;
+          transition: all 0.2s ease-out;
+          position: relative;
+          z-index: 10000;
+        }
+        
+        .formmaster-checkbox-highlight,
+        .formmaster-radio-highlight {
+          background-color: rgba(66, 133, 244, 0.15) !important;
+          border-radius: 4px;
+          transition: all 0.2s ease-out;
+        }
+        
+        .formmaster-row-hover {
+          background-color: #f0f7ff !important;
+          cursor: pointer;
+        }
+        
+        /* Special handling for Select2 and Chosen dropdowns */
+        .select2-container--focus,
+        .chosen-container-active {
+          box-shadow: 0 0 15px rgba(66, 133, 244, 0.4) !important;
+        }
       `
     });
 
@@ -627,6 +656,9 @@ document.addEventListener('DOMContentLoaded', function() {
         if (existingPanel) {
           document.body.removeChild(existingPanel);
         }
+        
+        // Remove any existing highlight
+        clearFormHighlights();
         
         const existingToggle = document.querySelector('.formmaster-toggle-panel');
         if (existingToggle) {
@@ -669,6 +701,7 @@ document.addEventListener('DOMContentLoaded', function() {
         closeButton.setAttribute('aria-label', 'Close form analysis panel');
         closeButton.onclick = () => {
           panel.classList.add('collapsed');
+          clearFormHighlights(); // Clear any remaining highlights when closing
           setTimeout(() => {
             if (document.body.contains(panel)) {
               document.body.removeChild(panel);
@@ -716,8 +749,30 @@ document.addEventListener('DOMContentLoaded', function() {
         // Create table body
         const tbody = document.createElement('tbody');
         
-        fieldsData.forEach(field => {
+        fieldsData.forEach((field, index) => {
           const row = document.createElement('tr');
+          row.setAttribute('data-field-id', field.id || '');
+          row.setAttribute('data-field-name', field.name || '');
+          row.setAttribute('data-field-label', field.label || '');
+          row.setAttribute('data-field-type', field.type || '');
+          row.setAttribute('data-field-index', index);
+          
+          // Add hover handlers to highlight the corresponding form field
+          row.addEventListener('mouseenter', function() {
+            // Add hover styling to the row
+            this.classList.add('formmaster-row-hover');
+            
+            // Find and highlight the form field
+            highlightFormField(field);
+          });
+          
+          row.addEventListener('mouseleave', function() {
+            // Remove hover styling from the row
+            this.classList.remove('formmaster-row-hover');
+            
+            // Remove highlight from the form field
+            clearFormHighlights();
+          });
           
           // Label/Name cell
           const labelCell = document.createElement('td');
@@ -814,6 +869,162 @@ document.addEventListener('DOMContentLoaded', function() {
         panel.appendChild(body);
         document.body.appendChild(panel);
         
+        // Field highlighting functions
+        function highlightFormField(field) {
+          // Clear any existing highlights first
+          clearFormHighlights();
+          
+          // Try to find the element in different ways
+          let element = findFieldElement(field);
+          
+          if (element) {
+            scrollElementIntoView(element);
+            applyHighlightToElement(element, field.type);
+          }
+        }
+        
+        function findFieldElement(field) {
+          let element = null;
+          
+          // Try using ID first
+          if (field.id) {
+            element = document.getElementById(field.id);
+            if (element) return element;
+          }
+          
+          // Try using name
+          if (field.name) {
+            const nameElements = document.getElementsByName(field.name);
+            if (nameElements.length > 0) return nameElements[0];
+            
+            // For radio buttons and checkboxes, try a more specific selector
+            if (field.type === 'radio' || field.type === 'checkbox') {
+              element = document.querySelector(`input[type="${field.type}"][name="${field.name}"]`);
+              if (element) return element;
+            }
+          }
+          
+          // Try label matching
+          if (field.label) {
+            const labels = Array.from(document.querySelectorAll('label'));
+            for (const label of labels) {
+              if (label.textContent.trim() === field.label) {
+                if (label.htmlFor) {
+                  element = document.getElementById(label.htmlFor);
+                  if (element) return element;
+                }
+                
+                // Check if the label contains the input
+                const labeledElement = label.querySelector('input, select, textarea');
+                if (labeledElement) return labeledElement;
+              }
+            }
+          }
+          
+          // Try selected options for select fields (when available)
+          if (field.type === 'select' && field.options) {
+            const selectElements = document.querySelectorAll('select');
+            for (const select of selectElements) {
+              if (select.options.length === field.options.length) {
+                const optionText = Array.from(select.options).map(o => o.text.trim());
+                const fieldOptionText = field.options.map(o => o.text?.trim() || '');
+                if (optionText.join() === fieldOptionText.join()) {
+                  return select;
+                }
+              }
+            }
+          }
+          
+          return null;
+        }
+        
+        function applyHighlightToElement(element, fieldType) {
+          // Different highlighting based on element type
+          if (fieldType === 'checkbox' || fieldType === 'radio') {
+            // For checkboxes/radios, highlight the parent container too
+            const container = element.closest('label, .form-check, .checkbox, .radio, .custom-control');
+            if (container) {
+              container.classList.add('formmaster-checkbox-highlight');
+            } else {
+              element.parentElement?.classList.add('formmaster-checkbox-highlight');
+            }
+            
+            // Also highlight any associated label
+            if (element.id) {
+              const label = document.querySelector(`label[for="${element.id}"]`);
+              if (label) {
+                label.classList.add('formmaster-checkbox-highlight');
+              }
+            }
+            
+            element.classList.add('formmaster-field-highlight');
+          } else if (fieldType === 'select') {
+            // For select fields, check if it's a hidden select with enhanced UI
+            if (window.getComputedStyle(element).display === 'none') {
+              // Try to find the enhanced select container (Chosen or Select2)
+              let enhancedContainer = null;
+              
+              if (element.id) {
+                // Check for Chosen
+                enhancedContainer = document.getElementById(`${element.id}_chosen`);
+                
+                if (!enhancedContainer) {
+                  // Check for Select2
+                  enhancedContainer = document.querySelector(`[data-select2-id="${element.id}"]`);
+                }
+                
+                if (!enhancedContainer) {
+                  // Try other common patterns
+                  const possibleContainers = Array.from(
+                    document.querySelectorAll(`.select2-container[id$="-${element.id}"], .chosen-container[id$="-${element.id}"]`)
+                  );
+                  
+                  if (possibleContainers.length > 0) {
+                    enhancedContainer = possibleContainers[0];
+                  }
+                }
+              }
+              
+              if (enhancedContainer) {
+                enhancedContainer.classList.add('formmaster-field-highlight');
+              } else {
+                // Fall back to highlighting the original element
+                element.classList.add('formmaster-field-highlight');
+              }
+            } else {
+              element.classList.add('formmaster-field-highlight');
+            }
+          } else {
+            element.classList.add('formmaster-field-highlight');
+          }
+        }
+        
+        function clearFormHighlights() {
+          // Remove all highlight classes
+          document.querySelectorAll('.formmaster-field-highlight, .formmaster-checkbox-highlight, .formmaster-radio-highlight')
+            .forEach(el => {
+              el.classList.remove('formmaster-field-highlight', 'formmaster-checkbox-highlight', 'formmaster-radio-highlight');
+            });
+        }
+        
+        function scrollElementIntoView(element) {
+          // Only scroll if not already in viewport
+          const rect = element.getBoundingClientRect();
+          const isInView = (
+            rect.top >= 0 &&
+            rect.left >= 0 &&
+            rect.bottom <= (window.innerHeight || document.documentElement.clientHeight) &&
+            rect.right <= (window.innerWidth || document.documentElement.clientWidth)
+          );
+          
+          if (!isInView) {
+            element.scrollIntoView({
+              behavior: 'smooth',
+              block: 'center'
+            });
+          }
+        }
+        
         // Implement panel resizing functionality
         let startX, startWidth;
         
@@ -854,6 +1065,7 @@ document.addEventListener('DOMContentLoaded', function() {
         document.addEventListener('keydown', (event) => {
           if (event.key === 'Escape') {
             if (document.body.contains(panel)) {
+              clearFormHighlights(); // Clear highlights
               panel.classList.add('collapsed');
               setTimeout(() => {
                 if (document.body.contains(panel)) {

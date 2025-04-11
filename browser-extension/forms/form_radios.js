@@ -2,7 +2,6 @@
 
 // Add function to check if an element is hidden
 function isElementHidden(element) {
-  // Function kept for reference but will no longer be used to filter elements
   if (!element) return true;
   
   // Check element's own visibility
@@ -53,8 +52,6 @@ function extractRadioGroups(container) {
         return;
       }
       
-      // REMOVED: Skip hidden radio buttons condition
-      // Instead, track visibility state in the data
       const isHidden = isElementHidden(radio);
       
       if (!groups[name]) {
@@ -66,10 +63,23 @@ function extractRadioGroups(container) {
           label: getRadioGroupLabel(radio) || name,
           className: '', // Initialize className for the group
           class: '', // Initialize class attribute for the group
+          ariaLabel: '',  // Initialize ariaLabel for the group
+          ariaLabelledBy: '', // Initialize ariaLabelledBy for the group
           hidden: false, // Will be updated based on all radio buttons in the group
           options: []
         };
         console.log(`Created new radio group with name "${name}"`);
+        
+        // Check for common aria attributes on a parent radiogroup role
+        let parent = radio.parentElement;
+        while (parent && parent.tagName !== 'FORM' && parent.tagName !== 'BODY') {
+          if (parent.getAttribute('role') === 'radiogroup') {
+            groups[name].ariaLabel = parent.getAttribute('aria-label') || '';
+            groups[name].ariaLabelledBy = parent.getAttribute('aria-labelledby') || '';
+            break;
+          }
+          parent = parent.parentElement;
+        }
       }
       
       // Add this radio button to its group
@@ -82,6 +92,8 @@ function extractRadioGroups(container) {
         class: radio.getAttribute('class') || '', // Add explicit class attribute
         checked: radio.checked,
         label: getRadioElementLabel(radio),
+        ariaLabel: radio.getAttribute('aria-label') || '',
+        ariaLabelledBy: radio.getAttribute('aria-labelledby') || '',
         hidden: isHidden // Include visibility info but don't filter
       });
       
@@ -98,9 +110,6 @@ function extractRadioGroups(container) {
       
       console.log(`Added option "${radio.value}" to group "${name}", total options: ${groups[name].options.length}`);
     });
-    
-    // Only keep groups that have at least one radio button
-    // REMOVED: Filtering based on visibility
     
     // Try to find a common container ID for each radio group
     for (const name in groups) {
@@ -147,6 +156,21 @@ function extractRadioGroups(container) {
 }
 
 function getRadioElementLabel(element) {
+  // First check for ARIA labeling
+  const ariaLabelledBy = element.getAttribute('aria-labelledby');
+  if (ariaLabelledBy) {
+    const labelElement = document.getElementById(ariaLabelledBy);
+    if (labelElement) {
+      return labelElement.textContent.trim();
+    }
+  }
+  
+  // Check for direct aria-label attribute
+  const ariaLabel = element.getAttribute('aria-label');
+  if (ariaLabel) {
+    return ariaLabel.trim();
+  }
+  
   // Try to find a label by for attribute
   if (element.id) {
     const labelElement = document.querySelector(`label[for="${element.id}"]`);
@@ -159,7 +183,6 @@ function getRadioElementLabel(element) {
   let parent = element.parentElement;
   while (parent) {
     if (parent.tagName === 'LABEL') {
-      // Extract text but exclude the radio button's value
       let labelText = parent.textContent.trim();
       return element.value || labelText;
     }
@@ -184,7 +207,6 @@ function detectStructuredRadioGroup(radioElement) {
   try {
     if (!radioElement.name) return null;
     
-    // Find all radio buttons with the same name
     const radioName = radioElement.name;
     const allRadios = Array.from(
       document.querySelectorAll(`input[type="radio"][name="${CSS.escape(radioName)}"]`)
@@ -192,13 +214,10 @@ function detectStructuredRadioGroup(radioElement) {
     
     if (allRadios.length === 0) return null;
     
-    // Find common ancestor for all these radio buttons
     let commonAncestor = allRadios[0].parentElement;
     let foundCommon = false;
     
-    // Search up to 6 levels for a common container
     for (let level = 0; level < 6 && !foundCommon && commonAncestor; level++) {
-      // Check if this container contains all radio buttons
       if (allRadios.every(radio => commonAncestor.contains(radio))) {
         foundCommon = true;
       } else {
@@ -210,9 +229,8 @@ function detectStructuredRadioGroup(radioElement) {
     
     console.log(`Found common ancestor for radio group "${radioName}":`, commonAncestor);
     
-    // ENHANCEMENT: Look for parent with role="radiogroup" and aria-labelledby
     let currentAncestor = commonAncestor;
-    for (let i = 0; i < 3 && currentAncestor; i++) { // Check up to 3 levels up
+    for (let i = 0; i < 3 && currentAncestor; i++) {
       if (currentAncestor.getAttribute('role') === 'radiogroup') {
         const labelledById = currentAncestor.getAttribute('aria-labelledby');
         if (labelledById) {
@@ -224,7 +242,6 @@ function detectStructuredRadioGroup(radioElement) {
           }
         }
         
-        // If no aria-labelledby but has aria-label
         const ariaLabel = currentAncestor.getAttribute('aria-label');
         if (ariaLabel) {
           console.log(`Found role="radiogroup" with aria-label: "${ariaLabel}"`);
@@ -234,7 +251,6 @@ function detectStructuredRadioGroup(radioElement) {
       currentAncestor = currentAncestor.parentElement;
     }
     
-    // Look for a direct child label that isn't associated with any specific radio
     const directLabels = Array.from(commonAncestor.children).filter(child => 
       child.tagName === 'LABEL' && 
       (!child.getAttribute('for') || 
@@ -247,7 +263,6 @@ function detectStructuredRadioGroup(radioElement) {
       return labelText;
     }
     
-    // NEW: Look for label in parent structure (for form groups with nested divs)
     const parentElement = commonAncestor.parentElement;
     if (parentElement) {
       const parentLabelElements = Array.from(parentElement.children).filter(child => 
@@ -335,8 +350,35 @@ function getRadioGroupLabel(radioElement) {
   try {
     console.log('Trying to find label for radio group:', radioElement.name);
     
-    let parent = radioElement.parentElement;
+    let element = radioElement;
+    let parent = element.parentElement;
     let depth = 0;
+    
+    while (parent && depth < 6) {
+      if (parent.getAttribute('role') === 'radiogroup') {
+        const labelledById = parent.getAttribute('aria-labelledby');
+        if (labelledById) {
+          const labelElement = document.getElementById(labelledById);
+          if (labelElement) {
+            const text = labelElement.textContent.trim();
+            console.log(`Found role="radiogroup" with aria-labelledby: "${text}"`);
+            return text;
+          }
+        }
+        
+        const ariaLabel = parent.getAttribute('aria-label');
+        if (ariaLabel) {
+          console.log(`Found role="radiogroup" with aria-label: "${ariaLabel}"`);
+          return ariaLabel;
+        }
+      }
+      
+      parent = parent.parentElement;
+      depth++;
+    }
+    
+    parent = radioElement.parentElement;
+    depth = 0;
     const maxDepth = 5;
     
     while (parent && depth < maxDepth) {
@@ -348,24 +390,6 @@ function getRadioGroupLabel(radioElement) {
           return text;
         }
         break;
-      }
-      parent = parent.parentElement;
-      depth++;
-    }
-    
-    parent = radioElement.parentElement;
-    depth = 0;
-    while (parent && depth < 4) {
-      if (parent.getAttribute('role') === 'radiogroup') {
-        const labelledById = parent.getAttribute('aria-labelledby');
-        if (labelledById) {
-          const labelElement = document.getElementById(labelledById);
-          if (labelElement) {
-            const text = labelElement.textContent.trim();
-            console.log(`Found direct role="radiogroup" with aria-labelledby: "${text}"`);
-            return text;
-          }
-        }
       }
       parent = parent.parentElement;
       depth++;
