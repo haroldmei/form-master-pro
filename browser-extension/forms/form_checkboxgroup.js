@@ -72,6 +72,8 @@ function extractCheckboxGroups(container) {
         value: checkbox.value || '',
         checked: checkbox.checked,
         label: optionLabel,
+        ariaLabel: checkbox.getAttribute('aria-label') || '',
+        ariaLabelledBy: checkbox.getAttribute('aria-labelledby') || '',
         hidden: isHidden // Include visibility info but don't filter
       });
       
@@ -125,6 +127,16 @@ function extractCheckboxGroups(container) {
       
       console.log(`Group ${name} label determined as: "${groupLabel}"`);
       
+      // Get ARIA attributes for the group
+      let groupAriaLabel = '';
+      let groupAriaLabelledBy = '';
+      
+      // Check if the form-group has ARIA attributes
+      if (formGroupContainer && formGroupContainer.getAttribute('role') === 'group') {
+        groupAriaLabel = formGroupContainer.getAttribute('aria-label') || '';
+        groupAriaLabelledBy = formGroupContainer.getAttribute('aria-labelledby') || '';
+      }
+      
       // Determine if the entire group is hidden (only if all checkboxes are hidden)
       const allHidden = options.every(opt => opt.hidden === true);
       
@@ -136,6 +148,8 @@ function extractCheckboxGroups(container) {
           label: groupLabel,
           className: (formGroupContainer ? formGroupContainer.className : '') || '',
           class: (formGroupContainer ? formGroupContainer.getAttribute('class') : '') || '',
+          ariaLabel: groupAriaLabel,
+          ariaLabelledBy: groupAriaLabelledBy,
           options: options,
           hidden: allHidden // Mark as hidden only if ALL checkboxes are hidden
         });
@@ -188,6 +202,8 @@ function extractBootstrapCheckboxGroups(container) {
         value: checkbox.value || '',
         checked: checkbox.checked,
         label: optionLabel,
+        ariaLabel: checkbox.getAttribute('aria-label') || '',
+        ariaLabelledBy: checkbox.getAttribute('aria-labelledby') || '',
         hidden: isHidden // Include visibility info but don't filter
       });
     });
@@ -195,6 +211,16 @@ function extractBootstrapCheckboxGroups(container) {
     // Use the first checkbox's name, or generate a name if needed
     if (!groupName) {
       groupName = `checkbox_group_${result.length + 1}`;
+    }
+    
+    // Get ARIA attributes for the group
+    let groupAriaLabel = '';
+    let groupAriaLabelledBy = '';
+    
+    // Check if the form-group has ARIA attributes
+    if (formGroup.getAttribute('role') === 'group') {
+      groupAriaLabel = formGroup.getAttribute('aria-label') || '';
+      groupAriaLabelledBy = formGroup.getAttribute('aria-labelledby') || '';
     }
     
     // Determine if the entire group is hidden (only if all checkboxes are hidden)
@@ -206,6 +232,8 @@ function extractBootstrapCheckboxGroups(container) {
       label: groupLabel.textContent.trim(),
       className: formGroup.className || '',
       class: formGroup.getAttribute('class') || '',
+      ariaLabel: groupAriaLabel,
+      ariaLabelledBy: groupAriaLabelledBy,
       options: options,
       hidden: allHidden // Mark as hidden only if ALL checkboxes are hidden
     });
@@ -247,6 +275,8 @@ function extractBootstrapCheckboxGroups(container) {
           value: checkbox.value || '',
           checked: checkbox.checked,
           label: optionLabel,
+          ariaLabel: checkbox.getAttribute('aria-label') || '',
+          ariaLabelledBy: checkbox.getAttribute('aria-labelledby') || '',
           hidden: isHidden // Include visibility info but don't filter
         });
       });
@@ -280,6 +310,21 @@ function extractBootstrapCheckboxGroups(container) {
 }
 
 function getCheckboxOptionLabel(checkbox) {
+  // First check for ARIA labeling
+  const ariaLabelledBy = checkbox.getAttribute('aria-labelledby');
+  if (ariaLabelledBy) {
+    const labelElement = document.getElementById(ariaLabelledBy);
+    if (labelElement) {
+      return labelElement.textContent.trim();
+    }
+  }
+  
+  // Check for direct aria-label attribute
+  const ariaLabel = checkbox.getAttribute('aria-label');
+  if (ariaLabel) {
+    return ariaLabel.trim();
+  }
+  
   // Try to find a label by for attribute
   if (checkbox.id) {
     const labelElement = document.querySelector(`label[for="${checkbox.id}"]`);
@@ -335,6 +380,8 @@ function identifyStructuralCheckboxGroups(container) {
         value: checkbox.value || '',
         checked: checkbox.checked,
         label: getCheckboxOptionLabel(checkbox),
+        ariaLabel: checkbox.getAttribute('aria-label') || '',
+        ariaLabelledBy: checkbox.getAttribute('aria-labelledby') || '',
         hidden: isHidden // Include visibility info but don't filter
       });
     }
@@ -529,6 +576,24 @@ function determineGroupLabel(containers, options) {
 }
 
 function findGroupLabel(container) {
+  // First check for group-level ARIA labeling
+  if (container.getAttribute('role') === 'group' || container.getAttribute('role') === 'checkbox') {
+    const ariaLabelledBy = container.getAttribute('aria-labelledby');
+    if (ariaLabelledBy) {
+      const labelElement = document.getElementById(ariaLabelledBy);
+      if (labelElement) {
+        console.log(`Found aria-labelledby label in group: "${labelElement.textContent.trim()}"`);
+        return labelElement.textContent.trim();
+      }
+    }
+    
+    const ariaLabel = container.getAttribute('aria-label');
+    if (ariaLabel) {
+      console.log(`Found aria-label in group: "${ariaLabel}"`);
+      return ariaLabel;
+    }
+  }
+  
   // Bootstrap pattern: direct label child of a form-group
   if (container.className && container.className.includes('form-group')) {
     const directLabel = container.querySelector(':scope > label');

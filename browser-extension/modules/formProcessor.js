@@ -369,6 +369,7 @@ const formProcessor = (() => {
           const newMapping = {
             id: fieldId, 
             label: fieldLabel, 
+            ariaLabel: field.ariaLabel || '',
             name: fieldName, 
             type: fieldType, 
             value: formattedValue, 

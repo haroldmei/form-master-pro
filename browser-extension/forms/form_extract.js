@@ -111,6 +111,8 @@ function extractInputs(container) {
       class: input.getAttribute('class') || '',
       value: input.value || '',
       label: getElementLabel(input),
+      ariaLabel: input.getAttribute('aria-label') || '',
+      ariaLabelledBy: input.getAttribute('aria-labelledby') || '',
       hidden: isHidden, // Include visibility info but don't filter
       isDateInput: isDateInput
     });
@@ -225,6 +227,8 @@ function extractSelects(container) {
       class: select.getAttribute('class') || '',
       value: select.value || '',
       label: getElementLabel(select),
+      ariaLabel: select.getAttribute('aria-label') || '',
+      ariaLabelledBy: select.getAttribute('aria-labelledby') || '',
       hidden: isHidden, // Include visibility info but don't filter
       options: options
     });
@@ -249,6 +253,8 @@ function extractTextareas(container) {
       class: textarea.getAttribute('class') || '',
       value: textarea.value || '',
       label: getElementLabel(textarea),
+      ariaLabel: textarea.getAttribute('aria-label') || '',
+      ariaLabelledBy: textarea.getAttribute('aria-labelledby') || '',
       hidden: isHidden // Include visibility info but don't filter
     });
   });
@@ -271,6 +277,8 @@ function extractButtons(container) {
       class: button.getAttribute('class') || '',
       value: button.value || button.textContent || '',
       label: button.textContent || button.value || '',
+      ariaLabel: button.getAttribute('aria-label') || '',
+      ariaLabelledBy: button.getAttribute('aria-labelledby') || '',
       hidden: isHidden // Include visibility info but don't filter
     });
   });
@@ -299,6 +307,8 @@ function extractCheckboxes(container, groupedIds = new Set()) {
       value: checkbox.value || '',
       checked: checkbox.checked,
       label: getElementLabel(checkbox),
+      ariaLabel: checkbox.getAttribute('aria-label') || '',
+      ariaLabelledBy: checkbox.getAttribute('aria-labelledby') || '',
       hidden: isHidden // Include visibility info but don't filter
     });
   });
@@ -307,6 +317,24 @@ function extractCheckboxes(container, groupedIds = new Set()) {
 }
 
 function getElementLabel(element) {
+  let label = '';
+  
+  // First, check for ARIA labeling
+  const ariaLabelledBy = element.getAttribute('aria-labelledby');
+  if (ariaLabelledBy) {
+    const labelElement = document.getElementById(ariaLabelledBy);
+    if (labelElement) {
+      label = labelElement.textContent.trim();
+      if (label) return label;
+    }
+  }
+  
+  // Check for direct aria-label attribute
+  const ariaLabel = element.getAttribute('aria-label');
+  if (ariaLabel) {
+    return ariaLabel.trim();
+  }
+  
   // Try to find a label by for attribute
   if (element.id) {
     const labelElement = document.querySelector(`label[for="${element.id}"]`);
