@@ -85,13 +85,13 @@ jobs:
           
           # Create release in target repository
           gh release create $env:TAG_NAME `
-            --repo "haroldmei/formmasterpro" `
+            --repo "FormMasterPro/formmasterpro" `
             --title "FormMasterPro $env:TAG_NAME" `
             --notes "Release of FormMasterPro $env:TAG_NAME" `
             $env:PACKAGE_PATH `
             $env:CRX_PATH
           
-          echo "Release created in: https://github.com/haroldmei/formmasterpro"
+          echo "Release created in: https://github.com/FormMasterPro/formmasterpro"
           echo "Package uploaded: $env:PACKAGE_NAME"
           echo "CRX uploaded: $env:CRX_NAME"
         shell: pwsh
@@ -100,8 +100,8 @@ jobs:
         run: |
           echo "Package created: ${{ steps.get-package.outputs.filename }}"
           echo "CRX package created: ${{ steps.crx-package.outputs.crxname }}"
-          echo "Release created in: https://github.com/haroldmei/formmasterpro"
-          echo "View releases at: https://github.com/haroldmei/formmasterpro/releases"
+          echo "Release created in: https://github.com/FormMasterPro/formmasterpro"
+          echo "View releases at: https://github.com/FormMasterPro/formmasterpro/releases"
       
       # Upload artifacts for non-tag builds (branch pushes)
       - name: Upload build artifacts

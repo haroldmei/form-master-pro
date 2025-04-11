@@ -749,6 +749,13 @@ document.addEventListener('DOMContentLoaded', function() {
         // Create table body
         const tbody = document.createElement('tbody');
         
+        // Helper function to truncate text to 20 characters
+        function truncateText(text, maxLength = 12) {
+          if (!text) return '';
+          text = String(text);
+          return text.length > maxLength ? text.substring(0, maxLength) + '...' : text;
+        }
+        
         fieldsData.forEach((field, index) => {
           const row = document.createElement('tr');
           row.setAttribute('data-field-id', field.id || '');
@@ -776,7 +783,9 @@ document.addEventListener('DOMContentLoaded', function() {
           
           // Label/Name cell
           const labelCell = document.createElement('td');
-          labelCell.textContent = field.label || field.name || field.id || 'Unnamed Field';
+          const labelText = field.label || field.name || field.id || 'Unnamed Field';
+          labelCell.textContent = truncateText(labelText);
+          labelCell.title = labelText; // Show full text on hover
           row.appendChild(labelCell);
           
           // Type cell
@@ -786,7 +795,9 @@ document.addEventListener('DOMContentLoaded', function() {
           
           // ID cell
           const idCell = document.createElement('td');
-          idCell.textContent = field.id || '-';
+          const idText = field.id || '-';
+          idCell.textContent = truncateText(idText);
+          idCell.title = idText; // Show full ID on hover
           row.appendChild(idCell);
           
           // Add PDF Field Name cell if it's a PDF form
@@ -795,8 +806,9 @@ document.addEventListener('DOMContentLoaded', function() {
             
             if (field.rawFieldName) {
               pdfFieldNameCell.className = 'formmaster-pdf-field-name';
-              pdfFieldNameCell.textContent = field.rawFieldName;
-              pdfFieldNameCell.title = field.rawFieldName; // Show full name on hover
+              const pdfFieldText = field.rawFieldName;
+              pdfFieldNameCell.textContent = truncateText(pdfFieldText);
+              pdfFieldNameCell.title = pdfFieldText; // Show full name on hover
             } else {
               pdfFieldNameCell.textContent = '-';
             }
@@ -807,16 +819,19 @@ document.addEventListener('DOMContentLoaded', function() {
           // Value cell
           const valueCell = document.createElement('td');
           
+          let valueText = '';
           if (field.type === 'select' || field.type === 'radio') {
             // For select/radio, show selected option
             const selectedOpt = field.options?.find(opt => opt.selected || opt.checked);
-            valueCell.textContent = selectedOpt ? selectedOpt.value || selectedOpt.text : '-';
+            valueText = selectedOpt ? selectedOpt.value || selectedOpt.text : '-';
           } else if (field.type === 'checkbox') {
-            valueCell.textContent = field.checked ? 'Checked' : 'Unchecked';
+            valueText = field.checked ? 'Checked' : 'Unchecked';
           } else {
-            valueCell.textContent = field.value || '-';
+            valueText = field.value || '-';
           }
           
+          valueCell.textContent = truncateText(valueText);
+          valueCell.title = valueText; // Show full value on hover
           row.appendChild(valueCell);
           
           // Options cell
@@ -838,7 +853,8 @@ document.addEventListener('DOMContentLoaded', function() {
               }
               
               const optionText = option.text || option.value || option.label || '-';
-              optItem.textContent = optionText;
+              optItem.textContent = truncateText(optionText);
+              optItem.title = optionText; // Show full option text on hover
               optionsList.appendChild(optItem);
             });
             
