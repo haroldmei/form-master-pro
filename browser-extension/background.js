@@ -91,12 +91,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         .catch(error => sendResponse({ error: error.message }));
       return true;
       
-    case 'login':
-      auth0Service.login()
-        .then(result => sendResponse({ success: true }))
-        .catch(error => sendResponse({ success: false, error: error.message }));
-      return true;
-      
     case 'logout':
       auth0Service.logout()
         .then(() => sendResponse({ success: true }))

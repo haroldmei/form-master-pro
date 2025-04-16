@@ -74,15 +74,10 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     try {
-      const response = await chrome.runtime.sendMessage({ action: 'login' });
-      
-      if (response && response.success) {
-        console.log('Login successful:', response);
-        checkAuthState();
-      } else if (response && response.error) {
-        console.error('Login error:', response.error);
-        showError(`Login failed: ${response.error}`);
-      }
+      const response = await auth0Service.login();
+
+      console.log('Login successful');
+      checkAuthState();
     } catch (error) {
       console.error('Error during login:', error);
       showError('Login process failed');
