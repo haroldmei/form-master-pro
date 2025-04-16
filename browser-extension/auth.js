@@ -476,10 +476,11 @@ class Auth0Service {
     async clearAuthState() {
       if (this.isExtension) {
         return new Promise((resolve) => {
-          chrome.storage.local.remove(['authState'], resolve);
+          chrome.storage.local.remove(['authState', 'subscriptionData'], resolve);
         });
       } else {
         localStorage.removeItem('authState');
+        localStorage.removeItem('subscriptionData');
         return Promise.resolve();
       }
     }

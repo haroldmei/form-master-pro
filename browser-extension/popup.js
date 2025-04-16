@@ -43,10 +43,8 @@ document.addEventListener('DOMContentLoaded', function() {
   const subscriptionLink = document.getElementById('subscription-link');
   
   // Check authentication state on popup open
-  checkAuthState();
-  
   // Check subscription status on popup open
-  checkSubscriptionStatus();
+  checkAuthState();
   
   // Add auth button listeners
   if (loginButton) loginButton.addEventListener('click', login);
@@ -63,6 +61,7 @@ document.addEventListener('DOMContentLoaded', function() {
   // Listen for auth state changes from background script
   chrome.runtime.onMessage.addListener((message) => {
     if (message.type === 'auth-state-changed') {
+      console.log('Auth state changed:', message.isAuthenticated);
       checkAuthState();
     }
   });
@@ -78,6 +77,7 @@ document.addEventListener('DOMContentLoaded', function() {
       const response = await chrome.runtime.sendMessage({ action: 'login' });
       
       if (response && response.success) {
+        console.log('Login successful:', response);
         checkAuthState();
       } else if (response && response.error) {
         console.error('Login error:', response.error);
@@ -102,6 +102,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     try {
       await chrome.runtime.sendMessage({ action: 'logout' });
+      console.log('Logout successful');
       checkAuthState();
     } catch (error) {
       console.error('Error during logout:', error);
@@ -1158,6 +1159,7 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Display expiry date if available
         const expiryElem = document.getElementById('subscription-expiry');
+        console.log('Expiry element:', expiryElem);
         if (expiryElem && response.expiresAt) {
           try {
             // Parse ISO date string directly
