@@ -96,10 +96,10 @@ const aiService = (() => {
         const responseData = await response.json();
         //console.log("FromMasterPro API response:", responseData);
         if (!response.ok) {
-          if (response.status === 403 && responseData.error === 'email_not_verified') {
+          if (response.status === 403) {
             throw {
               status: response.status,
-              message: responseData.message || 'Email verification required',
+              message: responseData.message || 'Forbidden',
               error: responseData.error,
               isVerificationError: true
             };
