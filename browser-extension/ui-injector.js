@@ -5,7 +5,7 @@
 
 (function() {
   // Version information - should match manifest.json
-  const VERSION = "0.1.21";
+  const VERSION = "0.1.22";
   
   // Determine development mode based on API_BASE_URL which is set by webpack.DefinePlugin
   // In development mode it will be http://localhost:3001, in production it will be https://bargain4me.com

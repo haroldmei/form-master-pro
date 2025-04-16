@@ -201,7 +201,7 @@ const formProcessor = (() => {
         } catch (apiError) {
           console.error("Error getting AI suggestions:", apiError);
           // Continue with processing - we'll use rule-based suggestions as fallback
-          throw new Error("AI suggestions unavailable, check your network connection or subscription.");
+          throw apiError;
         }
       } else {
         console.log("Using cached suggestions - no API call needed");

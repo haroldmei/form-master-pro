@@ -91,12 +91,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         .catch(error => sendResponse({ error: error.message }));
       return true;
       
-    case 'login':
-      auth0Service.login()
-        .then(result => sendResponse({ success: true }))
-        .catch(error => sendResponse({ success: false, error: error.message }));
-      return true;
-      
     case 'logout':
       auth0Service.logout()
         .then(() => sendResponse({ success: true }))
@@ -105,22 +99,33 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       
     case 'checkSubscription':
       // First check if we have recent subscription data in storage
-      chrome.storage.local.get(['subscriptionData'], async (result) => {
-        if (result.subscriptionData && 
-          result.subscriptionData.data && result.subscriptionData.data.isSubscribed && // by default any new subscription should be active
-          result.subscriptionData.timestamp && 
-          (Date.now() - result.subscriptionData.timestamp < 24 * 60 * 60 * 1000)) {
-          // Use cached data if less than 24 hours old
-          console.log('Using cached subscription data');
-          sendResponse(result.subscriptionData.data);
-        } else {
-          // Otherwise fetch fresh data from the server
-          try {
-            const freshData = await checkSubscriptionStatus();
-            sendResponse(freshData);
-          } catch (error) {
-            sendResponse({ success: false, error: error.message, isSubscribed: false });
+      chrome.storage.local.get(['subscriptionData', 'authState'], async (result) => {
+        try {
+          // Get current user ID from auth state
+          const currentUserId = result.authState?.idToken ? 
+            JSON.parse(atob(result.authState.idToken.split('.')[1])).sub : null;
+          
+          if (result.subscriptionData && 
+            result.subscriptionData.data && 
+            result.subscriptionData.data.isSubscribed && 
+            result.subscriptionData.timestamp && 
+            result.subscriptionData.userId === currentUserId && // Verify user ID matches
+            (Date.now() - result.subscriptionData.timestamp < 24 * 60 * 60 * 1000)) {
+            // Use cached data if less than 24 hours old and belongs to current user
+            console.log('Using cached subscription data');
+            sendResponse(result.subscriptionData.data);
+          } else {
+            // Otherwise fetch fresh data from the server
+            try {
+              const freshData = await checkSubscriptionStatus();
+              sendResponse(freshData);
+            } catch (error) {
+              sendResponse({ success: false, error: error.message, isSubscribed: false });
+            }
           }
+        } catch (error) {
+          console.error('Error in checkSubscription handler:', error);
+          sendResponse({ success: false, error: error.message, isSubscribed: false });
         }
       });
       return true;
@@ -541,6 +546,15 @@ async function checkSubscriptionStatus() {
       return { success: false, error: 'Could not retrieve access token', isSubscribed: false };
     }
     
+    // Get current user ID to associate with subscription data
+    let currentUserId = null;
+    try {
+      const userProfile = await auth0Service.getUserProfile();
+      currentUserId = userProfile.sub;
+    } catch (error) {
+      console.error('Error getting user profile:', error);
+    }
+    
     // Call the subscription status API using the API_BASE_URL constant with fallback
     const response = await fetch(`${typeof API_BASE_URL !== 'undefined' ? API_BASE_URL : 'http://localhost:3001'}/api/auth/subscription-status`, {
       method: 'GET',
@@ -550,6 +564,7 @@ async function checkSubscriptionStatus() {
       }
     });
     
+    console.log('Subscription status API response:', response);
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
       console.error('Subscription status API error:', errorData);
@@ -595,10 +610,11 @@ async function checkSubscriptionStatus() {
       subscriptionData: subscription
     };
     
-    // Store subscription data in local storage with timestamp
+    // Store subscription data in local storage with timestamp and user ID
     chrome.storage.local.set({
       subscriptionData: {
         timestamp: Date.now(),
+        userId: currentUserId, // Associate with current user ID
         data: result
       }
     });
