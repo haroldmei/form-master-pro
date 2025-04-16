@@ -1147,28 +1147,10 @@ document.addEventListener('DOMContentLoaded', function() {
 
   // Check subscription status
   async function checkSubscriptionStatus() {
-    try {
-      // First check if we have recent subscription data in local storage
-      const storageData = await new Promise(resolve => {
-        chrome.storage.local.get(['subscriptionData'], result => {
-          resolve(result.subscriptionData);
-        });
-      });
-      
+    try {      
       // Use cached data if it exists and is less than 24 hours old
       let response;
-      if (storageData && 
-          storageData.data && storageData.data.isSubscribed && // by default any new subscription should be active
-          storageData.timestamp && 
-          (Date.now() - storageData.timestamp < 24 * 60 * 60 * 1000)) {
-        console.log('Cached subscription status', storageData.data.isSubscribed, storageData.data.success);
-        response = storageData.data;
-      } else {
-        // Otherwise request fresh data
-        console.log('Fetch subscription data from server');
-        response = await chrome.runtime.sendMessage({ action: 'checkSubscription' });
-      }
-      
+      response = await chrome.runtime.sendMessage({ action: 'checkSubscription' });
       if (response && response.isSubscribed) {
         // User has an active subscription
         subscriptionStatus.textContent = 'Active';
@@ -1180,6 +1162,20 @@ document.addEventListener('DOMContentLoaded', function() {
           try {
             // Parse ISO date string directly
             const expiryDate = new Date(response.expiresAt);
+            const now = new Date();
+            
+            // Check if subscription has expired
+            if (expiryDate < now) {
+              // Subscription has expired
+              subscriptionStatus.textContent = 'Expired';
+              subscriptionStatus.className = 'subscription-badge subscription-expired';
+              expiryElem.textContent = `Expired on: ${expiryDate.toLocaleDateString()}`;
+              expiryElem.style.color = '#dc3545';
+              expiryElem.classList.remove('hidden'); // Make sure it's visible
+              subscriptionLink.textContent = 'Renew Now';
+              subscriptionLink.classList.remove('hidden');
+              return;
+            }
             
             // Format the date in a user-friendly way
             const options = { year: 'numeric', month: 'short', day: 'numeric' };
@@ -1189,7 +1185,7 @@ document.addEventListener('DOMContentLoaded', function() {
             expiryElem.classList.remove('hidden');
             
             // Check if subscription expires soon (within 7 days)
-            const daysUntilExpiry = Math.ceil((expiryDate - new Date()) / (1000 * 60 * 60 * 24));
+            const daysUntilExpiry = Math.ceil((expiryDate - now) / (1000 * 60 * 60 * 24));
             
             if (daysUntilExpiry <= 7) {
               // Change expiry text to red and show renewal link
