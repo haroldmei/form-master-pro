@@ -161,9 +161,10 @@ document.addEventListener('DOMContentLoaded', function() {
         if (userPicture && userInfo.picture) userPicture.src = userInfo.picture;
         
         // Update subscription link with email parameter if available
+        const DEV_MODE = typeof API_BASE_URL === 'undefined' || API_BASE_URL.includes('localhost');
         const subscriptionLink = document.getElementById('subscription-link');
         if (subscriptionLink && userInfo.email) {
-          const baseUrl = 'https://subscribe.formmasterpro.com/';
+          const baseUrl = (DEV_MODE ? 'http://localhost:3002' : 'https://subscribe.formmasterpro.com/');
           subscriptionLink.href = `${baseUrl}?email=${encodeURIComponent(userInfo.email)}`;
         }
       }
@@ -1205,7 +1206,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
       } else {
         // User does not have an active subscription
-        subscriptionStatus.textContent = 'Free';
+        subscriptionStatus.textContent = 'Inactive';
         subscriptionStatus.className = 'subscription-badge subscription-inactive';
         subscriptionLink.textContent = 'Upgrade';
         subscriptionLink.classList.remove('hidden');
