@@ -602,11 +602,16 @@ async function checkSubscriptionStatus() {
       }
     }
     
+    // Check for cancel_at_period_end flag
+    const isCancelled = subscription.cancel_at_period_end === true;
+    console.log('Subscription cancelled at period end:', isCancelled);
+    
     const result = { 
       success: true, 
       isSubscribed: subscription.status === 'active' || subscription.status === 'trialing',
       plan: subscription.plan_name || subscription.plan || 'free',
       expiresAt: expiresAt,
+      cancel_at_period_end: isCancelled, // Include cancellation status
       subscriptionData: subscription
     };
     
