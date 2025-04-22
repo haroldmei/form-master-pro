@@ -1172,6 +1172,9 @@ document.addEventListener('DOMContentLoaded', function() {
               expiryElem.classList.remove('hidden'); // Make sure it's visible
               subscriptionLink.textContent = 'Renew Now';
               subscriptionLink.classList.remove('hidden');
+              
+              // Hide unsubscribe button for expired subscriptions
+              hideUnsubscribeButton();
               return;
             }
             
@@ -1179,8 +1182,29 @@ document.addEventListener('DOMContentLoaded', function() {
             const options = { year: 'numeric', month: 'short', day: 'numeric' };
             const formattedDate = expiryDate.toLocaleDateString(undefined, options);
             
+            // Check if the subscription is already cancelled (but still active)
+            const isCancelled = response.cancel_at_period_end === true;
+            console.log('Subscription cancelled:', isCancelled);
+            if (isCancelled) {
+              // If cancelled, show in the status and expiry text
+              subscriptionStatus.textContent = 'Cancelling';
+              subscriptionStatus.className = 'subscription-badge subscription-cancelling';
+              expiryElem.textContent = `Access until: ${formattedDate}`;
+              expiryElem.style.color = '#dc3545';
+              expiryElem.classList.remove('hidden');
+              
+              // Always show renew button for cancelled subscriptions
+              subscriptionLink.textContent = 'Renew';
+              subscriptionLink.classList.remove('hidden');
+              
+              // Don't show unsubscribe button since it's already cancelled
+              hideUnsubscribeButton();
+              return;
+            }
+            
             expiryElem.textContent = `Expires: ${formattedDate}`;
             expiryElem.classList.remove('hidden');
+            expiryElem.style.color = ''; // Reset color
             
             // Check if subscription expires soon (within 7 days)
             const daysUntilExpiry = Math.ceil((expiryDate - now) / (1000 * 60 * 60 * 24));
@@ -1199,9 +1223,17 @@ document.addEventListener('DOMContentLoaded', function() {
               // Not expiring soon, hide renewal link
               subscriptionLink.classList.add('hidden');
             }
+            
+            // Show unsubscribe button only for active, non-cancelled subscriptions
+            if (!isCancelled) {
+              showUnsubscribeButton();
+            } else {
+              hideUnsubscribeButton();
+            }
           } catch (e) {
             console.error('Error formatting expiry date:', e, response.expiresAt);
             expiryElem.classList.add('hidden');
+            hideUnsubscribeButton();
           }
         }
       } else {
@@ -1216,6 +1248,9 @@ document.addEventListener('DOMContentLoaded', function() {
         if (expiryElem) {
           expiryElem.classList.add('hidden');
         }
+        
+        // Hide unsubscribe button for non-subscribers
+        hideUnsubscribeButton();
       }
     } catch (error) {
       console.error('Error checking subscription status:', error);
@@ -1227,6 +1262,54 @@ document.addEventListener('DOMContentLoaded', function() {
       const expiryElem = document.getElementById('subscription-expiry');
       if (expiryElem) {
         expiryElem.classList.add('hidden');
+      }
+      
+      // Hide unsubscribe button on error
+      hideUnsubscribeButton();
+    }
+    
+    // Helper function to show the unsubscribe button
+    function showUnsubscribeButton() {
+      let unsubscribeBtn = document.getElementById('unsubscribe-button');
+      
+      if (!unsubscribeBtn) {
+        // Create the unsubscribe button if it doesn't exist
+        unsubscribeBtn = document.createElement('a');
+        unsubscribeBtn.id = 'unsubscribe-button';
+        unsubscribeBtn.className = 'button-link text-danger';
+        unsubscribeBtn.textContent = 'Unsubscribe';
+        unsubscribeBtn.style.marginLeft = '10px';
+        unsubscribeBtn.style.fontSize = '12px';
+        unsubscribeBtn.target = "_blank"; // Open in new tab
+        
+        // Add it next to the subscription link
+        if (subscriptionLink && subscriptionLink.parentNode) {
+          subscriptionLink.parentNode.appendChild(unsubscribeBtn);
+        }
+      }
+      
+      // Get the subscription URL and add the unsubscribe parameter
+      if (subscriptionLink && subscriptionLink.href) {
+        const baseUrl = subscriptionLink.href;
+        const separator = baseUrl.includes('?') ? '&' : '?';
+        const fullUrl = `${baseUrl}${separator}action=unsubscribe`;
+        unsubscribeBtn.href = fullUrl;
+        
+        // Add click event listener to open in new tab
+        unsubscribeBtn.addEventListener('click', function(e) {
+          e.preventDefault(); // Prevent default link behavior
+          chrome.tabs.create({ url: fullUrl }); // Open in new tab
+        });
+      }
+      
+      unsubscribeBtn.classList.remove('hidden');
+    }
+    
+    // Helper function to hide the unsubscribe button
+    function hideUnsubscribeButton() {
+      const unsubscribeBtn = document.getElementById('unsubscribe-button');
+      if (unsubscribeBtn) {
+        unsubscribeBtn.classList.add('hidden');
       }
     }
   }
