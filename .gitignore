@@ -67,5 +67,6 @@ venv.bak/
 .vscode/
 *.swp
 packages
+private.pem
 
 FormMaster-Setup.exe
