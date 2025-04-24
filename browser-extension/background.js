@@ -145,27 +145,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
   
-  if (message.action === 'checkCompanionConnection') {
-    // We're now in standalone mode, always "connected"
-    sendResponse({ connected: true, standalone: true });
-    return false;
-  }
-  
-  if (message.action === 'openFilePicker') {
-    // Using a placeholder for file picking, as browser extensions have limited file access
-    sendResponse({ 
-      success: true, 
-      filename: "user_profile.json",
-      message: "Profile data loaded from browser storage" 
-    });
-    return false;
-  }
-  
-  if (message.action === 'settingsUpdated') {
-    // Nothing to do - profile is already in global memory
-    return false;
-  }
-  
   if (message.action === 'analyze-form') {
     analyzeFormInTab(tabId, message.url)
       .then(result => {
@@ -290,25 +269,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     formProcessor.clearSuggestions()
       .then(result => sendResponse(result))
       .catch(error => sendResponse({ success: false, error: error.message }));
-    return true;
-  }
-  
-  // Add this to your background.js message listener
-  if (message.type === 'defaults-dialog-response') {
-    console.log('Received dialog response:', message);
-    // This message should be processed by defaultsDialog
-    // Implement handling here or ensure defaultsDialog is properly listening
-    return true;
-  }
-
-  if (message.action === 'get-defaults-dialog-data') {
-    console.log('Received get-defaults-dialog-data:', message);
-    return true;
-  }
-
-  if (message.action === 'defaults-dialog-submit') { 
-    console.log('Received defaults-dialog-submit');
-    // Open the defaults dialog
     return true;
   }
 
@@ -784,15 +744,8 @@ async function processPDF(pdfData, fileName) {
     console.log(`PDF loaded. Number of pages: ${pdfDocument.numPages}`);
     
     // Extract text from all pages
-    let textContent = '';
-    for (let i = 1; i <= pdfDocument.numPages; i++) {
-      console.log(`Processing page ${i}/${pdfDocument.numPages}`);
-      const page = await pdfDocument.getPage(i);
-      const content = await page.getTextContent();
-      const pageText = content.items.map(item => item.str).join(' ');
-      textContent += `Page ${i}:\n${pageText}\n\n`;
-    }
-    
+    const textContent = await extractTextFromPdfDocument(pdfDocument);
+
     console.log('Text extraction complete. Sample:', textContent.substring(0, 100) + '...');
 
     // Create a user profile structure from the PDF content
@@ -1006,14 +959,9 @@ async function extractTextFromPDF(pdfData) {
     const loadingTask = pdfjsLib.getDocument({ data: pdfData });
     const pdfDocument = await loadingTask.promise;
     
-    // Extract text from all pages
-    let textContent = '';
-    for (let i = 1; i <= pdfDocument.numPages; i++) {
-      const page = await pdfDocument.getPage(i);
-      const content = await page.getTextContent();
-      const pageText = content.items.map(item => item.str).join(' ');
-      textContent += `${pageText}\n\n`;
-    }
+    // Reuse extractTextFromPdfDocument to extract text
+    const textContent = await extractTextFromPdfDocument(pdfDocument);
+    
     console.log('Text extraction complete. Sample:', textContent.substring(0, 200) + '...');
     return textContent;
   } catch (error) {
