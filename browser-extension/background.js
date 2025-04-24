@@ -1,4 +1,3 @@
-
 // Import other modules
 importScripts(
   'modules/auth.js',
@@ -433,7 +432,7 @@ async function resendVerificationEmail() {
   }
 }
 
-// Fill form in the current tab - Main orchestration function
+// Fill form in the current tab - Modified to use injected formFiller functions
 async function fillFormInTab(tabId, url) {
   try {
     // Check if user is verified before proceeding
@@ -474,6 +473,46 @@ async function fillFormInTab(tabId, url) {
     return { message: `Error: ${error.message}` };
   }
 }
+
+// Execute the form filling on the page - Consolidated implementation
+async function executeFormFilling(tabId, fieldValues) {
+  // First ensure the formFiller module is properly injected
+  await chrome.scripting.executeScript({
+    target: { tabId },
+    files: ['modules/formFiller.js']
+  }).catch(err => console.warn('FormFiller module might already be loaded:', err));
+  
+  // Execute form filling script in the page context
+  const fillResult = await chrome.scripting.executeScript({
+    target: { tabId },
+    function: (fields) => {
+      // Access formFiller through the self object in the page context
+      if (!self.formFiller || typeof self.formFiller.performFormFilling !== 'function') {
+        console.error('FormFiller module not properly loaded or initialized');
+        return { error: 'FormFiller module not available' };
+      }
+      
+      return self.formFiller.performFormFilling(fields);
+    },
+    args: [fieldValues]
+  });
+  
+  console.log('Form filling result:', fillResult);
+  
+  // Process and return results
+  if (!fillResult || !fillResult[0] || !fillResult[0].result) {
+    return { message: 'Error filling form' };
+  }
+  
+  const stats = fillResult[0].result;
+  return {
+    message: `Filled ${stats.filled} of ${stats.total} fields`,
+    filledCount: stats.filled,
+    failedCount: stats.failed,
+    totalFields: stats.total
+  };
+}
+
 
 // Check if user's email is verified
 async function isUserVerified() {
@@ -523,31 +562,6 @@ async function processFormFields(allFields, url) {
   
   // Use the formProcessor module to get field values
   return await formProcessor.processForm(allFields, url, userProfile);
-}
-
-// Execute the form filling on the page
-async function executeFormFilling(tabId, fieldValues) {
-  // Execute form filling script in the page context
-  const fillResult = await chrome.scripting.executeScript({
-    target: { tabId },
-    function: formFiller.performFormFilling, // Using formFiller module's function
-    args: [fieldValues]
-  });
-  
-  console.log('Form filling result:', fillResult);
-  
-  // Process and return results
-  if (!fillResult || !fillResult[0] || !fillResult[0].result) {
-    return { message: 'Error filling form' };
-  }
-  
-  const stats = fillResult[0].result;
-  return {
-    message: `Filled ${stats.filled} of ${stats.total} fields`,
-    filledCount: stats.filled,
-    failedCount: stats.failed,
-    totalFields: stats.total
-  };
 }
 
 // Check subscription status
