@@ -11,15 +11,9 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   }
   
-  // Connection status elements
-  const statusIndicator = document.getElementById('status-indicator');
-  const statusText = document.getElementById('status-text');
-  
-  
   // Auth-related elements
   const loginButton = document.getElementById('login-button');
   const logoutButton = document.getElementById('logout-button');
-  const authContainer = document.getElementById('auth-container');
   const loggedOutView = document.getElementById('logged-out-view');
   const loggedInView = document.getElementById('logged-in-view');
   const userName = document.getElementById('user-name');
@@ -27,10 +21,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
   // Button elements
   const analyzeFormBtn = document.getElementById('analyze-form');
-  
-  // Form analysis panel
-  const fieldCount = document.getElementById('field-count');
-  const fieldsContainer = document.getElementById('fields-container');
   
   // Email verification elements
   const verificationAlert = document.getElementById('verification-alert');
@@ -42,8 +32,7 @@ document.addEventListener('DOMContentLoaded', function() {
   const subscriptionStatus = document.getElementById('subscription-status');
   const subscriptionLink = document.getElementById('subscription-link');
   
-  // Check authentication state on popup open
-  // Check subscription status on popup open
+  // Check authentication/subscription status on popup open
   checkAuthState();
   
   // Add auth button listeners
@@ -134,7 +123,6 @@ document.addEventListener('DOMContentLoaded', function() {
           // Authenticated but not verified
           showAuthenticatedUI(false);
           loadUserProfile();
-          showVerificationAlert();
           checkSubscriptionStatus(); // Check subscription when user is authenticated but not verified
         }
       } else {
@@ -298,15 +286,6 @@ document.addEventListener('DOMContentLoaded', function() {
       resendVerificationBtn.textContent = 'Resend Email';
     }
   }
-  
-  // Show verification alert (only for authenticated but unverified users)
-  function showVerificationAlert() {
-    // This function is now redundant as the alert visibility is managed in showAuthenticatedUI
-    // Keeping it for compatibility with existing code
-    if (verificationAlert) {
-      verificationAlert.style.display = 'block';
-    }
-  }
 
   // Enable/disable form features based on auth state and verification
   function enableFormFeatures(enabled) {
@@ -383,13 +362,7 @@ document.addEventListener('DOMContentLoaded', function() {
           }
         }, results => {
           if (results && results[0] && results[0].result) {
-            // Instead of displaying in popup, send to dialog in the page
-
             displayFormFieldsInPageDialog(results[0].result, tabs[0].id);
-            
-            if (typeof autoFillBtn !== 'undefined' && autoFillBtn) {
-              autoFillBtn.disabled = false;
-            }
           } else {
             showToast('No form detected or error analyzing form.', 'error');
           }
@@ -448,16 +421,7 @@ document.addEventListener('DOMContentLoaded', function() {
           display: flex;
           align-items: center;
         }
-        
-        .formmaster-field-count {
-          background-color: #4285f4;
-          color: white;
-          border-radius: 16px;
-          padding: 2px 8px;
-          font-size: 14px;
-          margin-left: 8px;
-        }
-        
+
         .formmaster-panel-close {
           background: none;
           border: none;
@@ -686,11 +650,6 @@ document.addEventListener('DOMContentLoaded', function() {
         const title = document.createElement('h2');
         title.className = 'formmaster-panel-title';
         title.textContent = 'FormMasterPro Analysis';
-        
-        const fieldCount = document.createElement('span');
-        fieldCount.className = 'formmaster-field-count';
-        fieldCount.textContent = fieldsData.length;
-        title.appendChild(fieldCount);
         
         const closeButton = document.createElement('button');
         closeButton.className = 'formmaster-panel-close';
@@ -1118,14 +1077,6 @@ document.addEventListener('DOMContentLoaded', function() {
       }, 3000);
     }, 10);
   }
-  
-  
-  // Initialize your popup interface
-  function initializePopup() {
-    // Your initialization code
-  }
-  
-  initializePopup();
 
   // Helper function to show error messages
   function showError(message) {
