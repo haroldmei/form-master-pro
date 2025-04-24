@@ -1,8 +1,7 @@
-// Import auth service
-importScripts('auth.js');
 
 // Import other modules
 importScripts(
+  'modules/auth.js',
   'modules/userProfile.js',
   'modules/formProcessor.js',
   'modules/aiService.js',
