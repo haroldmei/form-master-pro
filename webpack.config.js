@@ -18,7 +18,6 @@ module.exports = (env, argv) => {
       content: './browser-extension/content.js',
       // UI scripts
       popup: './browser-extension/popup.js',
-      options: './browser-extension/options.js',
       formAnalysis: './browser-extension/formAnalysis.js',
       callback: './browser-extension/callback.js',
       // Include all other JS files in the modules folder

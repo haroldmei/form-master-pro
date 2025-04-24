@@ -434,18 +434,6 @@ async function resendVerificationEmail() {
   }
 }
 
-
-// Count the total number of form fields
-function countFormFields(formData) {
-  let count = 0;
-  if (formData.inputs) count += formData.inputs.length;
-  if (formData.selects) count += formData.selects.length;
-  if (formData.textareas) count += formData.textareas.length;
-  if (formData.radios) count += formData.radios.length;
-  if (formData.checkboxes) count += formData.checkboxes.length;
-  return count;
-}
-
 // Fill form in the current tab - Main orchestration function
 async function fillFormInTab(tabId, url) {
   try {
