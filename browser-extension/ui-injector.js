@@ -91,6 +91,8 @@
     // Add Auto Fill button (always visible)
     buttons.push({ id: 'auto-fill', text: 'Auto Fill', icon: '✏️' });
     
+    // Do not add Click-to-Fill button as it's now enabled by default
+    
     // Make sure buttons are added with the correct structure
     buttons.forEach(button => {
       const btnElement = document.createElement('button');

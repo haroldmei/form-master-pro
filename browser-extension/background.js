@@ -312,22 +312,163 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
 
-  // If we reach here, the message wasn't handled
-  console.warn('Unhandled message:', message);
-  sendResponse({ success: false, error: 'Unhandled message type or action' });
-  return false;
+  if (message.action === 'getFormValues') {
+    console.log('Processing getFormValues request for:', message.url);
+    
+    // Wrap the async code in an immediately-invoked async function
+    (async () => {
+      try {
+        // Check if user is verified before proceeding
+        const isVerified = await checkEmailVerification();
+        if (!isVerified) {
+          sendResponse({ 
+            success: false, 
+            error: 'Email verification required to use this feature',
+            requiresVerification: true
+          });
+          return;
+        }
+        
+        // Get the current user profile
+        const userProfile = userProfileManager.getUserProfileSync();
+        
+        if (!userProfile || !userProfile.filename) {
+          console.log('No profile loaded for getFormValues');
+          sendResponse({ 
+            success: false, 
+            error: 'No profile loaded. Please load a profile first.' 
+          });
+          return;
+        }
+        
+        const tabId = sender.tab?.id;
+        
+        // Extract form data from the page
+        const formData = await extractFormData(tabId);
+        if (!formData) {
+          sendResponse({ 
+            success: false, 
+            error: 'No form detected on page' 
+          });
+          return;
+        }
+        
+        // Flatten form fields into a single array
+        const allFields = flattenFormFields(formData);    
+        console.log(`Found ${allFields.length} form fields to process`);
+        
+        if (allFields.length === 0) {
+          sendResponse({ 
+            success: false, 
+            error: 'No fillable form fields detected' 
+          });
+          return;
+        }
+        
+        // Process form fields with user profile data
+        const processedForm = await processFormFields(allFields, message.url);
+        if (!processedForm.success) {
+          sendResponse({
+            success: false, 
+            error: processedForm.error || 'Error processing form'
+          });
+          return;
+        }
+        
+        if (!processedForm.fields || processedForm.fields.length === 0) {
+          sendResponse({
+            success: false, 
+            error: 'No fields could be mapped for filling'
+          });
+          return;
+        }
+        
+        // Return processed fields without actually filling the form
+        console.log(`Returning ${processedForm.fields.length} fields for click-to-fill`);
+        sendResponse({ 
+          success: true, 
+          fields: processedForm.fields
+        });
+      } catch (error) {
+        console.error('Error in getFormValues:', error);
+        sendResponse({ 
+          success: false, 
+          error: error.message || 'Unknown error in getFormValues'
+        });
+      }
+    })();
+    
+    return true; // Keep the messaging channel open for the async response
+  }
+
+  // Also fix the click-fill handler in a similar way
+  if (message.action === 'click-fill') {
+    console.log('Handling click-fill request - redirecting to getFormValues');
+    
+    // Wrap in an IIFE async function
+    (async () => {
+      try {
+        const isVerified = await checkEmailVerification();
+        if (!isVerified) {
+          sendResponse({ 
+            success: false, 
+            error: 'Email verification required to use this feature',
+            requiresVerification: true
+          });
+          return;
+        }
+        
+        const userProfile = userProfileManager.getUserProfileSync();
+        
+        if (!userProfile || !userProfile.filename) {
+          sendResponse({ 
+            success: false, 
+            error: 'No profile loaded. Please load a profile first.' 
+          });
+          return;
+        }
+
+        const formData = await extractFormData(sender.tab?.id);
+        if (!formData) {
+          sendResponse({
+            success: false,
+            error: 'No form detected on page'
+          });
+          return;
+        }
+        
+        const allFields = flattenFormFields(formData);
+        const processedForm = await processFormFields(allFields, message.url);
+        
+        if (!processedForm.success || !processedForm.fields || processedForm.fields.length === 0) {
+          sendResponse({
+            success: false,
+            error: processedForm.error || 'No fields could be mapped for filling'
+          });
+          return;
+        }
+        
+        sendResponse({
+          success: true,
+          fields: processedForm.fields,
+          message: 'Click-to-fill is enabled by default'
+        });
+      } catch (error) {
+        console.error('Error handling click-fill:', error);
+        sendResponse({ 
+          success: false, 
+          error: error.message || 'Unknown error in click-fill'
+        });
+      }
+    })();
+    
+    return true;
+  }
 });
 
 // Check email verification status
 async function checkEmailVerification() {
   try {
-    // First check if user is authenticated
-    const isAuthenticated = await auth0Service.isAuthenticated();
-    if (!isAuthenticated) {
-      return false;
-    }
-    
-    // Use the auth0Service to check email verification status
     return await auth0Service.isEmailVerified();
   } catch (error) {
     console.error('Error checking email verification:', error);
