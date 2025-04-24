@@ -75,7 +75,48 @@ function enableClickToFill(fieldValues) {
     transition: all 0.2s ease-in-out;
     z-index: 999999;
   `;
+  
+  // Create value tooltip element
+  const valueTooltip = document.createElement('div');
+  valueTooltip.id = 'formmaster-value-tooltip';
+  valueTooltip.style.cssText = `
+    position: fixed;
+    background-color: rgba(66, 133, 244, 0.25);
+    color: white;
+    display: none;
+    z-index: 1000000;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.2s ease-in-out;
+    border-radius: 4px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+    font-weight: bold;
+    text-align: center;
+    overflow: hidden;
+  `;
+  
+  // Create a span for the text content to allow styling
+  const valueText = document.createElement('span');
+  valueText.style.cssText = `
+    text-shadow: 0 0 4px #000, 0 0 6px #000, 0 0 8px rgba(0,0,0,0.8);
+    padding: 4px 8px;
+    color: white;
+    font-weight: bold;
+    background-color: rgba(0, 0, 0, 0.4);
+    border-radius: 4px;
+    backdrop-filter: blur(1px);
+    max-width: 90%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  `;
+  valueTooltip.appendChild(valueText);
+  
   document.body.appendChild(indicator);
+  document.body.appendChild(valueTooltip);
   
   // Keep track of the currently highlighted element
   let currentHighlightedElement = null;
@@ -89,6 +130,17 @@ function enableClickToFill(fieldValues) {
     indicator.style.left = `${rect.left}px`;
     indicator.style.width = `${rect.width}px`;
     indicator.style.height = `${rect.height}px`;
+    
+    // Update tooltip position to overlay directly on the field
+    valueTooltip.style.top = `${rect.top}px`;
+    valueTooltip.style.left = `${rect.left}px`;
+    valueTooltip.style.width = `${rect.width}px`;
+    valueTooltip.style.height = `${rect.height}px`;
+    
+    // Adjust the text size to be double the height of the control
+    const desiredFontSize = Math.max(16, rect.height * 0.7); // 70% of height, minimum 16px
+    valueText.style.fontSize = `${desiredFontSize}px`;
+    valueText.style.lineHeight = `${desiredFontSize}px`;
   }
   
   // Function to find matching field
@@ -185,6 +237,8 @@ function enableClickToFill(fieldValues) {
           element instanceof HTMLSelectElement || 
           element instanceof HTMLTextAreaElement)) {
       indicator.style.display = 'none';
+      valueTooltip.style.display = 'none';
+      valueTooltip.style.opacity = '0';
       currentHighlightedElement = null;
       return;
     }
@@ -192,20 +246,40 @@ function enableClickToFill(fieldValues) {
     // Ignore submit/button inputs
     if (element.type === 'submit' || element.type === 'button' || element.type === 'reset') {
       indicator.style.display = 'none';
+      valueTooltip.style.display = 'none';
+      valueTooltip.style.opacity = '0';
       currentHighlightedElement = null;
       return;
     }
     
     // Find matching field
     const matchingField = findMatchingField(element);
-    if (!matchingField) {
+    if (!matchingField || matchingField.value === undefined) {
       indicator.style.display = 'none';
+      valueTooltip.style.display = 'none';
+      valueTooltip.style.opacity = '0';
       currentHighlightedElement = null;
       return;
     }
     
     // Store current element for scroll updates
     currentHighlightedElement = element;
+    
+    // Format the value for display
+    let displayValue = matchingField.value;
+    if (element.type === 'password') {
+      displayValue = '•••••••••';
+    } else if (displayValue === true || displayValue === 'true') {
+      displayValue = '✓ Checked';
+    } else if (displayValue === false || displayValue === 'false') {
+      displayValue = '✗ Unchecked';
+    } else if (displayValue === '') {
+      displayValue = '[Empty]';
+    }
+    
+    // Show the value in the tooltip
+    valueText.textContent = displayValue;
+    valueTooltip.style.display = 'flex';
     
     // Show indicator for fillable field using fixed positioning
     const rect = element.getBoundingClientRect();
@@ -214,6 +288,36 @@ function enableClickToFill(fieldValues) {
     indicator.style.width = `${rect.width}px`;
     indicator.style.height = `${rect.height}px`;
     indicator.style.display = 'block';
+    
+    // Position the tooltip as overlay directly on the field
+    valueTooltip.style.top = `${rect.top}px`;
+    valueTooltip.style.left = `${rect.left}px`;
+    valueTooltip.style.width = `${rect.width}px`;
+    valueTooltip.style.height = `${rect.height}px`;
+    
+    // Adjust the text size to be double the height of the control
+    const desiredFontSize = Math.max(16, rect.height * 0.7); // 70% of height, minimum 16px
+    valueText.style.fontSize = `${desiredFontSize}px`;
+    valueText.style.lineHeight = `${desiredFontSize}px`;
+    
+    // Fade in the tooltip
+    setTimeout(() => {
+      valueTooltip.style.opacity = '1';
+    }, 10);
+  }
+  
+  // Also update mouseout handler to hide the tooltip
+  function handleMouseout(e) {
+    if (e.target === currentHighlightedElement) {
+      indicator.style.display = 'none';
+      valueTooltip.style.opacity = '0';
+      setTimeout(() => {
+        if (valueTooltip.style.opacity === '0') {
+          valueTooltip.style.display = 'none';
+        }
+      }, 200);
+      currentHighlightedElement = null;
+    }
   }
   
   // Click handler to fill fields
@@ -267,6 +371,7 @@ function enableClickToFill(fieldValues) {
   
   // Add event listeners
   document.addEventListener('mouseover', handleMouseover, true);
+  document.addEventListener('mouseout', handleMouseout, true);
   document.addEventListener('click', handleClick, true);
   document.addEventListener('scroll', updateIndicatorPosition, true);
   window.addEventListener('resize', updateIndicatorPosition, true);
@@ -274,12 +379,17 @@ function enableClickToFill(fieldValues) {
   // Clean up function
   function cleanupClickToFill() {
     document.removeEventListener('mouseover', handleMouseover, true);
+    document.removeEventListener('mouseout', handleMouseout, true);
     document.removeEventListener('click', handleClick, true);
     document.removeEventListener('scroll', updateIndicatorPosition, true);
     window.removeEventListener('resize', updateIndicatorPosition, true);
     
     if (indicator && indicator.parentNode) {
       indicator.parentNode.removeChild(indicator);
+    }
+    
+    if (valueTooltip && valueTooltip.parentNode) {
+      valueTooltip.parentNode.removeChild(valueTooltip);
     }
     
     console.log("Click-to-fill functionality disabled");
