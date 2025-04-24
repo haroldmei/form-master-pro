@@ -24,6 +24,7 @@ module.exports = (env, argv) => {
       'modules/aiService': './browser-extension/modules/aiService.js',
       'modules/formFiller': './browser-extension/modules/formFiller.js',
       'modules/formProcessor': './browser-extension/modules/formProcessor.js',
+      'modules/formAnalysis': './browser-extension/modules/formAnalysis.js',
       'modules/utils': './browser-extension/modules/utils.js',
       // UI injection script
       'ui-injector': './browser-extension/ui-injector.js',
