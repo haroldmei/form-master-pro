@@ -738,129 +738,114 @@ const formFiller = (() => {
         displayValue = element.checked ? '✓' : '✗';
       } else if (inputType === 'radio') {
         if (element.checked) {
-          displayValue = '⚫'; // Only show indicator for the selected radio button
+          displayValue = element.value || 'Selected';
         } else {
           return; // Don't add indicator for unselected radio options
         }
       }
       
-      // Create the indicator element
-      const indicator = document.createElement('div');
+      // Create the indicator element as a span
+      const indicator = document.createElement('span');
       indicator.id = `formmaster-indicator-${element.id}`;
+      indicator.className = 'formmaster-value-indicator';
       
-      // Style differently based on element type
+      // Style the indicator based on field type
       if (inputType === 'checkbox' || inputType === 'radio') {
-        // For checkboxes and radios, add indicator near the element
-        const rect = element.getBoundingClientRect();
-        let parentElement = element.parentElement;
-        
-        // Make sure parent has position relative for absolute positioning
-        if (window.getComputedStyle(parentElement).position === 'static') {
-          parentElement.style.position = 'relative';
-        }
-        
-        indicator.className = 'formmaster-permanent-indicator formmaster-checkbox-indicator';
         indicator.style.cssText = `
-          position: absolute;
-          top: 0;
-          right: 0;
-          background-color: #4285f4;
-          color: white;
-          border-radius: 50%;
-          font-size: 10px;
-          width: 16px;
-          height: 16px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          z-index: 9999;
-          pointer-events: none;
-          font-weight: bold;
-          box-shadow: 0 0 5px rgba(0,0,0,0.3);
-        `;
-        indicator.textContent = displayValue;
-        
-        // Add to parent for better positioning
-        parentElement.style.position = 'relative';
-        parentElement.appendChild(indicator);
-      } else {
-        // For text inputs, textareas, and selects - add a label above or marker on the right
-        indicator.className = 'formmaster-permanent-indicator formmaster-text-indicator';
-        indicator.style.cssText = `
-          position: absolute;
-          right: 0;
-          top: 0;
-          background-color: rgba(66, 133, 244, 0.9);
-          color: white;
+          display: inline-block;
+          background-color: rgba(66, 133, 244, 0.15);
+          color: #1a73e8;
           padding: 2px 6px;
+          margin-left: 6px;
           border-radius: 3px;
-          font-size: 11px;
-          z-index: 9999;
-          pointer-events: none;
-          max-width: 150px;
+          font-size: 12px;
+          border-left: 3px solid #4285f4;
+          vertical-align: middle;
+          font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+        `;
+      } else {
+        indicator.style.cssText = `
+          display: inline-block;
+          background-color: rgba(66, 133, 244, 0.15);
+          color: #1a73e8;
+          padding: 2px 6px;
+          margin-left: 6px;
+          border-radius: 3px;
+          font-size: 12px;
+          border-left: 3px solid #4285f4;
+          vertical-align: middle;
+          font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+          max-width: 200px;
           overflow: hidden;
           text-overflow: ellipsis;
           white-space: nowrap;
-          box-shadow: 0 0 3px rgba(0,0,0,0.4);
-          font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
         `;
-        
-        indicator.textContent = `${displayValue}`;
-        
-        // Position the container relative to the input field
-        const rect = element.getBoundingClientRect();
-        const container = document.createElement('div');
-        container.style.cssText = `
-          position: relative;
-          display: inline-block;
-          margin: 0;
-          padding: 0;
-          border: none;
-          background: transparent;
-        `;
-        
-        // Add outline to the actual form element to indicate it's been filled
-        element.style.borderLeft = '4px solid #4285f4';
-        element.style.paddingLeft = parseInt(window.getComputedStyle(element).paddingLeft) + 4 + 'px';
-
-        // Don't wrap the element if it's already in a relative container
-        const parentStyle = window.getComputedStyle(element.parentElement);
-        if (parentStyle.position === 'relative' || parentStyle.position === 'absolute') {
-          element.parentElement.appendChild(indicator);
-        } else {
-          // Insert the container before the element
-          element.parentNode.insertBefore(container, element);
-          // Move the element inside the container
-          container.appendChild(element);
-          // Add the indicator to the container
-          container.appendChild(indicator);
+      }
+      
+      // Set the content
+      indicator.textContent = displayValue;
+      
+      // For checkbox and radio, add to the label if possible
+      if ((inputType === 'checkbox' || inputType === 'radio') && element.id) {
+        const label = document.querySelector(`label[for="${element.id}"]`);
+        if (label) {
+          label.appendChild(indicator);
+          return;
         }
       }
       
-      // Add stylesheet for hover effect if not already added
+      // Try to find a good insertion point for the indicator
+      if (element.nextSibling) {
+        // Insert right after the element
+        element.parentNode.insertBefore(indicator, element.nextSibling);
+      } else {
+        // Append to parent if no next sibling
+        element.parentNode.appendChild(indicator);
+      }
+      
+      // If element is in a container div/label, we need to handle special cases
+      const parent = element.parentElement;
+      if (parent && (parent.tagName === 'DIV' || parent.tagName === 'LABEL' || parent.tagName === 'SPAN')) {
+        // If the parent only contains this element, append to parent
+        if (parent.children.length === 1 && parent.children[0] === element) {
+          parent.appendChild(indicator);
+        }
+      }
+      
+      // Add visual highlight to the field itself
+      if (tagName === 'input' || tagName === 'textarea') {
+        // Add subtle left border to input field itself (common convention for filled fields)
+        if (window.getComputedStyle(element).position === 'static') {
+          element.style.position = 'relative';
+        }
+        element.style.borderLeft = '3px solid #4285f4';
+        
+        // If we need to adjust padding to account for border
+        const computedStyle = window.getComputedStyle(element);
+        const currentPaddingLeft = parseInt(computedStyle.paddingLeft) || 0;
+        if (currentPaddingLeft < 5) {
+          element.style.paddingLeft = '5px';
+        }
+      }
+      
+      // Add stylesheet for permanent indicators if not already added
       if (!document.getElementById('formmaster-permanent-indicators-style')) {
         const styleEl = document.createElement('style');
         styleEl.id = 'formmaster-permanent-indicators-style';
         styleEl.textContent = `
-          .formmaster-text-indicator {
-            opacity: 0.8;
+          .formmaster-value-indicator {
+            opacity: 0.85;
             transition: opacity 0.2s ease, transform 0.2s ease;
-            transform-origin: right top;
+            box-shadow: 0 1px 2px rgba(60, 64, 67, 0.3);
           }
-          input:hover + .formmaster-text-indicator,
-          select:hover + .formmaster-text-indicator,
-          textarea:hover + .formmaster-text-indicator,
-          .formmaster-text-indicator:hover {
+          .formmaster-value-indicator:hover {
             opacity: 1;
-            transform: scale(1.05);
-          }
-          .formmaster-filled-field {
-            border-left: 4px solid #4285f4 !important;
+            transform: translateY(-1px);
+            box-shadow: 0 1px 3px rgba(60, 64, 67, 0.4);
           }
         `;
         document.head.appendChild(styleEl);
       }
-      
     } catch (e) {
       console.error('Error adding permanent value indicator:', e);
     }
@@ -877,16 +862,24 @@ const formFiller = (() => {
       const styleEl = document.createElement('style');
       styleEl.id = 'formmaster-permanent-indicators-style';
       styleEl.textContent = `
-        .formmaster-permanent-indicator {
+        .formmaster-value-indicator {
           font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
-          font-size: 11px;
+          font-size: 12px;
           transition: all 0.2s ease;
-        }
-        .formmaster-filled-value {
           display: inline-block;
           background-color: rgba(66, 133, 244, 0.15);
-          border-left: 4px solid #4285f4;
-          padding-left: 4px;
+          color: #1a73e8;
+          padding: 2px 6px;
+          margin-left: 6px;
+          border-radius: 3px;
+          border-left: 3px solid #4285f4;
+          vertical-align: middle;
+          box-shadow: 0 1px 2px rgba(60, 64, 67, 0.3);
+        }
+        .formmaster-value-indicator:hover {
+          opacity: 1;
+          transform: translateY(-1px);
+          box-shadow: 0 1px 3px rgba(60, 64, 67, 0.4);
         }
       `;
       document.head.appendChild(styleEl);

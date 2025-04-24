@@ -158,8 +158,14 @@ function isEnhancedSelectComponent(input) {
 
 // New function to detect date inputs based on various indicators
 function detectDateInput(input) {
+  const debugging = input.id && (input.id.includes('Employment') || input.id.includes('Status'));
+  if (debugging) {
+    console.log(`Checking if ${input.id} is a date field`);
+  }
+
   // Check if element has datepicker-related classes
   if (input.className.match(/date|datepicker|hasDatepicker|calendar-input/i)) {
+    if (debugging) console.log(`Date detected by class: ${input.className}`);
     return true;
   }
   
@@ -171,12 +177,14 @@ function detectDateInput(input) {
       // Look for calendar icon or addon with calendar
       const calendarIcon = parent.querySelector('.ui-datepicker-trigger, .calendar-icon, [class*="calendar"], img[src*="calendar"]');
       if (calendarIcon) {
+        if (debugging) console.log('Date detected by calendar icon');
         return true;
       }
       
       // Check for input group addon with icon
       const addon = parent.querySelector('.input-group-addon, .sv-input-group-addon');
-      if (addon && (addon.innerHTML.includes('calendar') || addon.querySelector('img'))) {
+      if (addon && (addon.innerHTML.includes('calendar') || addon.querySelector('img[src*="calendar"]'))) {
+        if (debugging) console.log('Date detected by addon with calendar');
         return true;
       }
     }
@@ -184,25 +192,44 @@ function detectDateInput(input) {
   
   // Check for date-related placeholder or pattern
   if (input.placeholder && input.placeholder.match(/date|dd[^a-z]mm|mm[^a-z]dd|yyyy|^\d{1,2}[/-]\d{1,2}[/-]\d{2,4}$/i)) {
+    if (debugging) console.log(`Date detected by placeholder: ${input.placeholder}`);
     return true;
   }
   
   // Check for date format pattern attribute
   if (input.getAttribute('pattern') && input.getAttribute('pattern').match(/\d{1,2}[/-]\d{1,2}[/-]\d{2,4}/)) {
+    if (debugging) console.log(`Date detected by pattern: ${input.getAttribute('pattern')}`);
     return true;
   }
   
-  // Check for date-related label
+  // Check for date-related label using more precise matching
   const label = getElementLabel(input);
-  if (label && label.match(/\bdate\b|\bday\b|birthday|birth date|start date|end date|arrival|departure|check[ -]?in|check[ -]?out|(dd|mm)[ /-](mm|dd)[ /-](yy|yyyy)/i)) {
-    return true;
+  if (label) {
+    // Use word boundaries to avoid matching substrings and enforce more specific date patterns
+    const datePattern = /\b(date|day|birthday|birth date|start date|end date|arrival|departure|check[ -]?in|check[ -]?out)\b|(dd|mm)[ /-](mm|dd)[ /-](yy|yyyy)/i;
+    const isDateLabel = datePattern.test(label);
+    
+    // Explicitly exclude labels containing certain terms
+    const excludePattern = /\b(employment|status|type)\b/i;
+    const shouldExclude = excludePattern.test(label);
+    
+    if (isDateLabel && !shouldExclude) {
+      if (debugging) console.log(`Date detected by label: ${label}`);
+      return true;
+    }
+    
+    if (debugging && isDateLabel && shouldExclude) {
+      console.log(`Label contains date terms but was excluded: ${label}`);
+    }
   }
   
   // Check for data attributes related to date functionality
   if (input.getAttribute('data-date') || input.getAttribute('data-provide') === 'datepicker') {
+    if (debugging) console.log(`Date detected by data attribute`);
     return true;
   }
   
+  if (debugging) console.log(`Not a date field: ${input.id}`);
   return false;
 }
 
