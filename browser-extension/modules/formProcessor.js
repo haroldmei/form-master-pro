@@ -268,7 +268,7 @@ const formProcessor = (() => {
             const dd = String(today.getDate()).padStart(2, '0');
             allSuggestions[keyName] = `${yyyy}-${mm}-${dd}`;
           } else if (fieldType === 'text') {
-            allSuggestions[keyName] = '-';
+            allSuggestions[keyName] = '';
           } else if (fieldType === 'checkbox' || fieldType === 'radio') {
             allSuggestions[keyName] = 'on';
           } else {
