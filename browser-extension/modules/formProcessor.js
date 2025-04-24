@@ -272,7 +272,7 @@ const formProcessor = (() => {
           } else if (fieldType === 'checkbox' || fieldType === 'radio') {
             allSuggestions[keyName] = 'on';
           } else {
-            allSuggestions[keyName] = 'na';
+            allSuggestions[keyName] = '';
           }
         }
       });
