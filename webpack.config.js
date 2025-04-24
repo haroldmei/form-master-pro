@@ -37,7 +37,6 @@ module.exports = (env, argv) => {
       'libs/jszip.min': './browser-extension/libs/jszip.min.js',
       'libs/pdf.min': './browser-extension/libs/pdf.min.js',
       'libs/pdf.worker.min': './browser-extension/libs/pdf.worker.min.js',
-      'mappings': './browser-extension/mappings.js',
     },
     output: {
       path: path.resolve(__dirname, 'dist'),
@@ -100,6 +99,10 @@ module.exports = (env, argv) => {
           {
             from: './browser-extension/styles/injector-ui.css',
             to: 'styles/injector-ui.css'
+          },
+          {
+            from: './browser-extension/styles/formAnalysis.css',
+            to: 'styles/formAnalysis.css'
           },
           { 
             from: 'node_modules/pdfjs-dist/build/pdf.min.mjs',

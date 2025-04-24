@@ -145,38 +145,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
   
-  if (message.action === 'analyze-form') {
-    analyzeFormInTab(tabId, message.url)
-      .then(result => {
-        // Save the form analysis data temporarily
-        chrome.storage.local.set({
-          formAnalysisData: {
-            url: message.url,
-            timestamp: new Date().toISOString(),
-            data: result.data
-          }
-        }, () => {
-          // Open the form analysis page in a new tab
-          chrome.tabs.create({ url: 'formAnalysis.html' });
-          
-          // Send response to the original message
-          sendResponse({ 
-            success: true, 
-            message: 'Opening form analysis in new tab'
-          });
-        });
-      })
-      .catch(err => sendResponse({ success: false, error: err.message }));
-    return true;
-  }
-  
-  if (message.action === 'data-mappings') {
-    // Open the mappings page in a new tab
-    chrome.tabs.create({ url: 'mappings.html' });
-    sendResponse({ success: true, message: 'Opening field mappings' });
-    return false;
-  }
-  
   if (message.action === 'auto-fill') {
     fillFormInTab(tabId, message.url)
       .then(result => sendResponse({ success: true, ...result }))
@@ -466,43 +434,6 @@ async function resendVerificationEmail() {
   }
 }
 
-// Analyze form in the current tab
-async function analyzeFormInTab(tabId, url) {
-  try {
-    // First check if email is verified
-    const isVerified = await checkEmailVerification();
-    if (!isVerified) {
-      return { message: 'Email verification required to use this feature', requiresVerification: true };
-    }
-    
-    // Inject the form extraction scripts
-    await chrome.scripting.executeScript({
-      target: { tabId },
-      files: ['forms/form_radios.js', 'forms/form_checkboxgroup.js', 'forms/form_extract.js']
-    });
-    
-    // Execute the form extraction
-    const results = await chrome.scripting.executeScript({
-      target: { tabId },
-      function: () => {
-        return self.FormExtract.extractFormControls();
-      }
-    });
-    
-    if (!results || !results[0] || !results[0].result) {
-      return { message: 'No form detected' };
-    }
-    
-    const formData = results[0].result;
-    return { 
-      message: `Found ${countFormFields(formData)} fields`,
-      data: formData
-    };
-  } catch (error) {
-    console.error('Error analyzing form:', error);
-    throw new Error('Failed to analyze form');
-  }
-}
 
 // Count the total number of form fields
 function countFormFields(formData) {
