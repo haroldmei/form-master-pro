@@ -35,7 +35,13 @@
         "<all_urls>"
       ],
       "js": [
-        "content.js",
+        "content/uiState.js",
+        "content/positionUpdater.js",
+        "content/highlighters.js",
+        "content/eventHandlers.js",
+        "content/formFields.js",
+        "content/clickToFill.js",
+        "content/index.js",
         "libs/jszip.min.js",
         "ui-injector.js"
       ],

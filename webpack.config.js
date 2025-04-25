@@ -15,10 +15,18 @@ module.exports = (env, argv) => {
       // Main background script
       background: './browser-extension/background.js',
       // Content script
-      content: './browser-extension/content.js',
+      //content: './browser-extension/content.js',
       // UI scripts
       popup: './browser-extension/popup.js',
       callback: './browser-extension/callback.js',
+
+      'content/positionUpdater': './browser-extension/content/positionUpdater.js',
+      'content/uiState': './browser-extension/content/uiState.js',
+      'content/highlighters': './browser-extension/content/highlighters.js',
+      'content/eventHandlers': './browser-extension/content/eventHandlers.js',
+      'content/formFields': './browser-extension/content/formFields.js',
+      'content/index': './browser-extension/content/index.js', 
+
       // Include all other JS files in the modules folder
       'modules/userProfile': './browser-extension/modules/userProfile.js',
       'modules/aiService': './browser-extension/modules/aiService.js',
