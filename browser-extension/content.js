@@ -76,6 +76,30 @@ function enableClickToFill(fieldValues) {
     z-index: 999999;
   `;
   
+  // Create label highlight indicator
+  const labelIndicator = document.createElement('div');
+  labelIndicator.id = 'formmaster-label-indicator';
+  labelIndicator.style.cssText = `
+    position: fixed;
+    background-color: rgba(66, 133, 244, 0.1);
+    border: 1px dashed rgba(66, 133, 244, 0.6);
+    border-radius: 3px;
+    pointer-events: none;
+    display: none;
+    box-shadow: 0 0 5px rgba(66, 133, 244, 0.2);
+    transition: all 0.2s ease-in-out;
+    z-index: 999998;
+  `;
+  
+  // Create options highlight container for select/radio options
+  const optionsIndicator = document.createElement('div');
+  optionsIndicator.id = 'formmaster-options-indicator';
+  optionsIndicator.style.cssText = `
+    position: absolute;
+    pointer-events: none;
+    z-index: 999997;
+  `;
+  
   // Create value tooltip element
   const valueTooltip = document.createElement('div');
   valueTooltip.id = 'formmaster-value-tooltip';
@@ -117,9 +141,13 @@ function enableClickToFill(fieldValues) {
   
   document.body.appendChild(indicator);
   document.body.appendChild(valueTooltip);
+  document.body.appendChild(labelIndicator);
+  document.body.appendChild(optionsIndicator);
   
-  // Keep track of the currently highlighted element
+  // Keep track of the currently highlighted elements
   let currentHighlightedElement = null;
+  let currentHighlightedLabels = [];
+  let currentHighlightedOptions = [];
   
   // Function to update indicator position
   function updateIndicatorPosition() {
@@ -137,10 +165,234 @@ function enableClickToFill(fieldValues) {
     valueTooltip.style.width = `${rect.width}px`;
     valueTooltip.style.height = `${rect.height}px`;
     
+    // Update label indicators positions
+    updateLabelIndicatorsPositions();
+    
+    // Update options indicators positions
+    updateOptionsIndicatorsPositions();
+    
     // Adjust the text size to be double the height of the control
     const desiredFontSize = Math.max(16, rect.height * 0.7); // 70% of height, minimum 16px
     valueText.style.fontSize = `${desiredFontSize}px`;
     valueText.style.lineHeight = `${desiredFontSize}px`;
+  }
+  
+  // Function to update label indicators positions
+  function updateLabelIndicatorsPositions() {
+    currentHighlightedLabels.forEach(label => {
+      if (label && label.getBoundingClientRect) {
+        const labelRect = label.getBoundingClientRect();
+        const highlightEl = label._highlightElement;
+        if (highlightEl) {
+          highlightEl.style.top = `${labelRect.top}px`;
+          highlightEl.style.left = `${labelRect.left}px`;
+          highlightEl.style.width = `${labelRect.width}px`;
+          highlightEl.style.height = `${labelRect.height}px`;
+        }
+      }
+    });
+  }
+  
+  // Function to update options indicators positions
+  function updateOptionsIndicatorsPositions() {
+    currentHighlightedOptions.forEach(option => {
+      if (option && option.getBoundingClientRect) {
+        const optionRect = option.getBoundingClientRect();
+        const highlightEl = option._highlightElement;
+        if (highlightEl) {
+          highlightEl.style.top = `${optionRect.top}px`;
+          highlightEl.style.left = `${optionRect.left}px`;
+          highlightEl.style.width = `${optionRect.width}px`;
+          highlightEl.style.height = `${optionRect.height}px`;
+        }
+      }
+    });
+  }
+  
+  // Function to find and highlight labels associated with an element
+  function findAndHighlightLabels(element) {
+    // Clear any previous label highlights
+    clearLabelHighlights();
+    
+    // Try to find labels for this element
+    let labels = [];
+    
+    // 1. Check for label with 'for' attribute matching element id
+    if (element.id) {
+      const forLabels = document.querySelectorAll(`label[for="${element.id}"]`);
+      forLabels.forEach(label => labels.push(label));
+    }
+    
+    // 2. Check for label as parent
+    let parent = element.parentElement;
+    while (parent && parent.tagName !== 'FORM' && parent.tagName !== 'BODY' && labels.length < 3) {
+      if (parent.tagName === 'LABEL') {
+        labels.push(parent);
+      }
+      parent = parent.parentElement;
+    }
+    
+    // 3. Check for aria-labelledby
+    const labelledBy = element.getAttribute('aria-labelledby');
+    if (labelledBy) {
+      labelledBy.split(' ').forEach(id => {
+        const labelElement = document.getElementById(id);
+        if (labelElement) {
+          labels.push(labelElement);
+        }
+      });
+    }
+    
+    // 4. Check for label-like elements nearby
+    const siblings = Array.from(element.parentElement?.children || []);
+    siblings.forEach(sibling => {
+      if ((sibling.tagName === 'SPAN' || sibling.tagName === 'DIV' || sibling.tagName === 'P') && 
+          !sibling.contains(element) && 
+          labels.length < 3) {
+        const rect1 = element.getBoundingClientRect();
+        const rect2 = sibling.getBoundingClientRect();
+        const horizontalDistance = Math.min(
+          Math.abs(rect1.left - rect2.right),
+          Math.abs(rect1.right - rect2.left)
+        );
+        const verticalDistance = Math.min(
+          Math.abs(rect1.top - rect2.bottom),
+          Math.abs(rect1.bottom - rect2.top)
+        );
+        
+        // Consider as label if close enough
+        if ((horizontalDistance < 50 && verticalDistance < 30) || 
+            (horizontalDistance < 20 && verticalDistance < 100)) {
+          labels.push(sibling);
+        }
+      }
+    });
+    
+    // Create highlight elements for each label
+    labels.forEach(label => {
+      const labelHighlight = document.createElement('div');
+      labelHighlight.className = 'formmaster-label-highlight';
+      labelHighlight.style.cssText = `
+        position: fixed;
+        background-color: rgba(66, 133, 244, 0.1);
+        border: 1px dashed rgba(66, 133, 244, 0.6);
+        border-radius: 3px;
+        pointer-events: none;
+        z-index: 999998;
+        display: block;
+      `;
+      
+      const labelRect = label.getBoundingClientRect();
+      labelHighlight.style.top = `${labelRect.top}px`;
+      labelHighlight.style.left = `${labelRect.left}px`;
+      labelHighlight.style.width = `${labelRect.width}px`;
+      labelHighlight.style.height = `${labelRect.height}px`;
+      
+      // Associate the highlight element with the label for later updates
+      label._highlightElement = labelHighlight;
+      
+      document.body.appendChild(labelHighlight);
+    });
+    
+    currentHighlightedLabels = labels;
+  }
+  
+  // Function to find and highlight options for select elements or radio groups
+  function findAndHighlightOptions(element) {
+    // Clear any previous options highlights
+    clearOptionsHighlights();
+    
+    let options = [];
+    
+    // For select elements, find the options
+    if (element instanceof HTMLSelectElement) {
+      // If the select has a visible dropdown, try to find its options
+      const selectRect = element.getBoundingClientRect();
+      
+      // Look for visible dropdown options
+      document.querySelectorAll('.select-options, .dropdown-menu, [role="listbox"], ul.options')
+        .forEach(optionContainer => {
+          const containerRect = optionContainer.getBoundingClientRect();
+          
+          // Check if container is near the select element
+          if (Math.abs(containerRect.top - selectRect.bottom) < 30 || 
+              Math.abs(containerRect.left - selectRect.left) < 50) {
+            Array.from(optionContainer.children).forEach(option => {
+              options.push(option);
+            });
+          }
+        });
+    }
+    
+    // For radio buttons, find other buttons in the same group
+    if (element instanceof HTMLInputElement && element.type === 'radio') {
+      const name = element.name;
+      if (name) {
+        document.querySelectorAll(`input[type="radio"][name="${name}"]`).forEach(radio => {
+          if (radio !== element) {
+            options.push(radio);
+            
+            // Also include labels for these radio buttons
+            if (radio.id) {
+              const radioLabel = document.querySelector(`label[for="${radio.id}"]`);
+              if (radioLabel) options.push(radioLabel);
+            }
+          }
+        });
+      }
+    }
+    
+    // Create highlight elements for each option
+    options.forEach(option => {
+      if (!option || !option.getBoundingClientRect) return;
+      
+      const optionHighlight = document.createElement('div');
+      optionHighlight.className = 'formmaster-option-highlight';
+      optionHighlight.style.cssText = `
+        position: fixed;
+        background-color: rgba(66, 133, 244, 0.05);
+        border: 1px dotted rgba(66, 133, 244, 0.4);
+        border-radius: 2px;
+        pointer-events: none;
+        z-index: 999997;
+        display: block;
+      `;
+      
+      const optionRect = option.getBoundingClientRect();
+      optionHighlight.style.top = `${optionRect.top}px`;
+      optionHighlight.style.left = `${optionRect.left}px`;
+      optionHighlight.style.width = `${optionRect.width}px`;
+      optionHighlight.style.height = `${optionRect.height}px`;
+      
+      // Associate the highlight element with the option for later updates
+      option._highlightElement = optionHighlight;
+      
+      document.body.appendChild(optionHighlight);
+    });
+    
+    currentHighlightedOptions = options;
+  }
+  
+  // Function to clear label highlights
+  function clearLabelHighlights() {
+    currentHighlightedLabels.forEach(label => {
+      if (label && label._highlightElement && label._highlightElement.parentNode) {
+        label._highlightElement.parentNode.removeChild(label._highlightElement);
+        delete label._highlightElement;
+      }
+    });
+    currentHighlightedLabels = [];
+  }
+  
+  // Function to clear options highlights
+  function clearOptionsHighlights() {
+    currentHighlightedOptions.forEach(option => {
+      if (option && option._highlightElement && option._highlightElement.parentNode) {
+        option._highlightElement.parentNode.removeChild(option._highlightElement);
+        delete option._highlightElement;
+      }
+    });
+    currentHighlightedOptions = [];
   }
   
   // Function to find matching field
@@ -239,6 +491,8 @@ function enableClickToFill(fieldValues) {
       indicator.style.display = 'none';
       valueTooltip.style.display = 'none';
       valueTooltip.style.opacity = '0';
+      clearLabelHighlights();
+      clearOptionsHighlights();
       currentHighlightedElement = null;
       return;
     }
@@ -248,6 +502,8 @@ function enableClickToFill(fieldValues) {
       indicator.style.display = 'none';
       valueTooltip.style.display = 'none';
       valueTooltip.style.opacity = '0';
+      clearLabelHighlights();
+      clearOptionsHighlights();
       currentHighlightedElement = null;
       return;
     }
@@ -258,12 +514,18 @@ function enableClickToFill(fieldValues) {
       indicator.style.display = 'none';
       valueTooltip.style.display = 'none';
       valueTooltip.style.opacity = '0';
+      clearLabelHighlights();
+      clearOptionsHighlights();
       currentHighlightedElement = null;
       return;
     }
     
     // Store current element for scroll updates
     currentHighlightedElement = element;
+    
+    // Find and highlight labels and options
+    findAndHighlightLabels(element);
+    findAndHighlightOptions(element);
     
     // Format the value for display
     let displayValue = matchingField.value;
@@ -311,6 +573,8 @@ function enableClickToFill(fieldValues) {
     if (e.target === currentHighlightedElement) {
       indicator.style.display = 'none';
       valueTooltip.style.opacity = '0';
+      clearLabelHighlights();
+      clearOptionsHighlights();
       setTimeout(() => {
         if (valueTooltip.style.opacity === '0') {
           valueTooltip.style.display = 'none';
@@ -391,6 +655,18 @@ function enableClickToFill(fieldValues) {
     if (valueTooltip && valueTooltip.parentNode) {
       valueTooltip.parentNode.removeChild(valueTooltip);
     }
+    
+    if (labelIndicator && labelIndicator.parentNode) {
+      labelIndicator.parentNode.removeChild(labelIndicator);
+    }
+    
+    if (optionsIndicator && optionsIndicator.parentNode) {
+      optionsIndicator.parentNode.removeChild(optionsIndicator);
+    }
+    
+    // Clear any remaining highlights
+    clearLabelHighlights();
+    clearOptionsHighlights();
     
     console.log("Click-to-fill functionality disabled");
   }
