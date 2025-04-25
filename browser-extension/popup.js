@@ -42,7 +42,7 @@ document.addEventListener('DOMContentLoaded', function() {
   // Set up event listeners
   addSafeEventListener('analyze-form', 'click', function() {
     // Call the form analysis module's analyzeCurrentForm function
-    self.formAnalysis.analyzeCurrentForm(analyzeFormBtn, showToast);
+    self.formAnalysisEx.analyzeCurrentForm(analyzeFormBtn, showToast);
   });
   addSafeEventListener('clear-data', 'click', clearSavedData);
 
