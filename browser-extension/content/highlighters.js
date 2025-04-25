@@ -417,4 +417,297 @@
       console.log('No associated inputs found for this label');
     }
   };
+
+  // Function to detect and highlight containers with form elements
+  FM.highlightFormContainer = function(element) {
+    // First, check if we're already on a form control - if so, don't try to highlight containers
+    if (element instanceof HTMLInputElement || 
+        element instanceof HTMLSelectElement || 
+        element instanceof HTMLTextAreaElement ||
+        element instanceof HTMLLabelElement) {
+      return;
+    }
+    
+    // Check if this element contains form controls
+    const formControls = element.querySelectorAll('input, select, textarea');
+    if (formControls.length === 0) {
+      return;
+    }
+    
+    // Clean any previous container highlight
+    FM.clearContainerHighlight();
+    
+    const rect = element.getBoundingClientRect();
+    
+    // Create highlight for the container
+    const containerHighlight = document.createElement('div');
+    containerHighlight.className = 'formmaster-container-highlight';
+    containerHighlight.style.cssText = `
+      position: fixed;
+      background-color: rgba(76, 175, 80, 0.1);
+      border: 2px dashed rgba(76, 175, 80, 0.7);
+      border-radius: 4px;
+      pointer-events: none;
+      z-index: 999995;
+      display: block;
+      box-shadow: 0 0 5px rgba(76, 175, 80, 0.3);
+    `;
+    
+    containerHighlight.style.top = `${rect.top}px`;
+    containerHighlight.style.left = `${rect.left}px`;
+    containerHighlight.style.width = `${rect.width}px`;
+    containerHighlight.style.height = `${rect.height}px`;
+    
+    // Create control buttons container (allows proper positioning)
+    const buttonsContainer = document.createElement('div');
+    buttonsContainer.className = 'formmaster-buttons-container';
+    buttonsContainer.style.cssText = `
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      display: flex;
+      gap: 6px;
+      padding: 5px;
+      pointer-events: auto;
+      z-index: 999999;
+      background-color: rgba(255, 255, 255, 0.8);
+      border-radius: 4px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    `;
+    
+    // Create Analyse button
+    const analyseButton = document.createElement('button');
+    analyseButton.className = 'formmaster-container-button formmaster-analyse-button';
+    analyseButton.textContent = 'Analyse';
+    analyseButton.style.cssText = `
+      background-color: #4285f4;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      padding: 4px 8px;
+      font-size: 12px;
+      cursor: pointer;
+      font-weight: bold;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+      transition: all 0.2s;
+    `;
+    analyseButton.addEventListener('mouseover', () => {
+      analyseButton.style.backgroundColor = '#2b76f5';
+    });
+    analyseButton.addEventListener('mouseout', () => {
+      analyseButton.style.backgroundColor = '#4285f4';
+    });
+    analyseButton.addEventListener('click', (e) => {
+      e.stopPropagation();
+      FM.analyseContainer(element);
+    });
+    
+    // Create Fill button
+    const fillButton = document.createElement('button');
+    fillButton.className = 'formmaster-container-button formmaster-fill-button';
+    fillButton.textContent = 'Fill';
+    fillButton.style.cssText = `
+      background-color: #34a853;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      padding: 4px 8px;
+      font-size: 12px;
+      cursor: pointer;
+      font-weight: bold;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+      transition: all 0.2s;
+    `;
+    fillButton.addEventListener('mouseover', () => {
+      fillButton.style.backgroundColor = '#2d9249';
+    });
+    fillButton.addEventListener('mouseout', () => {
+      fillButton.style.backgroundColor = '#34a853';
+    });
+    fillButton.addEventListener('click', (e) => {
+      e.stopPropagation();
+      FM.fillContainer(element);
+    });
+    
+    // Add buttons to container
+    buttonsContainer.appendChild(analyseButton);
+    buttonsContainer.appendChild(fillButton);
+    containerHighlight.appendChild(buttonsContainer);
+    
+    // Associate the highlight element with the container
+    element._highlightElement = containerHighlight;
+    FM.currentHighlightedContainer = element;
+    
+    document.body.appendChild(containerHighlight);
+  };
+
+  // Container event handlers
+  FM.handleContainerMouseover = function(e) {
+    const element = e.target;
+    
+    // Only process container elements that aren't already being handled
+    // as form controls or labels
+    const isFormElement = 
+      element instanceof HTMLInputElement || 
+      element instanceof HTMLSelectElement || 
+      element instanceof HTMLTextAreaElement ||
+      element.tagName === 'LABEL' ||
+      (element.tagName === 'SPAN' && element.classList.contains('label')) ||
+      (element.tagName === 'DIV' && element.classList.contains('label'));
+    
+    if (isFormElement || FM.currentHighlightedElement) {
+      return;
+    }
+    
+    // Check for common container classes using the helper function
+    const isContainer = FM.isContainerElement(element);
+    
+    if (isContainer) {
+      // Check if this container has multiple sub-containers
+      let subContainerCount = 0;
+      const childElements = element.children;
+      
+      for (let i = 0; i < childElements.length; i++) {
+        if (FM.isContainerElement(childElements[i])) {
+          subContainerCount++;
+          if (subContainerCount > 1) {
+            // Found multiple sub-containers, don't highlight
+            return;
+          }
+        }
+      }
+      
+      // If we get here, there are either 0 or 1 sub-containers, so highlight the container
+      FM.highlightFormContainer(element);
+    }
+  };
+  
+  FM.handleContainerMouseout = function(e) {
+    // Don't clear highlight if we're moving to the buttons or child elements
+    const relatedTarget = e.relatedTarget;
+    
+    // Check if we're moving to the container highlight or its children (buttons)
+    if (FM.currentHighlightedContainer && FM.currentHighlightedContainer._highlightElement) {
+      if (FM.currentHighlightedContainer._highlightElement.contains(relatedTarget) || 
+          relatedTarget?.classList?.contains('formmaster-container-button')) {
+        // Mouse moved to the buttons or highlight element - don't clear the highlight
+        return;
+      }
+    }
+    
+    // Otherwise proceed with normal clearing
+    if (FM.currentHighlightedContainer === e.target) {
+      FM.clearContainerHighlight();
+    }
+  };
+  
+  FM.handleContainerClick = function(e) {
+    const element = e.target;
+    
+    // Check if this is one of our buttons - if so, don't process further
+    if (element.classList.contains('formmaster-container-button')) {
+      return;
+    }
+    
+    // Only process container elements that aren't already being handled
+    // as form controls or labels
+    const isFormElement = 
+      element instanceof HTMLInputElement || 
+      element instanceof HTMLSelectElement || 
+      element instanceof HTMLTextAreaElement ||
+      element.tagName === 'LABEL' ||
+      (element.tagName === 'SPAN' && element.classList.contains('label')) ||
+      (element.tagName === 'DIV' && element.classList.contains('label'));
+    
+    if (isFormElement) {
+      return;
+    }
+    
+    // Check for common container classes - same logic as in handleContainerMouseover
+    const isContainer = 
+      element.tagName === 'DIV' || 
+      element.tagName === 'FIELDSET' ||
+      element.classList.contains('form-group') ||
+      element.classList.contains('field-group') ||
+      element.classList.contains('input-group') ||
+      element.classList.contains('form-field') ||
+      element.classList.contains('control-group') ||
+      (element.tagName === 'LI' && element.querySelector('input, select, textarea'));
+    
+    if (isContainer) {      
+      console.group('Form Container Content');
+      console.log('Container element:', element);
+      console.groupEnd();
+    }
+  };
+
+  // Analysis and filling container functions
+  FM.analyseContainer = function(container) {
+    const inputs = container.querySelectorAll('input, select, textarea');
+    const labels = container.querySelectorAll('label');
+    
+    console.group('📊 Form Container Analysis');
+    console.log('Container element:', container);
+    console.log('Number of inputs:', inputs.length);
+    console.log('Number of labels:', labels.length);
+    console.groupEnd();
+  };
+  
+  FM.fillContainer = function(container) {
+    const inputs = container.querySelectorAll('input, select, textarea');
+    
+    console.group('🖊️ Form Container Fill');
+    console.log(`Attempting to fill ${inputs.length} form fields in container:`);
+    console.log(container);
+    
+    let filledCount = 0;
+    
+    inputs.forEach(input => {
+      // Skip submit/button/image/reset inputs
+      if (input instanceof HTMLInputElement && 
+          (input.type === 'submit' || input.type === 'button' || 
+           input.type === 'image' || input.type === 'reset')) {
+        return;
+      }
+      
+      // Find matching field
+      const matchingField = FM.findMatchingField ? FM.findMatchingField(input) : null;
+      if (!matchingField || matchingField.value === undefined) {
+        console.log(`No match found for:`, input);
+        return;
+      }
+      
+      // Fill the field based on its type
+      try {
+        const value = matchingField.value;
+        
+        // Apply visual highlight effect
+        const originalBg = input.style.backgroundColor;
+        input.style.transition = 'background-color 0.3s ease';
+        input.style.backgroundColor = 'rgba(66, 133, 244, 0.2)';
+        
+        setTimeout(() => {
+          input.style.backgroundColor = originalBg;
+        }, 500);
+        
+        if (input instanceof HTMLSelectElement) {
+          if (FM.fillSelectField) FM.fillSelectField(input, value);
+          filledCount++;
+        } else if (input.type === 'checkbox' || input.type === 'radio') {
+          if (FM.fillCheckboxOrRadio) FM.fillCheckboxOrRadio(input, input.type, value);
+          filledCount++;
+        } else {
+          if (FM.fillTextField_explore) FM.fillTextField_explore(input, value);
+          filledCount++;
+        }
+        
+        console.log(`Filled ${input.tagName.toLowerCase()} with value: ${value}`, input);
+      } catch (err) {
+        console.error(`Error filling field:`, err);
+      }
+    });
+    
+    console.log(`Successfully filled ${filledCount} out of ${inputs.length} fields`);
+    console.groupEnd();
+  };
 })(); 
