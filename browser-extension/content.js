@@ -775,6 +775,42 @@ function enableClickToFill(fieldValues) {
       clearContainerHighlight();
     }
   }
+  
+  // Handle clicks on container elements to print their contents
+  function handleContainerClick(e) {
+    const element = e.target;
+    
+    // Only process container elements that aren't already being handled
+    // as form controls or labels
+    const isFormElement = 
+      element instanceof HTMLInputElement || 
+      element instanceof HTMLSelectElement || 
+      element instanceof HTMLTextAreaElement ||
+      element.tagName === 'LABEL' ||
+      (element.tagName === 'SPAN' && element.classList.contains('label')) ||
+      (element.tagName === 'DIV' && element.classList.contains('label'));
+    
+    if (isFormElement) {
+      return;
+    }
+    
+    // Check for common container classes - same logic as in handleContainerMouseover
+    const isContainer = 
+      element.tagName === 'DIV' || 
+      element.tagName === 'FIELDSET' ||
+      element.classList.contains('form-group') ||
+      element.classList.contains('field-group') ||
+      element.classList.contains('input-group') ||
+      element.classList.contains('form-field') ||
+      element.classList.contains('control-group') ||
+      (element.tagName === 'LI' && element.querySelector('input, select, textarea'));
+    
+    if (isContainer) {      
+      console.group('Form Container Content');
+      console.log('Container element:', element);
+      console.groupEnd();
+    }
+  }
 
   // Add event listeners for labels
   document.addEventListener('mouseover', handleLabelMouseover, true);
@@ -784,6 +820,7 @@ function enableClickToFill(fieldValues) {
   // Add container event listeners
   document.addEventListener('mouseover', handleContainerMouseover, true);
   document.addEventListener('mouseout', handleContainerMouseout, true);
+  document.addEventListener('click', handleContainerClick, true);
   
   // Function to find matching field
   function findMatchingField(element) {
@@ -1038,8 +1075,9 @@ function enableClickToFill(fieldValues) {
     document.removeEventListener('mouseover', handleLabelMouseover, true);
     document.removeEventListener('mouseout', handleLabelMouseout, true);
     document.removeEventListener('click', handleLabelClick, true);
-    document.removeEventListener('mouseover', handleContainerMouseover, true); // Add this
-    document.removeEventListener('mouseout', handleContainerMouseout, true); // Add this
+    document.removeEventListener('mouseover', handleContainerMouseover, true);
+    document.removeEventListener('mouseout', handleContainerMouseout, true);
+    document.removeEventListener('click', handleContainerClick, true);
     document.removeEventListener('scroll', updateIndicatorPosition, true);
     window.removeEventListener('resize', updateIndicatorPosition, true);
     
