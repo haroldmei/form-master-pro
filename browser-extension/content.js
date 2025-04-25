@@ -149,6 +149,7 @@ function enableClickToFill(fieldValues) {
   let currentHighlightedLabels = [];
   let currentHighlightedOptions = [];
   let currentHighlightedInputs = [];
+  let currentHighlightedContainer = null; // Add tracking for highlighted container
   
   // Function to clear label highlights - MOVED EARLIER TO FIX REFERENCE ERROR
   function clearLabelHighlights() {
@@ -183,6 +184,19 @@ function enableClickToFill(fieldValues) {
     currentHighlightedInputs = [];
   }
   
+  // Function to clear container highlight
+  function clearContainerHighlight() {
+    if (currentHighlightedContainer && currentHighlightedContainer._highlightElement) {
+      if (currentHighlightedContainer._highlightElement.parentNode) {
+        currentHighlightedContainer._highlightElement.parentNode.removeChild(
+          currentHighlightedContainer._highlightElement
+        );
+      }
+      delete currentHighlightedContainer._highlightElement;
+      currentHighlightedContainer = null;
+    }
+  }
+
   // Function to update indicator position
   function updateIndicatorPosition() {
     if (!currentHighlightedElement || indicator.style.display === 'none') return;
@@ -259,6 +273,52 @@ function enableClickToFill(fieldValues) {
     });
   }
   
+  // Function to detect and highlight containers with form elements
+  function highlightFormContainer(element) {
+    // First, check if we're already on a form control - if so, don't try to highlight containers
+    if (element instanceof HTMLInputElement || 
+        element instanceof HTMLSelectElement || 
+        element instanceof HTMLTextAreaElement ||
+        element instanceof HTMLLabelElement) {
+      return;
+    }
+    
+    // Check if this element contains form controls
+    const formControls = element.querySelectorAll('input, select, textarea');
+    if (formControls.length === 0) {
+      return;
+    }
+    
+    // Clean any previous container highlight
+    clearContainerHighlight();
+    
+    // Create highlight for the container
+    const containerHighlight = document.createElement('div');
+    containerHighlight.className = 'formmaster-container-highlight';
+    containerHighlight.style.cssText = `
+      position: fixed;
+      background-color: rgba(76, 175, 80, 0.1);
+      border: 2px dashed rgba(76, 175, 80, 0.7);
+      border-radius: 4px;
+      pointer-events: none;
+      z-index: 999995;
+      display: block;
+      box-shadow: 0 0 5px rgba(76, 175, 80, 0.3);
+    `;
+    
+    const rect = element.getBoundingClientRect();
+    containerHighlight.style.top = `${rect.top}px`;
+    containerHighlight.style.left = `${rect.left}px`;
+    containerHighlight.style.width = `${rect.width}px`;
+    containerHighlight.style.height = `${rect.height}px`;
+    
+    // Associate the highlight element with the container
+    element._highlightElement = containerHighlight;
+    currentHighlightedContainer = element;
+    
+    document.body.appendChild(containerHighlight);
+  }
+
   // Function to find and highlight labels associated with an element
   function findAndHighlightLabels(element) {
     // Clear any previous label highlights
@@ -493,18 +553,19 @@ function enableClickToFill(fieldValues) {
     // Clear any previous input highlights
     clearHighlightedInputs();
     
-    // Create highlight elements for each input
     inputs.forEach(input => {
       const inputHighlight = document.createElement('div');
       inputHighlight.className = 'formmaster-input-highlight';
       inputHighlight.style.cssText = `
         position: fixed;
-        background-color: rgba(66, 133, 244, 0.1);
-        border: 1px solid rgba(66, 133, 244, 0.6);
-        border-radius: 3px;
+        background-color: rgba(66, 133, 244, 0.15);
+        border: 2px solid rgba(66, 133, 244, 0.7);
+        border-radius: 4px;
         pointer-events: none;
-        z-index: 999999;
+        z-index: 999996;
         display: block;
+        box-shadow: 0 0 8px rgba(66, 133, 244, 0.3);
+        animation: formmaster-pulse 1.5s infinite;
       `;
       
       const inputRect = input.getBoundingClientRect();
@@ -515,9 +576,24 @@ function enableClickToFill(fieldValues) {
       
       // Associate the highlight element with the input for later updates
       input._highlightElement = inputHighlight;
+      currentHighlightedInputs.push(input);
       
       document.body.appendChild(inputHighlight);
     });
+    
+    // Add animation style if it doesn't exist yet
+    if (!document.getElementById('formmaster-animations')) {
+      const styleEl = document.createElement('style');
+      styleEl.id = 'formmaster-animations';
+      styleEl.textContent = `
+        @keyframes formmaster-pulse {
+          0% { border-color: rgba(66, 133, 244, 0.7); }
+          50% { border-color: rgba(66, 133, 244, 1.0); }
+          100% { border-color: rgba(66, 133, 244, 0.7); }
+        }
+      `;
+      document.head.appendChild(styleEl);
+    }
     
     currentHighlightedInputs = inputs;
   }
@@ -537,8 +613,59 @@ function enableClickToFill(fieldValues) {
       // Only clear if it's not already being handled by input hover
       if (!currentHighlightedElement) {
         clearHighlightedInputs();
+        clearLabelHighlights(); // Also clear label highlights
       }
       return;
+    }
+    
+    // Clear any previous label highlights first
+    clearLabelHighlights();
+    
+    // Create highlight for the label with more visible styling
+    const labelHighlight = document.createElement('div');
+    labelHighlight.className = 'formmaster-label-highlight';
+    labelHighlight.style.cssText = `
+      position: fixed;
+      background-color: rgba(255, 193, 7, 0.2);
+      border: 3px solid rgba(255, 153, 0, 0.8);
+      border-radius: 3px;
+      pointer-events: none;
+      z-index: 999998;
+      display: block !important;
+      box-shadow: 0 0 10px rgba(255, 153, 0, 0.4);
+      animation: formmaster-pulse-amber 1.5s infinite;
+    `;
+    
+    const labelRect = element.getBoundingClientRect();
+    labelHighlight.style.top = `${labelRect.top - 2}px`;
+    labelHighlight.style.left = `${labelRect.left - 2}px`;
+    labelHighlight.style.width = `${labelRect.width + 4}px`;
+    labelHighlight.style.height = `${labelRect.height + 4}px`;
+    
+    // Associate the highlight element with the label
+    element._highlightElement = labelHighlight;
+    
+    // Add label to tracked labels
+    currentHighlightedLabels = [element];
+    
+    // Add the highlight to the DOM
+    document.body.appendChild(labelHighlight);
+    
+    // Add amber pulse animation if it doesn't exist yet
+    if (!document.getElementById('formmaster-animations') || 
+        !document.getElementById('formmaster-animations').textContent.includes('formmaster-pulse-amber')) {
+      const styleEl = document.getElementById('formmaster-animations') || document.createElement('style');
+      styleEl.id = 'formmaster-animations';
+      styleEl.textContent += `
+        @keyframes formmaster-pulse-amber {
+          0% { border-color: rgba(255, 153, 0, 0.8); }
+          50% { border-color: rgba(255, 153, 0, 1.0); }
+          100% { border-color: rgba(255, 153, 0, 0.8); }
+        }
+      `;
+      if (!styleEl.parentNode) {
+        document.head.appendChild(styleEl);
+      }
     }
     
     // Find associated inputs for this label
@@ -551,6 +678,10 @@ function enableClickToFill(fieldValues) {
     
     // Highlight the associated inputs
     highlightAssociatedInputs(associatedInputs);
+    
+    // Register scroll and resize handlers to keep the highlights in position
+    document.addEventListener('scroll', updateIndicatorPosition, { passive: true });
+    window.addEventListener('resize', updateIndicatorPosition, { passive: true });
   }
   
   // Handle mouseout on labels
@@ -571,6 +702,7 @@ function enableClickToFill(fieldValues) {
     // Only clear if we're not hovering over an input
     if (!currentHighlightedElement) {
       clearHighlightedInputs();
+      clearLabelHighlights(); // Also clear label highlights
     }
   }
   
@@ -603,10 +735,55 @@ function enableClickToFill(fieldValues) {
     }
   }
   
+  // Add mouseover handler to detect container elements
+  function handleContainerMouseover(e) {
+    const element = e.target;
+    
+    // Only process container elements that aren't already being handled
+    // as form controls or labels
+    const isFormElement = 
+      element instanceof HTMLInputElement || 
+      element instanceof HTMLSelectElement || 
+      element instanceof HTMLTextAreaElement ||
+      element.tagName === 'LABEL' ||
+      (element.tagName === 'SPAN' && element.classList.contains('label')) ||
+      (element.tagName === 'DIV' && element.classList.contains('label'));
+    
+    if (isFormElement || currentHighlightedElement) {
+      return;
+    }
+    
+    // Check for common container classes
+    const isContainer = 
+      element.tagName === 'DIV' || 
+      element.tagName === 'FIELDSET' ||
+      element.classList.contains('form-group') ||
+      element.classList.contains('field-group') ||
+      element.classList.contains('input-group') ||
+      element.classList.contains('form-field') ||
+      element.classList.contains('control-group') ||
+      (element.tagName === 'LI' && element.querySelector('input, select, textarea'));
+    
+    if (isContainer) {
+      highlightFormContainer(element);
+    }
+  }
+
+  // Add mouseout handler for containers
+  function handleContainerMouseout(e) {
+    if (currentHighlightedContainer === e.target) {
+      clearContainerHighlight();
+    }
+  }
+
   // Add event listeners for labels
   document.addEventListener('mouseover', handleLabelMouseover, true);
   document.addEventListener('mouseout', handleLabelMouseout, true);
   document.addEventListener('click', handleLabelClick, true);
+  
+  // Add container event listeners
+  document.addEventListener('mouseover', handleContainerMouseover, true);
+  document.addEventListener('mouseout', handleContainerMouseout, true);
   
   // Function to find matching field
   function findMatchingField(element) {
@@ -861,6 +1038,8 @@ function enableClickToFill(fieldValues) {
     document.removeEventListener('mouseover', handleLabelMouseover, true);
     document.removeEventListener('mouseout', handleLabelMouseout, true);
     document.removeEventListener('click', handleLabelClick, true);
+    document.removeEventListener('mouseover', handleContainerMouseover, true); // Add this
+    document.removeEventListener('mouseout', handleContainerMouseout, true); // Add this
     document.removeEventListener('scroll', updateIndicatorPosition, true);
     window.removeEventListener('resize', updateIndicatorPosition, true);
     
@@ -884,6 +1063,7 @@ function enableClickToFill(fieldValues) {
     clearLabelHighlights();
     clearOptionsHighlights();
     clearHighlightedInputs();
+    clearContainerHighlight();
     
     console.log("Click-to-fill functionality disabled");
   }
