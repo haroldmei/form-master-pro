@@ -199,19 +199,25 @@ function enableClickToFill(fieldValues) {
 
   // Function to update indicator position
   function updateIndicatorPosition() {
-    if (!currentHighlightedElement || indicator.style.display === 'none') return;
-    
-    const rect = currentHighlightedElement.getBoundingClientRect();
-    indicator.style.top = `${rect.top}px`;
-    indicator.style.left = `${rect.left}px`;
-    indicator.style.width = `${rect.width}px`;
-    indicator.style.height = `${rect.height}px`;
-    
-    // Update tooltip position to overlay directly on the field
-    valueTooltip.style.top = `${rect.top}px`;
-    valueTooltip.style.left = `${rect.left}px`;
-    valueTooltip.style.width = `${rect.width}px`;
-    valueTooltip.style.height = `${rect.height}px`;
+    // Update main indicator if active
+    if (currentHighlightedElement && indicator.style.display !== 'none') {
+      const rect = currentHighlightedElement.getBoundingClientRect();
+      indicator.style.top = `${rect.top}px`;
+      indicator.style.left = `${rect.left}px`;
+      indicator.style.width = `${rect.width}px`;
+      indicator.style.height = `${rect.height}px`;
+      
+      // Update tooltip position to overlay directly on the field
+      valueTooltip.style.top = `${rect.top}px`;
+      valueTooltip.style.left = `${rect.left}px`;
+      valueTooltip.style.width = `${rect.width}px`;
+      valueTooltip.style.height = `${rect.height}px`;
+      
+      // Adjust the text size to be double the height of the control
+      const desiredFontSize = Math.max(16, rect.height * 0.7); // 70% of height, minimum 16px
+      valueText.style.fontSize = `${desiredFontSize}px`;
+      valueText.style.lineHeight = `${desiredFontSize}px`;
+    }
     
     // Update label indicators positions
     updateLabelIndicatorsPositions();
@@ -219,10 +225,19 @@ function enableClickToFill(fieldValues) {
     // Update options indicators positions
     updateOptionsIndicatorsPositions();
     
-    // Adjust the text size to be double the height of the control
-    const desiredFontSize = Math.max(16, rect.height * 0.7); // 70% of height, minimum 16px
-    valueText.style.fontSize = `${desiredFontSize}px`;
-    valueText.style.lineHeight = `${desiredFontSize}px`;
+    // Update input highlights positions
+    updateInputHighlightsPositions();
+    
+    // Update container highlight if active
+    if (currentHighlightedContainer && currentHighlightedContainer._highlightElement) {
+      const containerRect = currentHighlightedContainer.getBoundingClientRect();
+      const containerHighlight = currentHighlightedContainer._highlightElement;
+      
+      containerHighlight.style.top = `${containerRect.top}px`;
+      containerHighlight.style.left = `${containerRect.left}px`;
+      containerHighlight.style.width = `${containerRect.width}px`;
+      containerHighlight.style.height = `${containerRect.height}px`;
+    }
   }
   
   // Function to update label indicators positions
