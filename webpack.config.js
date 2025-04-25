@@ -14,8 +14,6 @@ module.exports = (env, argv) => {
     entry: {
       // Main background script
       background: './browser-extension/background.js',
-      // Content script
-      //content: './browser-extension/content.js',
       // UI scripts
       popup: './browser-extension/popup.js',
       callback: './browser-extension/callback.js',

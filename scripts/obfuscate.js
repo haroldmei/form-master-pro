@@ -56,8 +56,7 @@ function obfuscateDirectory(directory) {
       if (entry.name === 'background.js' || entry.name === 'auth.js' 
         || entry.name === 'userProfile.js' || entry.name === 'formProcessor.js'
         || entry.name === 'aiService.js' || entry.name === 'formFiller.js'
-        || entry.name === 'utils.js' || entry.name === 'popup.js'
-        || entry.name === 'content.js') {
+        || entry.name === 'utils.js' || entry.name === 'popup.js') {
         console.log(chalk.yellow(`⚠️ Skipping service worker file: ${entry.name}`));
         continue;
       }
