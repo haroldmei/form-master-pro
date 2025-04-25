@@ -1247,59 +1247,6 @@ function enableClickToFill(fieldValues) {
   return cleanupClickToFill;
 }
 
-/**
- * Emulate keyboard typing character by character
- */
-async function emulateTyping(element, text) {
-  // Focus the element first
-  element.focus();
-  element.value = '';
-  element.dispatchEvent(new Event('focus', { bubbles: true }));
-  
-  // Type each character with a delay
-  for (let i = 0; i < text.length; i++) {
-    // Get the current character
-    const char = text[i];
-    
-    // Add the character to the current value
-    const currentValue = element.value;
-    element.value = currentValue + char;
-    
-    // Dispatch keyboard events for the character
-    const keyCode = char.charCodeAt(0);
-    element.dispatchEvent(new KeyboardEvent('keydown', { 
-      key: char, 
-      code: `Key${char.toUpperCase()}`, 
-      keyCode: keyCode, 
-      which: keyCode, 
-      bubbles: true 
-    }));
-    
-    element.dispatchEvent(new KeyboardEvent('keypress', { 
-      key: char, 
-      code: `Key${char.toUpperCase()}`, 
-      keyCode: keyCode, 
-      which: keyCode, 
-      bubbles: true 
-    }));
-    
-    // Dispatch input event after each character
-    element.dispatchEvent(new Event('input', { bubbles: true }));
-    
-    element.dispatchEvent(new KeyboardEvent('keyup', { 
-      key: char, 
-      code: `Key${char.toUpperCase()}`, 
-      keyCode: keyCode, 
-      which: keyCode, 
-      bubbles: true 
-    }));
-    
-    // Short delay between characters (50-100ms makes it look realistic)
-    await new Promise(resolve => setTimeout(resolve, 50 + Math.random() * 50));
-  }
-}
-
-
 async function fillTextField_explore(element, value) {
   console.log(`Filling text field: ${element.id}, ${element.name}, ${value}`);
   
@@ -1340,73 +1287,6 @@ async function fillTextField_explore(element, value) {
     }
   });
   return true;
-}
-
-
-async function fillTextField(element, value) {
-  console.log(`Filling text field: ${element.id}, ${element.name}, ${value}`);
-  
-  // Check if this is a dropdown/autocomplete field
-  const isDropdownField = 
-      element.getAttribute('role') === 'combobox' ||
-      element.classList.contains('tags-input') ||
-      element.classList.contains('autocomplete') ||
-      element.classList.contains('ui-autocomplete-input') ||
-      element.hasAttribute('list') ||
-      element.getAttribute('autocomplete') === 'off' ||
-      window.getComputedStyle(element).getPropertyValue('background-image').includes('dropdown');
-  
-  if (isDropdownField) {
-    // Clear any existing value
-    element.value = '';
-    element.dispatchEvent(new Event('focus', { bubbles: true }));
-    
-    // Emulate typing for dropdown fields
-    await emulateTyping(element, value);
-    
-    // Wait for dropdown to appear
-    await new Promise(resolve => setTimeout(resolve, 300));
-    
-    console.log(`Filled dropdown/autocomplete field: ${element.id}, ${element.name}, ${element.value}`);
-    element.style.borderLeft = '4px solid #4285f4';
-    return true;
-  }
-
-  // For standard inputs, use direct setting
-  element.value = value;
-  element.dispatchEvent(new Event('input', { bubbles: true }));
-  element.dispatchEvent(new Event('change', { bubbles: true }));
-  element.dispatchEvent(new Event('blur', { bubbles: true }));
-  
-  element.style.borderLeft = '4px solid #4285f4';
-  return true;
-}
-
-/**
- * Select an option in a dropdown
- */
-async function selectOption(selectElement, value) {
-  // Find the option with matching value
-  let found = false;
-  for (let i = 0; i < selectElement.options.length; i++) {
-    if (selectElement.options[i].value == value ||
-        selectElement.options[i].text == value) {
-      selectElement.selectedIndex = i;
-      found = true;
-      break;
-    }
-  }
-  
-  // If option not found by value/text, try setting value directly
-  if (!found) {
-    selectElement.value = value;
-  }
-  
-  // Trigger change event
-  selectElement.dispatchEvent(new Event('change', { bubbles: true }));
-  
-  // Add slight delay for stability
-  await new Promise(resolve => setTimeout(resolve, 50));
 }
 
 /**
