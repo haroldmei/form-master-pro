@@ -148,6 +148,40 @@ function enableClickToFill(fieldValues) {
   let currentHighlightedElement = null;
   let currentHighlightedLabels = [];
   let currentHighlightedOptions = [];
+  let currentHighlightedInputs = [];
+  
+  // Function to clear label highlights - MOVED EARLIER TO FIX REFERENCE ERROR
+  function clearLabelHighlights() {
+    currentHighlightedLabels.forEach(label => {
+      if (label && label._highlightElement && label._highlightElement.parentNode) {
+        label._highlightElement.parentNode.removeChild(label._highlightElement);
+        delete label._highlightElement;
+      }
+    });
+    currentHighlightedLabels = [];
+  }
+  
+  // Function to clear options highlights
+  function clearOptionsHighlights() {
+    currentHighlightedOptions.forEach(option => {
+      if (option && option._highlightElement && option._highlightElement.parentNode) {
+        option._highlightElement.parentNode.removeChild(option._highlightElement);
+        delete option._highlightElement;
+      }
+    });
+    currentHighlightedOptions = [];
+  }
+  
+  // Function to clear highlighted inputs
+  function clearHighlightedInputs() {
+    currentHighlightedInputs.forEach(input => {
+      if (input && input._highlightElement && input._highlightElement.parentNode) {
+        input._highlightElement.parentNode.removeChild(input._highlightElement);
+        delete input._highlightElement;
+      }
+    });
+    currentHighlightedInputs = [];
+  }
   
   // Function to update indicator position
   function updateIndicatorPosition() {
@@ -204,6 +238,22 @@ function enableClickToFill(fieldValues) {
           highlightEl.style.left = `${optionRect.left}px`;
           highlightEl.style.width = `${optionRect.width}px`;
           highlightEl.style.height = `${optionRect.height}px`;
+        }
+      }
+    });
+  }
+  
+  // Function to update input highlights positions
+  function updateInputHighlightsPositions() {
+    currentHighlightedInputs.forEach(input => {
+      if (input && input.getBoundingClientRect) {
+        const inputRect = input.getBoundingClientRect();
+        const highlightEl = input._highlightElement;
+        if (highlightEl) {
+          highlightEl.style.top = `${inputRect.top}px`;
+          highlightEl.style.left = `${inputRect.left}px`;
+          highlightEl.style.width = `${inputRect.width}px`;
+          highlightEl.style.height = `${inputRect.height}px`;
         }
       }
     });
@@ -306,10 +356,15 @@ function enableClickToFill(fieldValues) {
     
     // For select elements, find the options
     if (element instanceof HTMLSelectElement) {
+      // Get all option elements in the select
+      Array.from(element.options).forEach(option => {
+        options.push(option);
+      });
+      
       // If the select has a visible dropdown, try to find its options
       const selectRect = element.getBoundingClientRect();
       
-      // Look for visible dropdown options
+      // Look for visible dropdown options (for custom select elements)
       document.querySelectorAll('.select-options, .dropdown-menu, [role="listbox"], ul.options')
         .forEach(optionContainer => {
           const containerRect = optionContainer.getBoundingClientRect();
@@ -372,28 +427,186 @@ function enableClickToFill(fieldValues) {
     
     currentHighlightedOptions = options;
   }
-  
-  // Function to clear label highlights
-  function clearLabelHighlights() {
-    currentHighlightedLabels.forEach(label => {
-      if (label && label._highlightElement && label._highlightElement.parentNode) {
-        label._highlightElement.parentNode.removeChild(label._highlightElement);
-        delete label._highlightElement;
+
+  // Function to find input elements associated with a label
+  function findAssociatedInputs(labelElement) {
+    let inputs = [];
+    
+    // 1. Check if label has 'for' attribute
+    const forId = labelElement.getAttribute('for');
+    if (forId) {
+      const input = document.getElementById(forId);
+      if (input && (input instanceof HTMLInputElement || 
+                     input instanceof HTMLSelectElement || 
+                     input instanceof HTMLTextAreaElement)) {
+        inputs.push(input);
       }
+    }
+    
+    // 2. Check for inputs that are children of the label
+    labelElement.querySelectorAll('input, select, textarea').forEach(input => {
+      inputs.push(input);
     });
-    currentHighlightedLabels = [];
+    
+    // 3. Check nearby siblings
+    if (inputs.length === 0) {
+      const siblings = Array.from(labelElement.parentElement?.children || []);
+      siblings.forEach(sibling => {
+        if ((sibling instanceof HTMLInputElement || 
+             sibling instanceof HTMLSelectElement || 
+             sibling instanceof HTMLTextAreaElement) && 
+            !sibling.contains(labelElement)) {
+          
+          const rect1 = labelElement.getBoundingClientRect();
+          const rect2 = sibling.getBoundingClientRect();
+          const horizontalDistance = Math.min(
+            Math.abs(rect1.left - rect2.right),
+            Math.abs(rect1.right - rect2.left)
+          );
+          const verticalDistance = Math.min(
+            Math.abs(rect1.top - rect2.bottom),
+            Math.abs(rect1.bottom - rect2.top)
+          );
+          
+          // Consider as associated if close enough
+          if ((horizontalDistance < 50 && verticalDistance < 30) || 
+              (horizontalDistance < 20 && verticalDistance < 100)) {
+            inputs.push(sibling);
+          }
+        }
+      });
+    }
+    
+    // 4. Check if this is part of a form field group
+    const fieldGroup = labelElement.closest('.form-group, .field-group, .input-group, .control-group');
+    if (fieldGroup && inputs.length === 0) {
+      fieldGroup.querySelectorAll('input, select, textarea').forEach(input => {
+        inputs.push(input);
+      });
+    }
+    
+    return inputs;
   }
   
-  // Function to clear options highlights
-  function clearOptionsHighlights() {
-    currentHighlightedOptions.forEach(option => {
-      if (option && option._highlightElement && option._highlightElement.parentNode) {
-        option._highlightElement.parentNode.removeChild(option._highlightElement);
-        delete option._highlightElement;
-      }
+  // Function to highlight input elements when hovering over a label
+  function highlightAssociatedInputs(inputs) {
+    // Clear any previous input highlights
+    clearHighlightedInputs();
+    
+    // Create highlight elements for each input
+    inputs.forEach(input => {
+      const inputHighlight = document.createElement('div');
+      inputHighlight.className = 'formmaster-input-highlight';
+      inputHighlight.style.cssText = `
+        position: fixed;
+        background-color: rgba(66, 133, 244, 0.1);
+        border: 1px solid rgba(66, 133, 244, 0.6);
+        border-radius: 3px;
+        pointer-events: none;
+        z-index: 999999;
+        display: block;
+      `;
+      
+      const inputRect = input.getBoundingClientRect();
+      inputHighlight.style.top = `${inputRect.top}px`;
+      inputHighlight.style.left = `${inputRect.left}px`;
+      inputHighlight.style.width = `${inputRect.width}px`;
+      inputHighlight.style.height = `${inputRect.height}px`;
+      
+      // Associate the highlight element with the input for later updates
+      input._highlightElement = inputHighlight;
+      
+      document.body.appendChild(inputHighlight);
     });
-    currentHighlightedOptions = [];
+    
+    currentHighlightedInputs = inputs;
   }
+
+  // Handle mouseover on labels
+  function handleLabelMouseover(e) {
+    const element = e.target;
+    
+    // Check if this is a label or label-like element
+    const isLabelOrLabelLike = 
+      element.tagName === 'LABEL' || 
+      (element.tagName === 'SPAN' && element.classList.contains('label')) ||
+      (element.tagName === 'DIV' && element.classList.contains('label')) ||
+      element.getAttribute('aria-label') !== null;
+    
+    if (!isLabelOrLabelLike) {
+      // Only clear if it's not already being handled by input hover
+      if (!currentHighlightedElement) {
+        clearHighlightedInputs();
+      }
+      return;
+    }
+    
+    // Find associated inputs for this label
+    const associatedInputs = findAssociatedInputs(element);
+    
+    if (associatedInputs.length === 0) {
+      clearHighlightedInputs();
+      return;
+    }
+    
+    // Highlight the associated inputs
+    highlightAssociatedInputs(associatedInputs);
+  }
+  
+  // Handle mouseout on labels
+  function handleLabelMouseout(e) {
+    const element = e.target;
+    
+    // Check if this is a label or label-like element
+    const isLabelOrLabelLike = 
+      element.tagName === 'LABEL' || 
+      (element.tagName === 'SPAN' && element.classList.contains('label')) ||
+      (element.tagName === 'DIV' && element.classList.contains('label')) ||
+      element.getAttribute('aria-label') !== null;
+    
+    if (!isLabelOrLabelLike) {
+      return;
+    }
+    
+    // Only clear if we're not hovering over an input
+    if (!currentHighlightedElement) {
+      clearHighlightedInputs();
+    }
+  }
+  
+  // Handle click on labels to print HTML
+  function handleLabelClick(e) {
+    const element = e.target;
+    
+    // Check if this is a label or label-like element
+    const isLabelOrLabelLike = 
+      element.tagName === 'LABEL' || 
+      (element.tagName === 'SPAN' && element.classList.contains('label')) ||
+      (element.tagName === 'DIV' && element.classList.contains('label')) ||
+      element.getAttribute('aria-label') !== null;
+    
+    if (!isLabelOrLabelLike) {
+      return;
+    }
+    
+    console.log('Label HTML:', element.outerHTML);
+    
+    // Also log details about associated inputs
+    const associatedInputs = findAssociatedInputs(element);
+    if (associatedInputs.length > 0) {
+      console.log(`Found ${associatedInputs.length} associated input(s):`);
+      associatedInputs.forEach((input, index) => {
+        console.log(`Input ${index + 1}:`, input.outerHTML);
+      });
+    } else {
+      console.log('No associated inputs found for this label');
+    }
+  }
+  
+  // Add event listeners for labels
+  document.addEventListener('mouseover', handleLabelMouseover, true);
+  document.addEventListener('mouseout', handleLabelMouseout, true);
+  document.addEventListener('click', handleLabelClick, true);
   
   // Function to find matching field
   function findMatchingField(element) {
@@ -645,6 +858,9 @@ function enableClickToFill(fieldValues) {
     document.removeEventListener('mouseover', handleMouseover, true);
     document.removeEventListener('mouseout', handleMouseout, true);
     document.removeEventListener('click', handleClick, true);
+    document.removeEventListener('mouseover', handleLabelMouseover, true);
+    document.removeEventListener('mouseout', handleLabelMouseout, true);
+    document.removeEventListener('click', handleLabelClick, true);
     document.removeEventListener('scroll', updateIndicatorPosition, true);
     window.removeEventListener('resize', updateIndicatorPosition, true);
     
@@ -667,6 +883,7 @@ function enableClickToFill(fieldValues) {
     // Clear any remaining highlights
     clearLabelHighlights();
     clearOptionsHighlights();
+    clearHighlightedInputs();
     
     console.log("Click-to-fill functionality disabled");
   }
