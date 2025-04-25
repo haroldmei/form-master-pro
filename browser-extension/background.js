@@ -390,6 +390,52 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     
     return true;
   }
+
+  // Explora code injection
+  if (message.action === 'injectExplora') {
+    console.log('Injecting Explora script into tab:', sender.tab?.id);
+
+    try {
+      // Prepare the code script - add some safeguards by wrapping in IIFE
+      const wrappedCode = `(function() {
+        ${message.codeString}
+        try {
+          setTitleValue('Mx');
+          return { success: true, message: 'Explora script executed successfully' };
+        } catch (error) {
+          console.error('Explora execution error:', error);
+          return { success: false, error: error.message };
+        }
+      })();`;
+
+      // Execute the script directly in the page context
+      chrome.scripting.executeScript({
+        target: { tabId: sender.tab?.id },
+        world: "MAIN", // This executes in the page's JavaScript context
+        func: (code) => {
+          // Create a function from string in a way that avoids CSP issues
+          const script = document.createElement('script');
+          script.textContent = code;
+          (document.head || document.documentElement).appendChild(script);
+          script.remove();
+          return { success: true };
+        },
+        args: [wrappedCode]
+      }).then(results => {
+        console.log('Script injection result:', results);
+        if (results && results[0] && results[0].result) {
+          console.log('Explora script execution complete');
+        }
+      }).catch(error => {
+        console.error('Error executing script via scripting API:', error);
+      });
+
+      return true; // Keep the messaging channel open for async response
+    } catch (error) {
+      console.error('Error preparing Explora injection:', error);
+      return true;
+    }
+  }
 });
 
 // Check email verification status

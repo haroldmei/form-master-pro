@@ -363,7 +363,7 @@ function enableClickToFill(fieldValues) {
     } else if (element.type === 'checkbox' || element.type === 'radio') {
       fillCheckboxOrRadio(element, element.type, value);
     } else {
-      fillTextField(element, value);
+      fillTextField_explore(element, value);
     }
     
     console.log(`Click-to-fill: Filled ${element.tagName.toLowerCase()} with value: ${value}`);
@@ -452,6 +452,50 @@ async function emulateTyping(element, text) {
     await new Promise(resolve => setTimeout(resolve, 50 + Math.random() * 50));
   }
 }
+
+
+async function fillTextField_explore(element, value) {
+  console.log(`Filling text field: ${element.id}, ${element.name}, ${value}`);
+  
+  console.log("Requesting form values from background script...");
+  codeString = 
+  `
+  async function setTitleValue(newValue) {
+    const options = ["Mr", "Ms", "Mrs", "Miss", "Mx"];
+    console.log("============= Setting title value to:", newValue);
+
+    if (options.includes(newValue)) {
+      // Set hidden input
+      document.getElementById("sTitle-postback").value = newValue;
+  
+      // Set visible value in the editable combobox
+      document.getElementById("sTitle-edit").value = newValue;
+  
+      // Update the selection indicator (if visible)
+      const indicator = document.getElementById("formmaster-indicator-sTitle-edit");
+      if (indicator) {
+        indicator.textContent = newValue;
+      }
+  
+      // Optionally mark the selected option in the list visually
+      document.querySelectorAll("#sTitle-list .cb_option").forEach(option => {
+        option.classList.toggle("selected", option.dataset.value === newValue);
+      });
+    }
+  }
+  `;
+
+  chrome.runtime.sendMessage({ action: "injectExplora", url: window.location.href, codeString: codeString}, function(response) {
+    console.log("Received response:", response);
+    if (response && response.success) {
+      console.log("Filling text field with custom code");
+    } else {
+      console.warn("No form values available for click-to-fill");
+    }
+  });
+  return true;
+}
+
 
 async function fillTextField(element, value) {
   console.log(`Filling text field: ${element.id}, ${element.name}, ${value}`);
