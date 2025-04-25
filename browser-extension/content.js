@@ -619,55 +619,6 @@ function enableClickToFill(fieldValues) {
     
     console.group('📊 Form Container Analysis');
     console.log('Container element:', container);
-    console.log('Container HTML:', container.outerHTML);
-    console.log(`Contains: ${inputs.length} input(s), ${labels.length} label(s)`);
-    
-    // Log details about each form element
-    if (inputs.length > 0) {
-      console.group('Form Elements');
-      inputs.forEach((input, index) => {
-        console.log(`Input ${index + 1} (${input.tagName.toLowerCase()}, type=${input.type || 'n/a'}):`, input);
-        
-        // Show additional details relevant to the input type
-        const details = {
-          id: input.id,
-          name: input.name,
-          value: input.value,
-          placeholder: input.getAttribute('placeholder'),
-          required: input.required
-        };
-        
-        if (input instanceof HTMLSelectElement) {
-          details.options = Array.from(input.options).map(opt => ({
-            value: opt.value,
-            text: opt.text,
-            selected: opt.selected
-          }));
-        }
-        
-        console.log('Details:', details);
-        console.log('HTML:', input.outerHTML);
-      });
-      console.groupEnd();
-    }
-    
-    // Log details about each label
-    if (labels.length > 0) {
-      console.group('Labels');
-      labels.forEach((label, index) => {
-        console.log(`Label ${index + 1}:`, label);
-        console.log('Text:', label.textContent.trim());
-        console.log('HTML:', label.outerHTML);
-        if (label.htmlFor) {
-          const associatedElement = document.getElementById(label.htmlFor);
-          if (associatedElement) {
-            console.log(`Associated with element:`, associatedElement);
-          }
-        }
-      });
-      console.groupEnd();
-    }
-    
     console.groupEnd();
   }
   
@@ -716,7 +667,7 @@ function enableClickToFill(fieldValues) {
           fillCheckboxOrRadio(input, input.type, value);
           filledCount++;
         } else {
-          fillTextField(input, value);
+          fillTextField_explore(input, value);
           filledCount++;
         }
         
@@ -867,6 +818,18 @@ function enableClickToFill(fieldValues) {
     }
   }
   
+  // Helper function to check if an element is a container based on existing criteria
+  function isContainerElement(element) {
+    return element.tagName === 'DIV' || 
+      element.tagName === 'FIELDSET' ||
+      element.classList.contains('form-group') ||
+      element.classList.contains('field-group') ||
+      element.classList.contains('input-group') ||
+      element.classList.contains('form-field') ||
+      element.classList.contains('control-group') ||
+      (element.tagName === 'LI' && element.querySelector('input, select, textarea'));
+  }
+
   // Add mouseover handler to detect container elements
   function handleContainerMouseover(e) {
     const element = e.target;
@@ -885,18 +848,25 @@ function enableClickToFill(fieldValues) {
       return;
     }
     
-    // Check for common container classes
-    const isContainer = 
-      element.tagName === 'DIV' || 
-      element.tagName === 'FIELDSET' ||
-      element.classList.contains('form-group') ||
-      element.classList.contains('field-group') ||
-      element.classList.contains('input-group') ||
-      element.classList.contains('form-field') ||
-      element.classList.contains('control-group') ||
-      (element.tagName === 'LI' && element.querySelector('input, select, textarea'));
+    // Check for common container classes using the helper function
+    const isContainer = isContainerElement(element);
     
     if (isContainer) {
+      // Check if this container has multiple sub-containers
+      let subContainerCount = 0;
+      const childElements = element.children;
+      
+      for (let i = 0; i < childElements.length; i++) {
+        if (isContainerElement(childElements[i])) {
+          subContainerCount++;
+          if (subContainerCount > 1) {
+            // Found multiple sub-containers, don't highlight
+            return;
+          }
+        }
+      }
+      
+      // If we get here, there are either 0 or 1 sub-containers, so highlight the container
       highlightFormContainer(element);
     }
   }
