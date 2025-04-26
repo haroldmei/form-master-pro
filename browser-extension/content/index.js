@@ -26,12 +26,12 @@
           
           // Set up event listeners if they exist
           if (typeof FM.setupEventListeners === 'function') {
-            FM.setupEventListeners();
+            //FM.setupEventListeners();
           }
           
           // Enable click-to-fill if it exists
           if (typeof FM.enableClickToFill === 'function') {
-            FM.enableClickToFill(FM.clickToFillValues);
+            //FM.enableClickToFill(FM.clickToFillValues);
           }
         } else {
           console.warn("No form values available for click-to-fill");
