@@ -69,25 +69,42 @@ const formAnalysisV2 = (() => {
     }
     
     chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
-      // Execute script to analyze the form in the active tab
-      chrome.scripting.executeScript({
-        target: { tabId: tabs[0].id },
-        function: performFormAnalysis,
-        args: [devMode, 'fm-container-highlight', 'fm-label-highlight', 'fm-option-highlight', 'fm-input-highlight']
-      }, results => {
-        // Reset button state
-        if (analyzeFormBtn) {
-          analyzeFormBtn.disabled = false;
-          analyzeFormBtn.textContent = 'Analyze Current Form';
+      // Get the current URL for retrieving existing mappings
+      const url = new URL(tabs[0].url);
+      const rootUrl = url.origin;
+      
+      // First, load any existing field mappings for this URL
+      chrome.storage.local.get('fieldMappingsV2', function(result) {
+        let existingMappings = [];
+        
+        // Check if we have mappings for this URL
+        if (result && result.fieldMappingsV2 && result.fieldMappingsV2[rootUrl]) {
+          existingMappings = result.fieldMappingsV2[rootUrl];
+          if (devMode) {
+            console.log('Found existing mappings for URL:', rootUrl, existingMappings);
+          }
         }
         
-        console.log('Results:', results);
-        if (results && results[0] && results[0].result) {
-          const controlCount = results[0].result.count || 0;
-          showToastCallback(`Analyzed ${controlCount} form controls`, 'success');
-        } else {
-          showToastCallback('No form controls detected or error analyzing form.', 'error');
-        }
+        // Execute script to analyze the form in the active tab
+        chrome.scripting.executeScript({
+          target: { tabId: tabs[0].id },
+          function: performFormAnalysis,
+          args: [devMode, 'fm-container-highlight', 'fm-label-highlight', 'fm-option-highlight', 'fm-input-highlight', existingMappings]
+        }, results => {
+          // Reset button state
+          if (analyzeFormBtn) {
+            analyzeFormBtn.disabled = false;
+            analyzeFormBtn.textContent = 'Analyze Current Form';
+          }
+          
+          console.log('Results:', results);
+          if (results && results[0] && results[0].result) {
+            const controlCount = results[0].result.count || 0;
+            showToastCallback(`Analyzed ${controlCount} form controls`, 'success');
+          } else {
+            showToastCallback('No form controls detected or error analyzing form.', 'error');
+          }
+        });
       });
     });
   }
@@ -99,9 +116,10 @@ const formAnalysisV2 = (() => {
    * @param {string} labelClass - CSS class name for label highlights
    * @param {string} optionClass - CSS class name for option highlights
    * @param {string} inputClass - CSS class name for input highlights
+   * @param {Array} existingMappings - Existing mappings from storage
    * @returns {Object} Analysis results with control count and data
    */
-  function performFormAnalysis(devMode, containerClass, optionClass, inputClass) {
+  function performFormAnalysis(devMode, containerClass, labelClass, optionClass, inputClass, existingMappings = []) {
     // Set constants for highlighting classes within this function scope
     const CONTAINER_HIGHLIGHT_CLASS = containerClass;
     
@@ -188,6 +206,9 @@ const formAnalysisV2 = (() => {
     // Form control analysis results
     let formControls = [];
     
+    // Map to track elements we've already processed using existing mappings
+    const processedElements = new Map();
+    
     // Expose the form controls through the global FormMaster object
     FM.formControls = formControls;
     
@@ -256,10 +277,102 @@ const formAnalysisV2 = (() => {
     // Clear any existing highlights
     clearAllHighlights();
     
+    // First try to use existing mappings if available
+    if (existingMappings && existingMappings.length > 0) {
+      if (devMode) {
+        console.log('Found existing field mappings, attempting to apply stored containers', existingMappings);
+      }
+      
+      existingMappings.forEach(mapping => {
+        // Try to find the form element by id or name
+        let element = null;
+        
+        if (mapping.id) {
+          element = document.getElementById(mapping.id);
+        }
+        
+        // If not found by ID, try by name
+        if (!element && mapping.name) {
+          const elements = document.getElementsByName(mapping.name);
+          if (elements.length > 0) {
+            element = elements[0];
+          }
+        }
+        
+        // If we found the element and it has a valid container mapping
+        if (element && mapping.containerDesc) {
+          let container = null;
+          
+          // Try to find the container by ID first
+          if (mapping.containerDesc.id) {
+            container = document.getElementById(mapping.containerDesc.id);
+          }
+          
+          console.log('Container by ID:', container, mapping.containerDesc.id);
+          // If not found by ID, try using the raw HTML string
+          if (!container && mapping.containerDesc.html) {
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = mapping.containerDesc.html;
+            container = tempDiv.firstElementChild;
+            // Check if the container is in the document
+            if (container && !document.body.contains(container)) {
+              container = null; // Reset if not found in the document
+            }
+          }
+          console.log('Container by html:', container, mapping.containerDesc.html);
+
+          // If not found by ID, try using the CSS path
+          if (!container && mapping.containerDesc.path) {
+            try {
+              const containers = document.querySelectorAll(mapping.containerDesc.path);
+              if (containers.length === 1) {
+                container = containers[0];
+              }
+            } catch (e) {
+              if (devMode) {
+                console.warn('Invalid container path:', mapping.containerDesc.path);
+              }
+            }
+          }
+          
+          // If we found the container
+          if (container) {
+            // Create a control info object with the existing container reference
+            const controlInfo = analyzeFormControl(element);
+            if (controlInfo) {
+              // Override with the stored container
+              controlInfo.container = container;
+              formControls.push(controlInfo);
+              processedElements.set(element, true);
+              
+              if (devMode) {
+                //console.log('Applied existing container to element:', element, container);
+              }
+            }
+          }
+        }
+      });
+    }
+    
     // Get all form controls
     const inputs = document.querySelectorAll('input:not([type="submit"]):not([type="button"]):not([type="reset"]):not([type="hidden"])');
     const selects = document.querySelectorAll('select');
     const textareas = document.querySelectorAll('textarea');
+    
+    // Modified processFormElements to skip elements we've already processed
+    function processFormElements(elements) {
+      elements.forEach(element => {
+        // Skip if we've already processed this element using existing mappings
+        if (processedElements.has(element)) {
+          return;
+        }
+        
+        const controlInfo = analyzeFormControl(element);
+        if (controlInfo) {
+          formControls.push(controlInfo);
+        }
+      });
+    }
     
     // Process each type of control
     processFormElements(inputs);
@@ -273,31 +386,18 @@ const formAnalysisV2 = (() => {
       
       formControls.forEach((control, index) => {
         // Log to console
-        console.group(`Control #${index + 1}: ${control.type} ${control.id ? '#' + control.id : ''}`);
-        console.log('Element:', control.element);
-        console.log('Labels:', control.labels);
-        console.log('Options:', control.options);
-        console.log('Container:', control.container);
-        console.groupEnd();
+        // console.group(`Control #${index + 1}: ${control.type} ${control.id ? '#' + control.id : ''}`);
+        // console.log('Element:', control.element);
+        // console.log('Labels:', control.labels);
+        // console.log('Options:', control.options);
+        // console.log('Container:', control.container);
+        // console.groupEnd();
         
         // Highlight the elements
         highlightFormControl(control);
       });
       
       console.groupEnd();
-    }
-    
-    /**
-     * Process a collection of form elements
-     * @param {NodeList} elements - Collection of form elements to process
-     */
-    function processFormElements(elements) {
-      elements.forEach(element => {
-        const controlInfo = analyzeFormControl(element);
-        if (controlInfo) {
-          formControls.push(controlInfo);
-        }
-      });
     }
     
     /**
@@ -926,4 +1026,4 @@ const formAnalysisV2 = (() => {
 })();
 
 // Expose the module to the global scope
-self.formAnalysisV2 = formAnalysisV2; 
+self.formAnalysisV2 = formAnalysisV2;
