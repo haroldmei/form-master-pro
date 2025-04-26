@@ -340,9 +340,45 @@ const formAnalysisV2 = (() => {
     
     // Modified processFormElements to skip elements we've already processed
     function processFormElements(elements) {
+      // First, identify radio groups
+      const radioGroups = new Map(); // Maps name -> array of radio buttons
+      
+      // Group radio buttons by name
       elements.forEach(element => {
-        // Skip if we've already processed this element using existing mappings
-        if (processedElements.has(element)) {
+        if (element.type === 'radio' && element.name) {
+          if (!radioGroups.has(element.name)) {
+            radioGroups.set(element.name, []);
+          }
+          radioGroups.get(element.name).push(element);
+        }
+      });
+      
+      // Process radio groups as a single entity
+      radioGroups.forEach((radios, name) => {
+        // Skip if we've already processed any radio in this group using existing mappings
+        const alreadyProcessed = radios.some(radio => processedElements.has(radio));
+        if (alreadyProcessed) return;
+        
+        // We'll use the first radio as the representative for the group
+        const primaryRadio = radios[0];
+        
+        // Create a control info and update it with group info
+        const controlInfo = analyzeFormControl(primaryRadio);
+        if (controlInfo) {
+          // Ensure the options are added for all radio buttons in the group
+          controlInfo.groupElements = radios; // Store all radios for reference
+          formControls.push(controlInfo);
+          
+          // Mark all radios in this group as processed
+          radios.forEach(radio => processedElements.set(radio, true));
+        }
+      });
+      
+      // Process non-radio elements normally
+      elements.forEach(element => {
+        // Skip if we've already processed this element 
+        // Or if it's a radio button (handled separately above)
+        if (processedElements.has(element) || (element.type === 'radio' && element.name)) {
           return;
         }
         
@@ -380,287 +416,10 @@ const formAnalysisV2 = (() => {
     }
     
     /**
-     * Analyze a single form control to extract all relevant information
-     * @param {HTMLElement} element - The form control element
-     * @returns {Object} Information about the form control
-     */
-    function analyzeFormControl(element) {
-      // Basic element information
-      const controlInfo = {
-        element: element,
-        id: element.id,
-        name: element.name,
-        type: element.type || element.tagName.toLowerCase(),
-        value: element.value,
-        placeholder: element.placeholder,
-        required: element.required,
-        disabled: element.disabled,
-        labels: [], // Will contain label text and elements
-        options: [], // Will contain options if applicable
-        container: null // Will contain parent container element
-      };
-      
-      // Special handling for checkboxes and radio buttons
-      if (element.type === 'checkbox' || element.type === 'radio') {
-        controlInfo.checked = element.checked;
-        controlInfo.value = element.checked;
-      }
-      
-      // Find labels
-      findLabels(element, controlInfo);
-      
-      // Find options for select elements
-      if (element.tagName === 'SELECT') {
-        findSelectOptions(element, controlInfo);
-      }
-      
-      // Find options for radio buttons (same name groups)
-      if (element.type === 'radio' && element.name) {
-        findRadioOptions(element, controlInfo);
-      }
-      
-      // Find parent container
-      findParentContainer(element, controlInfo);
-      
-      return controlInfo;
-    }
-    
-    /**
-     * Find all labels associated with a form control
-     * @param {HTMLElement} element - The form control element
-     * @param {Object} controlInfo - The control info object to update
-     */
-    function findLabels(element, controlInfo) {
-      // Method 1: Check for explicit label with 'for' attribute
-      if (element.id) {
-        const explicitLabels = document.querySelectorAll(`label[for="${element.id}"]`);
-        explicitLabels.forEach(label => {
-          controlInfo.labels.push({
-            element: label,
-            text: label.textContent.trim(),
-            type: 'explicit'
-          });
-        });
-      }
-      
-      // Method 2: Check for ancestor label (implicit label)
-      let parent = element.parentElement;
-      while (parent && parent.tagName !== 'BODY') {
-        if (parent.tagName === 'LABEL') {
-          controlInfo.labels.push({
-            element: parent,
-            text: parent.textContent.trim().replace(element.value || '', ''),
-            type: 'implicit'
-          });
-          break;
-        }
-        parent = parent.parentElement;
-      }
-      
-      // Method 3: Check for preceding text or elements that might be labels
-      if (controlInfo.labels.length === 0) {
-        const previousElement = element.previousElementSibling;
-        if (previousElement && 
-            (previousElement.tagName === 'SPAN' || 
-             previousElement.tagName === 'DIV' || 
-             previousElement.tagName === 'P')) {
-          controlInfo.labels.push({
-            element: previousElement,
-            text: previousElement.textContent.trim(),
-            type: 'preceding'
-          });
-        }
-      }
-      
-      // Method 4: Look for aria-labelledby
-      if (element.hasAttribute('aria-labelledby')) {
-        const labelIds = element.getAttribute('aria-labelledby').split(' ');
-        labelIds.forEach(id => {
-          const labelElement = document.getElementById(id);
-          if (labelElement) {
-            controlInfo.labels.push({
-              element: labelElement,
-              text: labelElement.textContent.trim(),
-              type: 'aria-labelledby'
-            });
-          }
-        });
-      }
-      
-      // Method 5: Check for aria-label
-      if (element.hasAttribute('aria-label')) {
-        controlInfo.labels.push({
-          element: null,
-          text: element.getAttribute('aria-label').trim(),
-          type: 'aria-label'
-        });
-      }
-      
-      // If still no label found, use placeholder or name as fallback
-      if (controlInfo.labels.length === 0) {
-        if (element.placeholder) {
-          controlInfo.labels.push({
-            element: null,
-            text: element.placeholder,
-            type: 'placeholder'
-          });
-        } else if (element.name) {
-          controlInfo.labels.push({
-            element: null,
-            text: element.name.replace(/[-_]/g, ' '),
-            type: 'name'
-          });
-        }
-      }
-    }
-    
-    /**
-     * Find options for select elements
-     * @param {HTMLSelectElement} element - The select element
-     * @param {Object} controlInfo - The control info object to update
-     */
-    function findSelectOptions(element, controlInfo) {
-      const options = Array.from(element.options);
-      options.forEach(option => {
-        controlInfo.options.push({
-          element: option,
-          value: option.value,
-          text: option.text.trim(),
-          selected: option.selected
-        });
-      });
-    }
-    
-    /**
-     * Find options for radio button groups
-     * @param {HTMLInputElement} element - The radio button element
-     * @param {Object} controlInfo - The control info object to update
-     */
-    function findRadioOptions(element, controlInfo) {
-      const name = element.name;
-      const radioGroup = document.querySelectorAll(`input[type="radio"][name="${name}"]`);
-      
-      // Find common container for all radio buttons in the group
-      let commonContainer = null;
-      
-      // If there are multiple radio buttons, try to find a common container
-      if (radioGroup.length > 1) {
-        // Get all ancestors of the first radio button
-        const firstRadioAncestors = [];
-        let parent = radioGroup[0].parentElement;
-        while (parent && parent.tagName !== 'BODY' && parent.tagName !== 'FORM') {
-          firstRadioAncestors.push(parent);
-          parent = parent.parentElement;
-        }
-        
-        // Check if other radio buttons share an ancestor
-        for (let i = 0; i < firstRadioAncestors.length; i++) {
-          const ancestor = firstRadioAncestors[i];
-          let allContained = true;
-          
-          // Check if this ancestor contains all radio buttons
-          for (let j = 1; j < radioGroup.length; j++) {
-            if (!ancestor.contains(radioGroup[j])) {
-              allContained = false;
-              break;
-            }
-          }
-          
-          if (allContained) {
-            commonContainer = ancestor;
-            break; // Found the closest common container
-          }
-        }
-      }
-      
-      // If we found a common container, use it
-      if (commonContainer) {
-        controlInfo.container = commonContainer;
-      }
-      
-      radioGroup.forEach(radio => {
-        // Find the label for this radio
-        let labelText = '';
-        const explicitLabel = radio.id ? document.querySelector(`label[for="${radio.id}"]`) : null;
-        
-        if (explicitLabel) {
-          labelText = explicitLabel.textContent.trim();
-        } else {
-          // Check for parent label
-          let parent = radio.parentElement;
-          while (parent && parent.tagName !== 'BODY') {
-            if (parent.tagName === 'LABEL') {
-              labelText = parent.textContent.trim();
-              break;
-            }
-            parent = parent.parentElement;
-          }
-        }
-        
-        controlInfo.options.push({
-          element: radio,
-          value: radio.value,
-          text: labelText || radio.value,
-          selected: radio.checked
-        });
-      });
-    }
-    
-    /**
-     * Find the parent container of a form control
-     * @param {HTMLElement} element - The form control element
-     * @param {Object} controlInfo - The control info object to update
-     */
-    function findParentContainer(element, controlInfo) {
-      // If container is already set (e.g., by findRadioOptions), don't override it
-      if (controlInfo.container) {
-        return;
-      }
-      
-      // Try to find a semantic parent first (like form-group, input-group, etc.)
-      let parent = element.parentElement;
-      let container = null;
-      
-      // Look up to 5 levels up
-      for (let i = 0; i < 5 && parent && parent.tagName !== 'BODY' && parent.tagName !== 'FORM'; i++) {
-        // Check for common container classes
-        const className = parent.className.toLowerCase();
-        if (className.includes('form-group') || 
-            className.includes('input-group') || 
-            className.includes('form-field') || 
-            className.includes('input-field') ||
-            className.includes('form-control-container') || 
-            className.includes('field-wrapper')) {
-          container = parent;
-          break;
-        }
-        
-        // Check if this contains the element and its label
-        if (controlInfo.labels.length > 0) {
-          const labelElement = controlInfo.labels[0].element;
-          if (labelElement && parent.contains(labelElement)) {
-            container = parent;
-            break;
-          }
-        }
-        
-        parent = parent.parentElement;
-      }
-      
-      // If no semantic container found, use immediate parent as fallback
-      if (!container) {
-        container = element.parentElement;
-      }
-      
-      controlInfo.container = container;
-    }
-    
-    /**
      * Highlight a form control and its related elements for visual debugging
      * @param {Object} control - The control info object
      */
     function highlightFormControl(control) {
-      
       // Highlight the container element
       if (control.container) {
         control.container.classList.add(CONTAINER_HIGHLIGHT_CLASS);
@@ -843,6 +602,508 @@ const formAnalysisV2 = (() => {
                 }
               });
               document.dispatchEvent(event);
+              
+              // Log the change if in dev mode
+              if (devMode) {
+                console.log(`Control #${controlIndex + 1} container updated:`, currentContainer);
+                console.log(`New path: ${formControls[controlIndex].containerPath}`);
+                console.log(`New xpath: ${formControls[controlIndex].containerXPath}`);
+              }
+            }
+          }
+        });
+        
+        // Add click event to toggle highlighting (preserve existing functionality)
+        control.container.addEventListener('click', function(e) {
+          // Prevent default only if explicitly clicking the container (not a child input or button)
+          if (e.target === control.container) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            // Toggle highlight
+            this.classList.toggle(CONTAINER_HIGHLIGHT_CLASS);
+          }
+        });
+      }
+    }
+    
+    /**
+     * Analyze a single form control to extract all relevant information
+     * @param {HTMLElement} element - The form control element
+     * @returns {Object} Information about the form control
+     */
+    function analyzeFormControl(element) {
+      // Basic element information
+      const controlInfo = {
+        element: element,
+        id: element.id,
+        name: element.name,
+        type: element.type || element.tagName.toLowerCase(),
+        value: element.value,
+        placeholder: element.placeholder,
+        required: element.required,
+        disabled: element.disabled,
+        labels: [], // Will contain label text and elements
+        options: [], // Will contain options if applicable
+        container: null // Will contain parent container element
+      };
+      
+      // Special handling for checkboxes and radio buttons
+      if (element.type === 'checkbox' || element.type === 'radio') {
+        controlInfo.checked = element.checked;
+        controlInfo.value = element.checked;
+      }
+      
+      // Find labels
+      findLabels(element, controlInfo);
+      
+      // Find options for select elements
+      if (element.tagName === 'SELECT') {
+        findSelectOptions(element, controlInfo);
+      }
+      
+      // Find options for radio buttons (same name groups)
+      if (element.type === 'radio' && element.name) {
+        findRadioOptions(element, controlInfo);
+      }
+      
+      // Find parent container
+      findParentContainer(element, controlInfo);
+      
+      return controlInfo;
+    }
+    
+    /**
+     * Find the parent container of a form control
+     * @param {HTMLElement} element - The form control element
+     * @param {Object} controlInfo - The control info object to update
+     */
+    function findParentContainer(element, controlInfo) {
+      // If container is already set (e.g., by findRadioOptions), don't override it
+      if (controlInfo.container) {
+        return;
+      }
+      
+      // Try to find a semantic parent first (like form-group, input-group, etc.)
+      let parent = element.parentElement;
+      let container = null;
+      
+      // Look up to 5 levels up
+      for (let i = 0; i < 5 && parent && parent.tagName !== 'BODY' && parent.tagName !== 'FORM'; i++) {
+        // Check for common container classes
+        const className = parent.className.toLowerCase();
+        if (className.includes('form-group') || 
+            className.includes('input-group') || 
+            className.includes('form-field') || 
+            className.includes('input-field') ||
+            className.includes('form-control-container') || 
+            className.includes('field-wrapper')) {
+          container = parent;
+          break;
+        }
+        
+        // Check if this contains the element and its label
+        if (controlInfo.labels.length > 0) {
+          const labelElement = controlInfo.labels[0].element;
+          if (labelElement && parent.contains(labelElement)) {
+            container = parent;
+            break;
+          }
+        }
+        
+        parent = parent.parentElement;
+      }
+      
+      // If no semantic container found, use immediate parent as fallback
+      if (!container) {
+        container = element.parentElement;
+      }
+      
+      controlInfo.container = container;
+    }
+    
+    /**
+     * Find all labels associated with a form control
+     * @param {HTMLElement} element - The form control element
+     * @param {Object} controlInfo - The control info object to update
+     */
+    function findLabels(element, controlInfo) {
+      // Method 1: Check for explicit label with 'for' attribute
+      if (element.id) {
+        const explicitLabels = document.querySelectorAll(`label[for="${element.id}"]`);
+        explicitLabels.forEach(label => {
+          controlInfo.labels.push({
+            element: label,
+            text: label.textContent.trim(),
+            type: 'explicit'
+          });
+        });
+      }
+      
+      // Method 2: Check for ancestor label (implicit label)
+      let parent = element.parentElement;
+      while (parent && parent.tagName !== 'BODY') {
+        if (parent.tagName === 'LABEL') {
+          controlInfo.labels.push({
+            element: parent,
+            text: parent.textContent.trim().replace(element.value || '', ''),
+            type: 'implicit'
+          });
+          break;
+        }
+        parent = parent.parentElement;
+      }
+      
+      // Method 3: Check for preceding text or elements that might be labels
+      if (controlInfo.labels.length === 0) {
+        const previousElement = element.previousElementSibling;
+        if (previousElement && 
+            (previousElement.tagName === 'SPAN' || 
+             previousElement.tagName === 'DIV' || 
+             previousElement.tagName === 'P')) {
+          controlInfo.labels.push({
+            element: previousElement,
+            text: previousElement.textContent.trim(),
+            type: 'preceding'
+          });
+        }
+      }
+      
+      // Method 4: Look for aria-labelledby
+      if (element.hasAttribute('aria-labelledby')) {
+        const labelIds = element.getAttribute('aria-labelledby').split(' ');
+        labelIds.forEach(id => {
+          const labelElement = document.getElementById(id);
+          if (labelElement) {
+            controlInfo.labels.push({
+              element: labelElement,
+              text: labelElement.textContent.trim(),
+              type: 'aria-labelledby'
+            });
+          }
+        });
+      }
+      
+      // Method 5: Check for aria-label
+      if (element.hasAttribute('aria-label')) {
+        controlInfo.labels.push({
+          element: null,
+          text: element.getAttribute('aria-label').trim(),
+          type: 'aria-label'
+        });
+      }
+      
+      // If still no label found, use placeholder or name as fallback
+      if (controlInfo.labels.length === 0) {
+        if (element.placeholder) {
+          controlInfo.labels.push({
+            element: null,
+            text: element.placeholder,
+            type: 'placeholder'
+          });
+        } else if (element.name) {
+          controlInfo.labels.push({
+            element: null,
+            text: element.name.replace(/[-_]/g, ' '),
+            type: 'name'
+          });
+        }
+      }
+    }
+    
+    /**
+     * Find options for select elements
+     * @param {HTMLSelectElement} element - The select element
+     * @param {Object} controlInfo - The control info object to update
+     */
+    function findSelectOptions(element, controlInfo) {
+      const options = Array.from(element.options);
+      options.forEach(option => {
+        controlInfo.options.push({
+          element: option,
+          value: option.value,
+          text: option.text.trim(),
+          selected: option.selected
+        });
+      });
+    }
+    
+    /**
+     * Find options for radio button groups
+     * @param {HTMLInputElement} element - The radio button element
+     * @param {Object} controlInfo - The control info object to update
+     */
+    function findRadioOptions(element, controlInfo) {
+      const name = element.name;
+      // Get all radios in this group, either from stored groupElements or by querying
+      const radioGroup = controlInfo.groupElements || 
+                         document.querySelectorAll(`input[type="radio"][name="${name}"]`);
+      
+      // Find common container for all radio buttons in the group
+      let commonContainer = null;
+      
+      // If there are multiple radio buttons, try to find a common container
+      if (radioGroup.length > 1) {
+        // Try finding common container by DOM structure first
+        commonContainer = findCommonAncestor(radioGroup);
+        
+        // If no common container found using DOM structure, try more advanced techniques
+        if (!commonContainer || commonContainer === document.body) {
+          commonContainer = findBestRadioGroupContainer(radioGroup);
+        }
+      }
+      
+      // If we found a common container, use it
+      if (commonContainer && commonContainer !== document.body) {
+        controlInfo.container = commonContainer;
+        controlInfo.isRadioGroup = true; // Mark as radio group for special handling
+      }
+      
+      // Gather all options from the radio group
+      controlInfo.options = [];
+      radioGroup.forEach(radio => {
+        // Find the label for this radio
+        let labelText = '';
+        let labelElement = null;
+        
+        // Try explicit label
+        if (radio.id) {
+          labelElement = document.querySelector(`label[for="${radio.id}"]`);
+          if (labelElement) {
+            labelText = labelElement.textContent.trim();
+          }
+        }
+        
+        // Try implicit label (parent is a label)
+        if (!labelText) {
+          let parent = radio.parentElement;
+          while (parent && parent.tagName !== 'BODY') {
+            if (parent.tagName === 'LABEL') {
+              labelElement = parent;
+              labelText = parent.textContent.trim();
+              break;
+            }
+            parent = parent.parentElement;
+          }
+        }
+        
+        // Try nearby text node or simple elements
+        if (!labelText) {
+          labelText = findNearbyText(radio);
+        }
+        
+        controlInfo.options.push({
+          element: radio,
+          value: radio.value,
+          text: labelText || radio.value,
+          selected: radio.checked,
+          labelElement: labelElement
+        });
+      });
+      
+      // Add a more descriptive label for the radio group if possible
+      if (controlInfo.labels.length === 0) {
+        // Try to find a legend or heading near the container
+        const groupLabel = findRadioGroupLabel(controlInfo.container, radioGroup);
+        if (groupLabel) {
+          controlInfo.labels.push({
+            element: groupLabel.element,
+            text: groupLabel.text,
+            type: 'group-label'
+          });
+        }
+      }
+    }
+    
+    /**
+     * Find the common ancestor of multiple elements
+     * @param {Array} elements - Array of DOM elements 
+     * @returns {HTMLElement} The common ancestor element
+     */
+    function findCommonAncestor(elements) {
+      if (!elements || elements.length === 0) return null;
+      if (elements.length === 1) return elements[0].parentElement;
+      
+      // Get all ancestors of the first element
+      const firstElementAncestors = [];
+      let parent = elements[0].parentElement;
+      
+      while (parent && parent.tagName !== 'BODY' && parent.tagName !== 'HTML') {
+        firstElementAncestors.push(parent);
+        parent = parent.parentElement;
+      }
+      
+      if (firstElementAncestors.length === 0) return document.body;
+      
+      // Find the closest common ancestor
+      for (let ancestor of firstElementAncestors) {
+        let isCommonAncestor = true;
+        
+        // Check if this ancestor contains all other elements
+        for (let i = 1; i < elements.length; i++) {
+          if (!ancestor.contains(elements[i])) {
+            isCommonAncestor = false;
+            break;
+          }
+        }
+        
+        if (isCommonAncestor) {
+          return ancestor;
+        }
+      }
+      
+      // Default to body if no common ancestor found
+      return document.body;
+    }
+    
+    /**
+     * Find the best container for a radio group using heuristics
+     * @param {Array} radioGroup - Array of radio button elements
+     * @returns {HTMLElement} The best container element
+     */
+    function findBestRadioGroupContainer(radioGroup) {
+      if (!radioGroup || radioGroup.length === 0) return null;
+      
+      // Try to find common fieldset, form-group, or similar container
+      for (const radio of radioGroup) {
+        let parent = radio.parentElement;
+        while (parent && parent.tagName !== 'BODY') {
+          // Check for semantic containers
+          if (parent.tagName === 'FIELDSET' || 
+              parent.tagName === 'UL' || 
+              parent.tagName === 'OL' ||
+              parent.className.toLowerCase().includes('form-group') ||
+              parent.className.toLowerCase().includes('radio-group') ||
+              parent.className.toLowerCase().includes('option-group')) {
+            
+            // Check if this container holds all radio buttons
+            const containsAll = Array.from(radioGroup).every(r => parent.contains(r));
+            if (containsAll) {
+              return parent;
+            }
+          }
+          parent = parent.parentElement;
+        }
+      }
+      
+      // If no semantic container found, find the smallest common container
+      const commonAncestor = findCommonAncestor(radioGroup);
+      
+      // Try to find a more specific container within the common ancestor
+      if (commonAncestor && commonAncestor !== document.body) {
+        // Check for div or other container with class indicating a group
+        const potentialContainers = Array.from(commonAncestor.querySelectorAll('div, section, article, aside, form, fieldset'))
+          .filter(el => {
+            // Container must contain all radio buttons
+            const containsAll = Array.from(radioGroup).every(r => el.contains(r));
+            if (!containsAll) return false;
+            
+            // Container should have group-like styling or class name
+            return el.className.toLowerCase().includes('group') || 
+                   el.className.toLowerCase().includes('option') ||
+                   el.className.toLowerCase().includes('radio') ||
+                   el.className.toLowerCase().includes('choice');
+          });
+        
+        if (potentialContainers.length > 0) {
+          // Find the smallest container (most specific)
+          return potentialContainers.reduce((smallest, current) => {
+            if (!smallest) return current;
+            return current.contains(smallest) ? smallest : current;
+          }, null);
+        }
+      }
+      
+      return commonAncestor;
+    }
+    
+    /**
+     * Find nearby text node that may act as a label for a radio button
+     * @param {HTMLElement} element - The radio button element
+     * @returns {string} The nearby text content
+     */
+    function findNearbyText(element) {
+      // Check for nearby text nodes or simple elements
+      const parent = element.parentElement;
+      if (!parent) return '';
+      
+      // Look at child nodes of parent to find text nodes near the radio
+      let foundRadio = false;
+      let labelText = '';
+      
+      for (const node of parent.childNodes) {
+        if (node === element) {
+          foundRadio = true;
+        } else if (foundRadio && (node.nodeType === 3 || node.tagName === 'SPAN')) {
+          // This is a text node or simple element after the radio
+          const text = node.nodeType === 3 ? node.textContent : node.innerText;
+          if (text && text.trim()) {
+            labelText = text.trim();
+            break;
+          }
+        }
+      }
+      
+      return labelText;
+    }
+    
+    /**
+     * Find a label for a radio group (often a legend or heading)
+     * @param {HTMLElement} container - The container element
+     * @param {Array} radioGroup - Array of radio button elements
+     * @returns {Object} Label element and text
+     */
+    function findRadioGroupLabel(container, radioGroup) {
+      if (!container) return null;
+      
+      // Check for a legend inside fieldset
+      if (container.tagName === 'FIELDSET') {
+        const legend = container.querySelector('legend');
+        if (legend) {
+          return {
+            element: legend,
+            text: legend.textContent.trim()
+          };
+        }
+      }
+      
+      // Check for headings or strong text inside the container
+      const headings = container.querySelectorAll('h1, h2, h3, h4, h5, h6, strong, b, [role="heading"]');
+      if (headings.length > 0) {
+        const heading = headings[0]; // Use the first heading
+        return {
+          element: heading,
+          text: heading.textContent.trim()
+        };
+      }
+      
+      // Look for a label or div that seems to be a label (positioned before radio buttons)
+      const possibleLabels = Array.from(container.querySelectorAll('label, div, span, p'))
+        .filter(el => {
+          // Must come before the first radio button in the DOM
+          if (!el.compareDocumentPosition) return false;
+          const pos = el.compareDocumentPosition(radioGroup[0]);
+          const isBefore = pos & Node.DOCUMENT_POSITION_FOLLOWING;
+          
+          // Should not contain any radio buttons
+          const containsRadio = Array.from(radioGroup).some(r => el.contains(r));
+          
+          return isBefore && !containsRadio && el.textContent.trim().length > 0;
+        });
+      
+      if (possibleLabels.length > 0) {
+        return {
+          element: possibleLabels[0],
+          text: possibleLabels[0].textContent.trim()
+        };
+      }
+      
+      return null;
+    }
+
+    /**
+     * Find the parent container of a form control
+     * @param {HTMLElement} element - The form control element
               
               // Log the change if in dev mode
               if (devMode) {
