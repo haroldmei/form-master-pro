@@ -248,7 +248,8 @@ const formAnalysisV2 = (() => {
               name: attr.name,
               value: attr.value
             })),
-            path: getElementPath(control.container)
+            path: getElementPath(control.container),
+            xpath: getElementXPath(control.container)
           } : null
         };
       });
@@ -303,38 +304,13 @@ const formAnalysisV2 = (() => {
         if (element && mapping.containerDesc) {
           let container = null;
           
-          // Try to find the container by ID first
-          if (mapping.containerDesc.id) {
-            container = document.getElementById(mapping.containerDesc.id);
+          // Try using xpath if available and container still not found
+          if (!container && mapping.containerDesc.xpath) {
+            container = findContainerByXPath(mapping.containerDesc.xpath);
+            console.log('Container not found:', mapping.containerDesc.xpath, container); 
           }
           
-          console.log('Container by ID:', container, mapping.containerDesc.id);
-          // If not found by ID, try using the raw HTML string
-          if (!container && mapping.containerDesc.html) {
-            const tempDiv = document.createElement('div');
-            tempDiv.innerHTML = mapping.containerDesc.html;
-            container = tempDiv.firstElementChild;
-            // Check if the container is in the document
-            if (container && !document.body.contains(container)) {
-              container = null; // Reset if not found in the document
-            }
-          }
-          console.log('Container by html:', container, mapping.containerDesc.html);
 
-          // If not found by ID, try using the CSS path
-          if (!container && mapping.containerDesc.path) {
-            try {
-              const containers = document.querySelectorAll(mapping.containerDesc.path);
-              if (containers.length === 1) {
-                container = containers[0];
-              }
-            } catch (e) {
-              if (devMode) {
-                console.warn('Invalid container path:', mapping.containerDesc.path);
-              }
-            }
-          }
-          
           // If we found the container
           if (container) {
             // Create a control info object with the existing container reference
@@ -342,11 +318,14 @@ const formAnalysisV2 = (() => {
             if (controlInfo) {
               // Override with the stored container
               controlInfo.container = container;
+              // Store path and xpath properties for easier lookup
+              controlInfo.containerPath = mapping.containerDesc.path;
+              controlInfo.containerXPath = mapping.containerDesc.xpath;
               formControls.push(controlInfo);
               processedElements.set(element, true);
               
               if (devMode) {
-                //console.log('Applied existing container to element:', element, container);
+                console.log('Applied existing container to element:', element, container);
               }
             }
           }
@@ -766,6 +745,9 @@ const formAnalysisV2 = (() => {
             // Update the control in the formControls array
             if (controlIndex >= 0) {
               formControls[controlIndex].container = currentContainer;
+              // Update path and xpath for the new container
+              formControls[controlIndex].containerPath = getElementPath(currentContainer);
+              formControls[controlIndex].containerXPath = getElementXPath(currentContainer);
               
               // Fire a custom event to notify about the container change
               const event = new CustomEvent('fm-container-changed', {
@@ -778,7 +760,8 @@ const formAnalysisV2 = (() => {
                     className: currentContainer.className,
                     id: currentContainer.id,
                     html: currentContainer.outerHTML,
-                    path: getElementPath(currentContainer)
+                    path: getElementPath(currentContainer),
+                    xpath: getElementXPath(currentContainer)
                   }
                 }
               });
@@ -787,6 +770,8 @@ const formAnalysisV2 = (() => {
               // Log the change if in dev mode
               if (devMode) {
                 console.log(`Control #${controlIndex + 1} container updated:`, currentContainer);
+                console.log(`New path: ${formControls[controlIndex].containerPath}`);
+                console.log(`New xpath: ${formControls[controlIndex].containerXPath}`);
               }
             }
           }
@@ -837,6 +822,9 @@ const formAnalysisV2 = (() => {
             // Update the control in the formControls array
             if (controlIndex >= 0) {
               formControls[controlIndex].container = currentContainer;
+              // Update path and xpath for the new container
+              formControls[controlIndex].containerPath = getElementPath(currentContainer);
+              formControls[controlIndex].containerXPath = getElementXPath(currentContainer);
               
               // Fire a custom event to notify about the container change
               const event = new CustomEvent('fm-container-changed', {
@@ -849,7 +837,8 @@ const formAnalysisV2 = (() => {
                     className: currentContainer.className,
                     id: currentContainer.id,
                     html: currentContainer.outerHTML,
-                    path: getElementPath(currentContainer)
+                    path: getElementPath(currentContainer),
+                    xpath: getElementXPath(currentContainer)
                   }
                 }
               });
@@ -858,6 +847,8 @@ const formAnalysisV2 = (() => {
               // Log the change if in dev mode
               if (devMode) {
                 console.log(`Control #${controlIndex + 1} container updated:`, currentContainer);
+                console.log(`New path: ${formControls[controlIndex].containerPath}`);
+                console.log(`New xpath: ${formControls[controlIndex].containerXPath}`);
               }
             }
           }
@@ -930,7 +921,8 @@ const formAnalysisV2 = (() => {
             name: attr.name,
             value: attr.value
           })),
-          path: getElementPath(control.container)
+          path: getElementPath(control.container),
+          xpath: getElementXPath(control.container)
         } : null
       };
     });
@@ -977,6 +969,177 @@ const formAnalysisV2 = (() => {
       }
       
       return path;
+    }
+    
+    // Helper function to get XPath for an element
+    function getElementXPath(element) {
+      if (!element || element === document.body) return '';
+      
+      // Try to create a unique XPath using id
+      if (element.id) {
+        return `//*[@id="${element.id}"]`;
+      }
+      
+      // Try to use other unique attributes if available
+      if (element.name) {
+        // For inputs, check if the name is unique
+        const nameMatches = document.querySelectorAll(`*[name="${element.name}"]`);
+        if (nameMatches.length === 1) {
+          return `//*[@name="${element.name}"]`;
+        }
+      }
+      
+      // If element has a class, try to create a more specific XPath
+      if (element.className && typeof element.className === 'string' && element.className.trim()) {
+        const classes = element.className.trim().split(/\s+/);
+        if (classes.length > 0) {
+          // Use the first class as identifier and check if it's reasonably unique
+          const classSelector = `//${element.nodeName}[contains(@class, "${classes[0]}")]`;
+          try {
+            const matches = document.evaluate(
+              classSelector, 
+              document, 
+              null, 
+              XPathResult.ORDERED_NODE_SNAPSHOT_TYPE, 
+              null
+            );
+            
+            // If reasonably unique (fewer than 5 matches), use this class-based XPath
+            if (matches.snapshotLength > 0 && matches.snapshotLength < 5) {
+              // Add position if there are multiple elements with this class
+              if (matches.snapshotLength > 1) {
+                // Find our element's position
+                for (let i = 0; i < matches.snapshotLength; i++) {
+                  if (matches.snapshotItem(i) === element) {
+                    return `(${classSelector})[${i + 1}]`;
+                  }
+                }
+              }
+              return classSelector;
+            }
+          } catch (e) {
+            // If error, fall back to full path calculation
+          }
+        }
+      }
+      
+      // Fall back to a relative path from a parent with ID or unique attribute
+      let current = element;
+      let path = '';
+      let hasUniqueAncestor = false;
+      
+      while (current && current !== document.body) {
+        if (current.id) {
+          // Found ancestor with ID, create relative path from here
+          return `//*[@id="${current.id}"]${path}`;
+        }
+        
+        // Calculate position among siblings of same type
+        let position = 1;
+        let sibling = current.previousElementSibling;
+        while (sibling) {
+          if (sibling.nodeName === current.nodeName) {
+            position++;
+          }
+          sibling = sibling.previousElementSibling;
+        }
+        
+        // Append this node to the path
+        const nodeName = current.nodeName;
+        path = `/${nodeName}${position > 1 ? `[${position}]` : ''}${path}`;
+        
+        // Move up to parent
+        current = current.parentElement;
+      }
+      
+      // Return the relative path, not starting with / for document
+      return `/${path}`;
+    }
+
+    // Function to find container by XPath with better error handling and fallbacks
+    function findContainerByXPath(xpath) {
+      if (!xpath) return null;
+      
+      // Try the exact XPath first
+      try {
+        const result = document.evaluate(
+          xpath,
+          document,
+          null,
+          XPathResult.FIRST_ORDERED_NODE_TYPE,
+          null
+        );
+        
+        if (result.singleNodeValue) {
+          return result.singleNodeValue;
+        }
+      } catch (e) {
+        if (devMode) {
+          console.warn('Error evaluating exact XPath:', xpath, e);
+        }
+      }
+      
+      // Try a case-insensitive version as fallback
+      try {
+        // Create a lowercase version of the XPath by replacing tag names
+        const lowercaseXPath = xpath.replace(/\/([A-Z]+)(\[|\b|$)/g, function(match, p1, p2) {
+          return '/' + p1.toLowerCase() + p2;
+        });
+        
+        if (lowercaseXPath !== xpath) {
+          const result = document.evaluate(
+            lowercaseXPath,
+            document,
+            null,
+            XPathResult.FIRST_ORDERED_NODE_TYPE,
+            null
+          );
+          
+          if (result.singleNodeValue) {
+            if (devMode) {
+              console.log('Found container with lowercase XPath:', lowercaseXPath);
+            }
+            return result.singleNodeValue;
+          }
+        }
+      } catch (e) {
+        if (devMode) {
+          console.warn('Error evaluating lowercase XPath fallback', e);
+        }
+      }
+      
+      // If ID-based or attribute XPath, try to be more lenient with positioning
+      if (xpath.includes('@id') || xpath.includes('@class')) {
+        try {
+          // Extract just the attribute part and create a more lenient selector
+          const attrMatch = xpath.match(/@(\w+)="([^"]+)"/);
+          if (attrMatch && attrMatch.length === 3) {
+            const [_, attrName, attrValue] = attrMatch;
+            const lenientXPath = `//*[@${attrName}="${attrValue}"]`;
+            
+            const result = document.evaluate(
+              lenientXPath,
+              document,
+              null,
+              XPathResult.FIRST_ORDERED_NODE_TYPE,
+              null
+            );
+            
+            if (result.singleNodeValue) {
+              if (devMode) {
+                console.log('Found container with lenient attribute XPath:', lenientXPath);
+              }
+              return result.singleNodeValue;
+            }
+          }
+        } catch (e) {
+          if (devMode) {
+            console.warn('Error evaluating lenient attribute XPath', e);
+          }
+        }
+      }
+      
+      return null;
     }
     
     // Save the controls to local storage with current URL as key
