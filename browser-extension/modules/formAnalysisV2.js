@@ -144,6 +144,49 @@ const formAnalysisV2 = (() => {
     // Form control analysis results
     let formControls = [];
     
+    // Expose the form controls through the global FormMaster object
+    FM.formControls = formControls;
+    
+    // Add an event listener for container changes
+    document.addEventListener('fm-container-changed', function(e) {
+      // Update the serializable controls when containers change
+      const updatedControls = formControls.map(control => {
+        // Convert DOM elements to descriptions
+        return {
+          id: control.id,
+          name: control.name,
+          type: control.type,
+          value: control.value,
+          placeholder: control.placeholder,
+          required: control.required,
+          disabled: control.disabled,
+          checked: control.checked,
+          labels: control.labels.map(label => ({
+            text: label.text,
+            type: label.type
+          })),
+          options: control.options.map(option => ({
+            value: option.value,
+            text: option.text,
+            selected: option.selected
+          })),
+          containerDesc: control.container ? {
+            tagName: control.container.tagName,
+            className: control.container.className,
+            id: control.container.id
+          } : null
+        };
+      });
+      
+      // Update the global serializable controls
+      FM.serializableControls = updatedControls;
+      
+      // Log the update if in dev mode
+      if (devMode) {
+        console.log('Form controls updated:', updatedControls);
+      }
+    });
+    
     // Clear any existing highlights
     clearAllHighlights();
     
@@ -516,6 +559,9 @@ const formAnalysisV2 = (() => {
         let currentContainer = control.container;
         let originalElement = control.element;
         
+        // Track the control's index in the formControls array
+        const controlIndex = formControls.indexOf(control);
+        
         // Up button click handler
         upButton.addEventListener('click', function(e) {
           e.preventDefault();
@@ -550,6 +596,26 @@ const formAnalysisV2 = (() => {
             );
             
             downButton.disabled = newChildContainers.length === 0;
+            
+            // Update the control in the formControls array
+            if (controlIndex >= 0) {
+              formControls[controlIndex].container = currentContainer;
+              
+              // Fire a custom event to notify about the container change
+              const event = new CustomEvent('fm-container-changed', {
+                detail: {
+                  controlIndex: controlIndex,
+                  control: formControls[controlIndex],
+                  newContainer: currentContainer
+                }
+              });
+              document.dispatchEvent(event);
+              
+              // Log the change if in dev mode
+              if (devMode) {
+                console.log(`Control #${controlIndex + 1} container updated:`, currentContainer);
+              }
+            }
           }
         });
         
@@ -594,6 +660,26 @@ const formAnalysisV2 = (() => {
             );
             
             downButton.disabled = newChildContainers.length === 0;
+            
+            // Update the control in the formControls array
+            if (controlIndex >= 0) {
+              formControls[controlIndex].container = currentContainer;
+              
+              // Fire a custom event to notify about the container change
+              const event = new CustomEvent('fm-container-changed', {
+                detail: {
+                  controlIndex: controlIndex,
+                  control: formControls[controlIndex],
+                  newContainer: currentContainer
+                }
+              });
+              document.dispatchEvent(event);
+              
+              // Log the change if in dev mode
+              if (devMode) {
+                console.log(`Control #${controlIndex + 1} container updated:`, currentContainer);
+              }
+            }
           }
         });
         
@@ -632,8 +718,151 @@ const formAnalysisV2 = (() => {
       });
     }
     
+    /**
+     * Display a dialog with form fields information
+     */
+    function displayFormFieldsInPageDialog() {
+      // Create dialog if it doesn't exist
+      let dialog = document.getElementById('fm-form-fields-dialog');
+      if (!dialog) {
+        dialog = document.createElement('div');
+        dialog.id = 'fm-form-fields-dialog';
+        dialog.style.cssText = `
+          position: fixed;
+          top: 20px;
+          right: 20px;
+          width: 350px;
+          max-height: 80vh;
+          background: white;
+          border: 1px solid #ccc;
+          border-radius: 5px;
+          box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+          z-index: 10001;
+          overflow-y: auto;
+          padding: 0;
+          font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+          font-size: 14px;
+        `;
+        
+        // Add header
+        const header = document.createElement('div');
+        header.style.cssText = `
+          padding: 10px 15px;
+          border-bottom: 1px solid #eee;
+          background: #f8f9fa;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+        `;
+        
+        const title = document.createElement('h3');
+        title.textContent = 'Form Fields';
+        title.style.margin = '0';
+        title.style.fontSize = '16px';
+        
+        const closeBtn = document.createElement('button');
+        closeBtn.innerHTML = '×';
+        closeBtn.style.cssText = `
+          background: none;
+          border: none;
+          font-size: 20px;
+          cursor: pointer;
+          color: #666;
+        `;
+        closeBtn.onclick = () => {
+          dialog.remove();
+        };
+        
+        header.appendChild(title);
+        header.appendChild(closeBtn);
+        dialog.appendChild(header);
+        
+        // Add content container
+        const content = document.createElement('div');
+        content.id = 'fm-dialog-content';
+        content.style.padding = '15px';
+        dialog.appendChild(content);
+        
+        document.body.appendChild(dialog);
+      }
+      
+      // Update dialog content
+      const content = document.getElementById('fm-dialog-content');
+      content.innerHTML = '';
+      
+      if (formControls.length === 0) {
+        content.innerHTML = '<p>No form fields detected.</p>';
+        return;
+      }
+      
+      // Create list of form fields
+      const fieldsList = document.createElement('ul');
+      fieldsList.style.cssText = `
+        list-style: none;
+        padding: 0;
+        margin: 0;
+      `;
+      
+      formControls.forEach((control, index) => {
+        const item = document.createElement('li');
+        item.style.cssText = `
+          padding: 10px;
+          border-bottom: 1px solid #eee;
+          cursor: pointer;
+        `;
+        item.setAttribute('data-control-index', index);
+        
+        // Highlight the item if its container is highlighted
+        if (control.container && control.container.classList.contains(CONTAINER_HIGHLIGHT_CLASS)) {
+          item.style.backgroundColor = 'rgba(255, 165, 0, 0.1)';
+          item.style.borderLeft = '3px solid orange';
+        }
+        
+        // Get primary label text
+        const labelText = control.labels.length > 0 
+          ? control.labels[0].text 
+          : (control.name || 'Unnamed field');
+        
+        item.innerHTML = `
+          <div style="font-weight: bold;">${labelText}</div>
+          <div style="color: #666; display: flex; justify-content: space-between;">
+            <span>${control.type}</span>
+            <span>${control.id || control.name || ''}</span>
+          </div>
+        `;
+        
+        // Click to focus on the element
+        item.addEventListener('click', () => {
+          // Remove all existing highlights
+          document.querySelectorAll(`.${CONTAINER_HIGHLIGHT_CLASS}`).forEach(el => {
+            el.classList.remove(CONTAINER_HIGHLIGHT_CLASS);
+          });
+          
+          // Highlight this control's container
+          if (control.container) {
+            control.container.classList.add(CONTAINER_HIGHLIGHT_CLASS);
+            control.container.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            
+            // Update dialog list to show this item as selected
+            fieldsList.querySelectorAll('li').forEach(li => {
+              li.style.backgroundColor = '';
+              li.style.borderLeft = '';
+            });
+            item.style.backgroundColor = 'rgba(255, 165, 0, 0.1)';
+            item.style.borderLeft = '3px solid orange';
+          }
+        });
+        
+        fieldsList.appendChild(item);
+      });
+      
+      content.appendChild(fieldsList);
+    }
+    
+    // Expose the dialog function globally
+    FM.displayFormFieldsInPageDialog = displayFormFieldsInPageDialog;
+    
     // Return a simplified version of the form controls
-    // that can be serialized for message passing
     const serializableControls = formControls.map(control => {
       // Convert DOM elements to descriptions
       return {
@@ -664,7 +893,8 @@ const formAnalysisV2 = (() => {
     
     return {
       count: formControls.length,
-      controls: serializableControls
+      controls: serializableControls,
+      displayFormFieldsInPageDialog: displayFormFieldsInPageDialog
     };
   }
     
