@@ -20,77 +20,6 @@ const formProcessor = (() => {
     });
   }
   
-  // Helper function to save default field values directly  
-  async function saveDefaultFieldValues(url, values) {
-    return new Promise((resolve) => {
-      chrome.storage.local.get(['defaultFieldValues'], function(result) {
-        const defaultFieldValues = result.defaultFieldValues || {};
-        
-        // Merge new values with existing ones
-        const existingValues = defaultFieldValues[url] || {};
-        defaultFieldValues[url] = {
-          ...existingValues,
-          ...values
-        };
-        
-        chrome.storage.local.set({ defaultFieldValues }, function() {
-          console.log(`Updated default values for ${url}, now have ${Object.keys(defaultFieldValues[url]).length} fields`);
-          resolve();
-        });
-      });
-    });
-  }
-  
-  // Helper function to show default value dialog via window popup
-  async function showDefaultsDialogViaWindow(missingFields, rootUrl) {
-    return new Promise((resolve) => {
-      // Create the popup window without storing data in local storage
-      chrome.windows.create({
-        url: 'defaultsDialog.html',
-        type: 'popup',
-        width: 600,
-        height: 600,
-        focused: true
-      }, function(popupWindow) {
-        if (chrome.runtime.lastError) {
-          console.error("Error creating popup:", chrome.runtime.lastError);
-          resolve({});
-          return;
-        }
-        
-        // Set up a listener for the popup's response
-        const messageListener = function(message, sender, sendResponse) {
-          if (message.action === 'defaults-dialog-submit') {
-            // Remove this listener once we get a response
-            chrome.runtime.onMessage.removeListener(messageListener);
-            
-            // Return the values from the dialog
-            if (message.result === 'save') {
-              resolve(message.values || {});
-            } else {
-              resolve({});
-            }
-            
-            // Send acknowledgment
-            sendResponse({ received: true });
-            return true;
-          }
-          
-          // Handle requests for dialog data
-          if (message.action === 'get-defaults-dialog-data') {
-            sendResponse({ 
-              missingFields: missingFields,
-              rootUrl: rootUrl
-            });
-            return true;
-          }
-        };
-        
-        // Add the message listener
-        chrome.runtime.onMessage.addListener(messageListener);
-      });
-    });
-  }
   
   async function processForm(formFields, url) {
     try {
@@ -277,33 +206,6 @@ const formProcessor = (() => {
         }
       });
 
-      // Do this later
-      //let dialogActive = false;
-      //if (missingFields.length > 0 && !dialogActive) {
-      //  console.log("Showing dialog for missing fields:", missingFields);
-      //  dialogActive = true;
-      //  
-      //  try {
-      //    const userDefaultValues = await showDefaultsDialogViaWindow(missingFields, rootUrl);
-      //    
-      //    console.log("User provided default values:", userDefaultValues);
-      //    
-      //    if (Object.keys(userDefaultValues).length > 0) {
-      //      await saveDefaultFieldValues(rootUrl, userDefaultValues);
-      //      missingFields.forEach(field => {
-      //        const keyName = field.label || field.name || field.id;
-      //        if (userDefaultValues[keyName]) {
-      //          allSuggestions[keyName] = userDefaultValues[keyName];
-      //        }
-      //      });
-      //    }
-      //  } catch (dialogError) {
-      //    console.error("Error showing default values dialog:", dialogError);
-      //    // Continue with temporary default values we already set
-      //  } finally {
-      //    dialogActive = false;
-      //  }
-      //}
       
       // Save all suggestions to cache
       allSuggestionsCache[cacheKey] = {...allSuggestions};
