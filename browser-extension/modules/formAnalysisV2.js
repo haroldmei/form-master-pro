@@ -111,18 +111,18 @@ const formAnalysisV2 = (() => {
           top: 0;
           right: 0;
           display: flex;
-          flex-direction: column;
+          flex-direction: row;
           z-index: 10001;
         }
         .fm-nav-button {
           background: rgba(255, 165, 0, 0.9);
           color: white;
           border: none;
-          width: 24px;
-          height: 24px;
+          width: 20px;
+          height: 20px;
           margin: 2px;
           padding: 0;
-          font-size: 14px;
+          font-size: 12px;
           cursor: pointer;
           display: flex;
           align-items: center;
@@ -352,6 +352,44 @@ const formAnalysisV2 = (() => {
       const name = element.name;
       const radioGroup = document.querySelectorAll(`input[type="radio"][name="${name}"]`);
       
+      // Find common container for all radio buttons in the group
+      let commonContainer = null;
+      
+      // If there are multiple radio buttons, try to find a common container
+      if (radioGroup.length > 1) {
+        // Get all ancestors of the first radio button
+        const firstRadioAncestors = [];
+        let parent = radioGroup[0].parentElement;
+        while (parent && parent.tagName !== 'BODY' && parent.tagName !== 'FORM') {
+          firstRadioAncestors.push(parent);
+          parent = parent.parentElement;
+        }
+        
+        // Check if other radio buttons share an ancestor
+        for (let i = 0; i < firstRadioAncestors.length; i++) {
+          const ancestor = firstRadioAncestors[i];
+          let allContained = true;
+          
+          // Check if this ancestor contains all radio buttons
+          for (let j = 1; j < radioGroup.length; j++) {
+            if (!ancestor.contains(radioGroup[j])) {
+              allContained = false;
+              break;
+            }
+          }
+          
+          if (allContained) {
+            commonContainer = ancestor;
+            break; // Found the closest common container
+          }
+        }
+      }
+      
+      // If we found a common container, use it
+      if (commonContainer) {
+        controlInfo.container = commonContainer;
+      }
+      
       radioGroup.forEach(radio => {
         // Find the label for this radio
         let labelText = '';
@@ -386,6 +424,11 @@ const formAnalysisV2 = (() => {
      * @param {Object} controlInfo - The control info object to update
      */
     function findParentContainer(element, controlInfo) {
+      // If container is already set (e.g., by findRadioOptions), don't override it
+      if (controlInfo.container) {
+        return;
+      }
+      
       // Try to find a semantic parent first (like form-group, input-group, etc.)
       let parent = element.parentElement;
       let container = null;
