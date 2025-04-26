@@ -173,7 +173,8 @@ const formAnalysisV2 = (() => {
           containerDesc: control.container ? {
             tagName: control.container.tagName,
             className: control.container.className,
-            id: control.container.id
+            id: control.container.id,
+            container: control.container
           } : null
         };
       });
@@ -886,7 +887,8 @@ const formAnalysisV2 = (() => {
         containerDesc: control.container ? {
           tagName: control.container.tagName,
           className: control.container.className,
-          id: control.container.id
+          id: control.container.id,
+          container: control.container
         } : null
       };
     });
