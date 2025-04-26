@@ -12,6 +12,50 @@ const formAnalysisV2 = (() => {
   // Form control analysis data
   let formControls = [];
   
+  // Field mappings dictionary to store in local storage
+  let fieldMappingsV2 = {};
+  
+  /**
+   * Save field mappings to local storage using the page URL as the key
+   * @param {Array} serializableControls - Array of form controls to save
+   */
+  function saveFieldMappingsToStorage(serializableControls) {
+    if (!serializableControls || !serializableControls.length) return;
+    
+    chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
+      if (tabs && tabs[0] && tabs[0].url) {
+        // Get the root URL (domain) as the key
+        const url = new URL(tabs[0].url);
+        const rootUrl = url.origin;
+        
+        // Update the mappings dictionary
+        fieldMappingsV2[rootUrl] = serializableControls;
+        
+        // Save to local storage
+        chrome.storage.local.set({'fieldMappingsV2': fieldMappingsV2}, function() {
+          if (devMode) {
+            console.log('Field mappings saved to local storage:', rootUrl, serializableControls);
+          }
+        });
+      }
+    });
+  }
+  
+  /**
+   * Load field mappings from local storage
+   * @param {Function} callback - Callback function to handle the loaded mappings
+   */
+  function loadFieldMappingsFromStorage(callback) {
+    chrome.storage.local.get('fieldMappingsV2', function(result) {
+      if (result && result.fieldMappingsV2) {
+        fieldMappingsV2 = result.fieldMappingsV2;
+        if (callback && typeof callback === 'function') {
+          callback(fieldMappingsV2);
+        }
+      }
+    });
+  }
+  
   /**
    * Analyze the current form with form controls, labels, and containers
    * @param {HTMLElement} analyzeFormBtn - The button that was clicked to trigger analysis
@@ -149,6 +193,9 @@ const formAnalysisV2 = (() => {
     
     // Add an event listener for container changes
     document.addEventListener('fm-container-changed', function(e) {
+      // Get the control from the formControls array using the provided index
+      const controlIndex = e.detail.controlIndex;
+      
       // Update the serializable controls when containers change
       const updatedControls = formControls.map(control => {
         // Convert DOM elements to descriptions
@@ -174,7 +221,13 @@ const formAnalysisV2 = (() => {
             tagName: control.container.tagName,
             className: control.container.className,
             id: control.container.id,
-            container: control.container
+            // Save container as a string representation instead of DOM element
+            html: control.container.outerHTML,
+            attributes: Array.from(control.container.attributes).map(attr => ({
+              name: attr.name,
+              value: attr.value
+            })),
+            path: getElementPath(control.container)
           } : null
         };
       });
@@ -182,9 +235,21 @@ const formAnalysisV2 = (() => {
       // Update the global serializable controls
       FM.serializableControls = updatedControls;
       
+      // Save updated controls to local storage using current URL as key
+      const rootUrl = window.location.origin;
+      // Use postMessage to communicate with the extension context for storage access
+      window.postMessage({
+        type: 'FM_SAVE_FIELD_MAPPINGS',
+        payload: {
+          rootUrl: rootUrl,
+          controls: updatedControls
+        }
+      }, '*');
+      
       // Log the update if in dev mode
       if (devMode) {
         console.log('Form controls updated:', updatedControls);
+        console.log('Requested storage update for URL:', rootUrl);
       }
     });
     
@@ -606,8 +671,15 @@ const formAnalysisV2 = (() => {
               const event = new CustomEvent('fm-container-changed', {
                 detail: {
                   controlIndex: controlIndex,
-                  control: formControls[controlIndex],
-                  newContainer: currentContainer
+                  newContainer: currentContainer,
+                  // Add containerInfo object with serializable details
+                  containerInfo: {
+                    tagName: currentContainer.tagName,
+                    className: currentContainer.className,
+                    id: currentContainer.id,
+                    html: currentContainer.outerHTML,
+                    path: getElementPath(currentContainer)
+                  }
                 }
               });
               document.dispatchEvent(event);
@@ -670,8 +742,15 @@ const formAnalysisV2 = (() => {
               const event = new CustomEvent('fm-container-changed', {
                 detail: {
                   controlIndex: controlIndex,
-                  control: formControls[controlIndex],
-                  newContainer: currentContainer
+                  newContainer: currentContainer,
+                  // Add containerInfo object with serializable details
+                  containerInfo: {
+                    tagName: currentContainer.tagName,
+                    className: currentContainer.className,
+                    id: currentContainer.id,
+                    html: currentContainer.outerHTML,
+                    path: getElementPath(currentContainer)
+                  }
                 }
               });
               document.dispatchEvent(event);
@@ -745,10 +824,71 @@ const formAnalysisV2 = (() => {
           tagName: control.container.tagName,
           className: control.container.className,
           id: control.container.id,
-          container: control.container
+          // Save container as a string representation instead of DOM element
+          html: control.container.outerHTML,
+          attributes: Array.from(control.container.attributes).map(attr => ({
+            name: attr.name,
+            value: attr.value
+          })),
+          path: getElementPath(control.container)
         } : null
       };
     });
+    
+    // Helper function to create a CSS selector path for an element
+    function getElementPath(element) {
+      if (!element || element === document.body) return '';
+      
+      let path = '';
+      let current = element;
+      
+      while (current && current !== document.body) {
+        let selector = current.tagName.toLowerCase();
+        
+        if (current.id) {
+          selector += '#' + current.id;
+        } else {
+          // If no ID, use class or position among siblings
+          if (current.className) {
+            const classes = current.className.split(' ').filter(c => c.trim().length > 0);
+            if (classes.length > 0) {
+              selector += '.' + classes.join('.');
+            }
+          }
+          
+          // Add position if needed
+          if (!current.id) {
+            let index = 1;
+            let sibling = current.previousElementSibling;
+            
+            while (sibling) {
+              if (sibling.tagName === current.tagName) index++;
+              sibling = sibling.previousElementSibling;
+            }
+            
+            if (index > 1 || !current.className) {
+              selector += `:nth-child(${index})`;
+            }
+          }
+        }
+        
+        path = selector + (path ? ' > ' + path : '');
+        current = current.parentElement;
+      }
+      
+      return path;
+    }
+    
+    // Save the controls to local storage with current URL as key
+    const rootUrl = window.location.origin;
+    // Use postMessage to communicate with the extension context for storage access
+    window.postMessage({
+      type: 'FM_SAVE_FIELD_MAPPINGS',
+      payload: {
+        rootUrl: rootUrl,
+        controls: serializableControls
+      }
+    }, '*');
     
     return {
       count: formControls.length,
@@ -756,9 +896,32 @@ const formAnalysisV2 = (() => {
     };
   }
     
+  // Add message listener to handle storage requests from content script
+  chrome.runtime.onMessage.addListener(function(message, sender, sendResponse) {
+    if (message.type === 'FM_SAVE_FIELD_MAPPINGS') {
+      const { rootUrl, controls } = message.payload;
+      fieldMappingsV2[rootUrl] = controls;
+      
+      // Save to local storage
+      chrome.storage.local.set({'fieldMappingsV2': fieldMappingsV2}, function() {
+        if (devMode) {
+          console.log('Field mappings saved to local storage:', rootUrl, controls);
+        }
+        sendResponse({success: true});
+      });
+      return true; // Indicates async response
+    }
+  });
+  
+  // Initialize by loading existing mappings
+  loadFieldMappingsFromStorage();
+  
   // Public API
   return {
-    analyzeCurrentForm
+    analyzeCurrentForm,
+    saveFieldMappingsToStorage,
+    loadFieldMappingsFromStorage,
+    getFieldMappings: () => fieldMappingsV2
   };
 })();
 

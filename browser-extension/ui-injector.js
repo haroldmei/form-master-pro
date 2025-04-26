@@ -14,6 +14,25 @@
   // Check if we're in a frame - only inject in the main frame
   if (self !== self.top) return;
 
+  // Add window message listener for field mappings storage
+  window.addEventListener('message', function(event) {
+    // Only accept messages from the same frame
+    if (event.source !== window) return;
+    
+    // Check if it's our message
+    if (event.data && event.data.type === 'FM_SAVE_FIELD_MAPPINGS') {
+      // Forward to background script for storage
+      chrome.runtime.sendMessage({
+        type: 'FM_SAVE_FIELD_MAPPINGS',
+        payload: event.data.payload
+      }, function(response) {
+        if (DEV_MODE) {
+          console.log('Field mappings storage response:', response);
+        }
+      });
+    }
+  });
+
   // Create and inject the UI when the page is ready
   self.addEventListener('DOMContentLoaded', injectUI);
   

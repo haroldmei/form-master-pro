@@ -34,6 +34,27 @@ if (typeof pdfjsLib !== 'undefined') {
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   const tabId = sender.tab?.id;
   
+  // Handle field mappings storage
+  if (message.type === 'FM_SAVE_FIELD_MAPPINGS') {
+    const { rootUrl, controls } = message.payload;
+    
+    // First get current mappings
+    chrome.storage.local.get(['fieldMappingsV2'], function(result) {
+      let fieldMappingsV2 = result.fieldMappingsV2 || {};
+      
+      // Update with new data
+      fieldMappingsV2[rootUrl] = controls;
+      
+      // Save back to storage
+      chrome.storage.local.set({'fieldMappingsV2': fieldMappingsV2}, function() {
+        console.log('Field mappings saved to local storage for URL:', rootUrl);
+        sendResponse({success: true});
+      });
+    });
+    
+    return true; // Indicate async response
+  }
+
   if (message.action === 'getUserProfile') {
     userProfileManager.getUserProfile().then(profile => {
       sendResponse({ success: true, profile });
