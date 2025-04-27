@@ -169,10 +169,10 @@ const aiService = (() => {
         throw new Error(`No field mappings found for URL: ${url}`);
       }
 
-      // Iterate through each container in the URL mapping
-      for (const containerId in urlMapping) {
-        const container = urlMapping[containerId];
+      // Process as array - new structure
+      for (let i = 0; i < urlMapping.length; i++) {
         
+        const container = urlMapping[i];
         // Skip if container is not valid
         if (!container) continue;
         
@@ -184,16 +184,14 @@ const aiService = (() => {
             "Authorization": `Bearer ${accessToken}`
           },
           body: JSON.stringify({
-            container: container,
+            container: container.containerDesc.html,
             url: url
           })
         });
-
         if (!response.ok) {
           const errorData = await response.json().catch(() => ({}));
           throw new Error(`AI code generation error: ${response.status} ${response.statusText} - ${errorData.message || ''}`);
         }
-
         // Get the JavaScript function as a string
         const responseData = await response.json();
         const codeString = responseData.code;
