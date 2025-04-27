@@ -148,9 +148,71 @@ const aiService = (() => {
     }
   }
   
+  /**
+   * Get AI-generated code for each container in the fieldMappings for a URL
+   *
+   * @param {Object} fieldMappingsV2 - The field mappings object from local storage
+   * @param {string} url - URL of the page containing the form
+   * @returns {Object} Updated fieldMappings with aicode for each container
+   */
+  async function getAiCode(fieldMappingsV2, url) {
+    try {
+      // Get the access token from the auth service
+      const accessToken = await auth0Service.getAccessToken();
+      if (!accessToken) {
+        throw new Error("Authentication required to use AI code generation");
+      }
+      
+      // Get the containers for the current URL
+      const urlMapping = fieldMappingsV2[url];
+      if (!urlMapping) {
+        throw new Error(`No field mappings found for URL: ${url}`);
+      }
+
+      // Iterate through each container in the URL mapping
+      for (const containerId in urlMapping) {
+        const container = urlMapping[containerId];
+        
+        // Skip if container is not valid
+        if (!container) continue;
+        
+        // Make the API call to generate code for this container
+        const response = await fetch(`${typeof API_BASE_URL !== 'undefined' ? API_BASE_URL : 'http://localhost:3001'}/api/aicode`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${accessToken}`
+          },
+          body: JSON.stringify({
+            container: container,
+            url: url
+          })
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(`AI code generation error: ${response.status} ${response.statusText} - ${errorData.message || ''}`);
+        }
+
+        // Get the JavaScript function as a string
+        const responseData = await response.json();
+        const codeString = responseData.code;
+        
+        // Update the container with the AI-generated code
+        container.aicode = codeString;
+      }
+      
+      return fieldMappingsV2;
+    } catch (error) {
+      console.error("Error in AI code generation:", error);
+      throw error;
+    }
+  }
+  
   // Return public API
   return {
-    getAiSuggestions
+    getAiSuggestions,
+    getAiCode
   };
 })();
 

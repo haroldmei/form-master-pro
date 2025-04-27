@@ -1102,34 +1102,6 @@ const formAnalysisV2 = (() => {
     }
 
     /**
-     * Find the parent container of a form control
-     * @param {HTMLElement} element - The form control element
-              
-              // Log the change if in dev mode
-              if (devMode) {
-                console.log(`Control #${controlIndex + 1} container updated:`, currentContainer);
-                console.log(`New path: ${formControls[controlIndex].containerPath}`);
-                console.log(`New xpath: ${formControls[controlIndex].containerXPath}`);
-              }
-            }
-          }
-        });
-        
-        // Add click event to toggle highlighting (preserve existing functionality)
-        control.container.addEventListener('click', function(e) {
-          // Prevent default only if explicitly clicking the container (not a child input or button)
-          if (e.target === control.container) {
-            e.preventDefault();
-            e.stopPropagation();
-            
-            // Toggle highlight
-            this.classList.toggle(CONTAINER_HIGHLIGHT_CLASS);
-          }
-        });
-      }
-    }
-    
-    /**
      * Clear all highlights from the page
      */
     function clearAllHighlights() {

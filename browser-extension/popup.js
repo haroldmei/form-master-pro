@@ -21,7 +21,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
   // Button elements
   const analyzeFormBtn = document.getElementById('analyze-form');
-  
+  const fetchCodeBtn = document.getElementById('fetch-code');
   // Email verification elements
   const verificationAlert = document.getElementById('verification-alert');
   const resendVerificationBtn = document.getElementById('resend-verification');
@@ -43,6 +43,10 @@ document.addEventListener('DOMContentLoaded', function() {
   addSafeEventListener('analyze-form', 'click', function() {
     // Call the formAnalysisV2 module's analyzeCurrentForm function
     self.formAnalysisV2.analyzeCurrentForm(analyzeFormBtn, showToast);
+  });
+  addSafeEventListener('fetch-code', 'click', function() {
+    // Call the formFetchCode module's analyzeCurrentForm function
+    self.formFetchCode.fetchCode(fetchCodeBtn, showToast);
   });
   addSafeEventListener('clear-data', 'click', clearSavedData);
 
