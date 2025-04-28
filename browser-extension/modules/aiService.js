@@ -207,8 +207,34 @@ const aiService = (() => {
       // Process as array - new structure
       for (let i = 0; i < urlMapping.length; i++) {
         const container = urlMapping[i];
-        // Skip if container is not valid or already has aicode
-        if (!container || (container.containerDesc && container.containerDesc.aicode)) continue;
+        
+        // Skip if container is not valid
+        if (!container || !container.containerDesc) {
+          console.log(`Skipping invalid container at index ${i}`);
+          continue;
+        }
+
+        // Check if container already has aicode
+        if (container.containerDesc.aicode) {
+          try {
+            // Parse existing aicode to check xpath
+            const jsonMatch = container.containerDesc.aicode.match(/```json\n([\s\S]*?)\n```/) || 
+                            container.containerDesc.aicode.match(/```([\s\S]*?)```/) || 
+                            [null, container.containerDesc.aicode];
+            const jsonContent = jsonMatch[1] || container.containerDesc.aicode;
+            const existingAiCode = JSON.parse(jsonContent);
+
+            // If xpath matches, skip this container
+            if (existingAiCode.xPath === container.containerDesc.xpath) {
+              console.log(`Skipping container ${i} - valid aicode with matching xpath exists`);
+              continue;
+            }
+            console.log(`Container ${i} has different xpath, regenerating aicode`);
+          } catch (parseError) {
+            console.error('Error parsing existing aicode:', parseError);
+            // If parsing fails, assume we need to regenerate
+          }
+        }
 
         // Add a 1-second delay before making the API call
         await new Promise(resolve => setTimeout(resolve, 1000));
@@ -216,11 +242,6 @@ const aiService = (() => {
         try {
           // Generate AI code for this container
           const codeString = await generateAiCodeForContainer(container.containerDesc.html, url);
-
-          // Update the container with the AI-generated code
-          if (!container.containerDesc) {
-            container.containerDesc = {};
-          }
 
           // Parse the AI code to add xPath information
           try {
