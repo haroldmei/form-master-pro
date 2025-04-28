@@ -1,6 +1,14 @@
 document.addEventListener('DOMContentLoaded', function() {
   // Wait for the DOM to be fully loaded before accessing elements
   
+  // Initialize the formAnalysis module if available
+  if (typeof self.formAnalysis !== 'undefined') {
+    self.formAnalysis.init({
+      devMode: true
+    });
+    console.log('Initialized FormAnalysis module');
+  }
+  
   // Helper function to safely add event listeners
   function addSafeEventListener(id, event, handler) {
     const element = document.getElementById(id);
@@ -41,11 +49,17 @@ document.addEventListener('DOMContentLoaded', function() {
 
   // Set up event listeners
   addSafeEventListener('analyze-form', 'click', function() {
-    // Call the formAnalysisV2 module's analyzeCurrentForm function
-    self.formAnalysisV2.analyzeCurrentForm(analyzeFormBtn, showToast);
+    // Use the new modular form analysis if available, otherwise fall back to legacy module
+    if (typeof self.formAnalysis !== 'undefined') {
+      self.formAnalysis.analyzeCurrentForm(analyzeFormBtn, showToast);
+    } else if (typeof self.formAnalysisV2 !== 'undefined') {
+      self.formAnalysisV2.analyzeCurrentForm(analyzeFormBtn, showToast);
+    } else {
+      showToast('Form analysis module not loaded', 'error');
+    }
   });
   addSafeEventListener('fetch-code', 'click', function() {
-    // Call the formFetchCode module's analyzeCurrentForm function
+    // Call the formFetchCode module's fetchCode function
     self.formFetchCode.fetchCode(fetchCodeBtn, showToast);
   });
   addSafeEventListener('clear-data', 'click', clearSavedData);
@@ -517,29 +531,20 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 
   // Function to clear saved data
-  function clearSavedData() {
-    const clearDataBtn = document.getElementById('clear-data');
-    if (!clearDataBtn) return;
-
-    // Store original text
-    const originalText = clearDataBtn.textContent;
-    
-    // Show loading state
-    clearDataBtn.textContent = 'Clearing...';
-    clearDataBtn.disabled = true;
-    
-    // Send message to clear suggestions data
-    chrome.runtime.sendMessage({ action: 'clearSuggestions' }, function(response) {
-      // Reset button state
-      clearDataBtn.disabled = false;
-      clearDataBtn.textContent = originalText;
-      
-      if (response && response.success) {
-        const profileText = response.profileCount === 1 ? 'profile' : 'profiles';
-        showToast(`Form data cleared successfully (${response.profileCount} ${profileText})`, 'success');
+  async function clearSavedData() {
+    try {
+      // Use the new Storage module if available, otherwise fall back to direct calls
+      if (typeof self.formAnalysis !== 'undefined' && self.formAnalysis.storage) {
+        await self.formAnalysis.storage.clearAll();
+        showToast('All saved form data has been cleared', 'success');
       } else {
-        showToast(response?.error || 'Error clearing form data', 'error');
+        // Legacy approach
+        await chrome.storage.local.clear();
+        showToast('All saved form data has been cleared', 'success');
       }
-    });
+    } catch (error) {
+      console.error('Error clearing data:', error);
+      showToast('Error clearing saved data', 'error');
+    }
   }
 });

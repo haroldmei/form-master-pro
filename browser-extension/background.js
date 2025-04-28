@@ -6,11 +6,17 @@ importScripts(
   'modules/aiService.js',
   'modules/formFiller.js',
   'modules/utils.js',
+  'modules/formAnalysis/storage.js',
   'libs/pdf.min.js',
   'libs/pdf.worker.min.js'
 );
 
 console.log("FormMasterPro extension initializing...");
+
+// Initialize form analysis storage
+if (typeof formAnalysisStorage !== 'undefined') {
+  formAnalysisStorage.init();
+}
 
 // Initialize auth on extension startup
 auth0Service.init()
@@ -53,6 +59,80 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     });
     
     return true; // Indicate async response
+  }
+  
+  // Handle form analysis actions through new message types
+  if (message.type === 'FM_ANALYZE_FORM') {
+    const { id, data } = message;
+    
+    // Execute the analysis in the sender tab
+    chrome.scripting.executeScript({
+      target: { tabId: sender.tab.id },
+      files: [
+        'modules/formAnalysis/domUtils.js',
+        'modules/formAnalysis/highlighting.js',
+        'modules/formAnalysis/containerDetection.js',
+        'modules/formAnalysis/labelDetection.js',
+        'modules/formAnalysis/injected.js'
+      ]
+    }, () => {
+      // After loading dependencies, execute the analysis
+      chrome.scripting.executeScript({
+        target: { tabId: sender.tab.id },
+        function: (params) => {
+          return window.formAnalysisInjected.performFormAnalysis(
+            params.devMode, 
+            params.containerClass, 
+            params.labelClass, 
+            params.optionClass, 
+            params.inputClass, 
+            params.existingMappings
+          );
+        },
+        args: [data]
+      }, results => {
+        // Send the response back to the caller
+        chrome.tabs.sendMessage(sender.tab.id, {
+          type: 'FM_ANALYSIS_RESPONSE',
+          id: id,
+          data: results && results[0] && results[0].result ? results[0].result : null,
+          error: results && results[0] && results[0].error ? results[0].error : null
+        });
+      });
+    });
+    
+    return true;
+  }
+  
+  if (message.type === 'FM_LOAD_FIELD_MAPPINGS') {
+    const { id, data } = message;
+    
+    if (data && data.url) {
+      const rootUrl = new URL(data.url).origin;
+      
+      chrome.storage.local.get(['fieldMappingsV2'], function(result) {
+        const mappings = result.fieldMappingsV2 && result.fieldMappingsV2[rootUrl] 
+          ? result.fieldMappingsV2[rootUrl] : [];
+        
+        // Send the response back to the caller
+        chrome.tabs.sendMessage(sender.tab.id, {
+          type: 'FM_ANALYSIS_RESPONSE',
+          id: id,
+          data: mappings,
+          error: null
+        });
+      });
+    } else {
+      // Send error response if URL is missing
+      chrome.tabs.sendMessage(sender.tab.id, {
+        type: 'FM_ANALYSIS_RESPONSE',
+        id: id,
+        data: null,
+        error: 'URL is required to load field mappings'
+      });
+    }
+    
+    return true;
   }
 
   if (message.action === 'getUserProfile') {

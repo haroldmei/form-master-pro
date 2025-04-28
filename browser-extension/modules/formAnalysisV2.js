@@ -1,7 +1,7 @@
 /**
  * Form analysis V2 module - Advanced form control detection and analysis
  */
-const formAnalysisV2 = (() => {
+const formAnalysisV3 = (() => {
   // Element highlighting styles
   const CONTAINER_HIGHLIGHT_CLASS = 'fm-container-highlight';
   const CONTAINER_HIGHLIGHT_AICODE_CLASS = 'fm-container-highlight-aicode';
@@ -1481,6 +1481,3 @@ const formAnalysisV2 = (() => {
     getFieldMappings: () => fieldMappingsV2
   };
 })();
-
-// Expose the module to the global scope
-self.formAnalysisV2 = formAnalysisV2;
