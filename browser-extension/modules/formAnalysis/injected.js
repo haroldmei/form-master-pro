@@ -282,80 +282,83 @@ const formAnalysisInjected = (() => {
       formControls[index].containerPath = formAnalysisDomUtils.getElementPath(control.container);
       formControls[index].containerXPath = formAnalysisDomUtils.getElementXPath(control.container);
       
-      // Generate new AI code for the updated container using messaging
-      (async () => {
-        try {
-          // Send message to background script to generate AI code
-          const response = await new Promise((resolve, reject) => {
-            chrome.runtime.sendMessage({
-              type: 'FM_GENERATE_AI_CODE',
-              payload: {
-                containerHtml: control.container.outerHTML,
-                url: window.location.href
-              }
-            }, response => {
-              if (chrome.runtime.lastError) {
-                reject(chrome.runtime.lastError);
-              } else {
-                resolve(response);
-              }
+      // Only generate AI code if it doesn't already exist
+      if (!formControls[index].aicode) {
+        // Generate new AI code for the updated container using messaging
+        (async () => {
+          try {
+            // Send message to background script to generate AI code
+            const response = await new Promise((resolve, reject) => {
+              chrome.runtime.sendMessage({
+                type: 'FM_GENERATE_AI_CODE',
+                payload: {
+                  containerHtml: control.container.outerHTML,
+                  url: window.location.href
+                }
+              }, response => {
+                if (chrome.runtime.lastError) {
+                  reject(chrome.runtime.lastError);
+                } else {
+                  resolve(response);
+                }
+              });
             });
-          });
-          
-          if (response && response.code) {
-            // Update the aicode property
-            formControls[index].aicode = response.code;
             
-            // Log the update if in dev mode
-            if (window.FormMaster && window.FormMaster.devMode) {
-              console.log('Generated new AI code for container:', response.code);
+            if (response && response.code) {
+              // Update the aicode property
+              formControls[index].aicode = response.code;
+              
+              // Log the update if in dev mode
+              if (window.FormMaster && window.FormMaster.devMode) {
+                console.log('Generated new AI code for container:', response.code);
+              }
             }
+          } catch (error) {
+            console.error('Error generating AI code for container:', error);
+            // Don't throw the error - we want to continue even if AI code generation fails
           }
-        } catch (error) {
-          console.error('Error generating AI code for container:', error);
-          // Don't throw the error - we want to continue even if AI code generation fails
-        }
-        
-        // Fire a custom event to notify about the container change
-        const event = new CustomEvent('fm-container-changed', {
-          detail: {
-            controlIndex: index,
-            newContainer: control.container,
-            // Add containerInfo object with serializable details
-            containerInfo: {
-              tagName: control.container.tagName,
-              className: control.container.className,
-              id: control.container.id,
-              html: control.container.outerHTML,
-              attributes: Array.from(control.container.attributes).map(attr => ({
-                name: attr.name,
-                value: attr.value
-              })),
-              path: formControls[index].containerPath,
-              xpath: formControls[index].containerXPath,
-              // Keep the aicode reference when container is changed
-              aicode: formControls[index].aicode
-            }
+        })();
+      }
+      
+      // Fire a custom event to notify about the container change
+      const event = new CustomEvent('fm-container-changed', {
+        detail: {
+          controlIndex: index,
+          newContainer: control.container,
+          // Add containerInfo object with serializable details
+          containerInfo: {
+            tagName: control.container.tagName,
+            className: control.container.className,
+            id: control.container.id,
+            html: control.container.outerHTML,
+            attributes: Array.from(control.container.attributes).map(attr => ({
+              name: attr.name,
+              value: attr.value
+            })),
+            path: formControls[index].containerPath,
+            xpath: formControls[index].containerXPath,
+            // Keep the aicode reference when container is changed
+            aicode: formControls[index].aicode
           }
-        });
-        document.dispatchEvent(event);
-        
-        // Log the container change in dev mode
-        if (window.FormMaster && window.FormMaster.devMode) {
-          console.log('Container updated for control:', formControls[index]);
-          console.log('New container:', control.container);
-          console.log('Container path:', formControls[index].containerPath);
-          console.log('Container XPath:', formControls[index].containerXPath);
         }
-        
-        // Now apply the highlight after AI code generation
-        formAnalysisHighlighting.highlightFormControl(control, async (newContainer) => {
-          // Update the control with the new container
-          formControls[index].container = newContainer;
-          formControls[index].containerPath = formAnalysisDomUtils.getElementPath(newContainer);
-          formControls[index].containerXPath = formAnalysisDomUtils.getElementXPath(newContainer);
-        });
-      })();
+      });
+      document.dispatchEvent(event);
+      
+      // Log the container change in dev mode
+      if (window.FormMaster && window.FormMaster.devMode) {
+        console.log('Container updated for control:', formControls[index]);
+        console.log('New container:', control.container);
+        console.log('Container path:', formControls[index].containerPath);
+        console.log('Container XPath:', formControls[index].containerXPath);
+      }
+      
+      // Now apply the highlight after AI code generation
+      formAnalysisHighlighting.highlightFormControl(control, async (newContainer) => {
+        // Update the control with the new container
+        formControls[index].container = newContainer;
+        formControls[index].containerPath = formAnalysisDomUtils.getElementPath(newContainer);
+        formControls[index].containerXPath = formAnalysisDomUtils.getElementXPath(newContainer);
+      });
     }
   }
   
