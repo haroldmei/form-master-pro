@@ -4,6 +4,7 @@
 const formAnalysisV2 = (() => {
   // Element highlighting styles
   const CONTAINER_HIGHLIGHT_CLASS = 'fm-container-highlight';
+  const CONTAINER_HIGHLIGHT_AICODE_CLASS = 'fm-container-highlight-aicode';
   
   
   // Development mode flag
@@ -122,6 +123,7 @@ const formAnalysisV2 = (() => {
   function performFormAnalysis(devMode, containerClass, labelClass, optionClass, inputClass, existingMappings = []) {
     // Set constants for highlighting classes within this function scope
     const CONTAINER_HIGHLIGHT_CLASS = containerClass;
+    const CONTAINER_HIGHLIGHT_AICODE_CLASS = 'fm-container-highlight-aicode';
     
     // Create or get the FormMaster object
     const FM = window.FormMaster = window.FormMaster || {};
@@ -140,6 +142,16 @@ const formAnalysisV2 = (() => {
         }
         .${CONTAINER_HIGHLIGHT_CLASS}:hover {
           outline-color: rgba(255, 165, 0, 1) !important;
+        }
+        .${CONTAINER_HIGHLIGHT_AICODE_CLASS} {
+          outline: 2px dashed rgba(0, 128, 0, 0.7) !important;
+          background-color: rgba(0, 128, 0, 0.1) !important;
+          position: relative !important;
+          z-index: 999 !important;
+          transition: outline-color 0.3s ease;
+        }
+        .${CONTAINER_HIGHLIGHT_AICODE_CLASS}:hover {
+          outline-color: rgba(0, 128, 0, 1) !important;
         }
         .fm-tooltip {
           position: absolute;
@@ -229,6 +241,7 @@ const formAnalysisV2 = (() => {
           required: control.required,
           disabled: control.disabled,
           checked: control.checked,
+          aicode: control.aicode,
           labels: control.labels.map(label => ({
             text: label.text,
             type: label.type
@@ -249,7 +262,9 @@ const formAnalysisV2 = (() => {
               value: attr.value
             })),
             path: getElementPath(control.container),
-            xpath: getElementXPath(control.container)
+            xpath: getElementXPath(control.container),
+            // Also save the aicode with the container description
+            aicode: control.aicode
           } : null
         };
       });
@@ -321,6 +336,12 @@ const formAnalysisV2 = (() => {
               // Store path and xpath properties for easier lookup
               controlInfo.containerPath = mapping.containerDesc.path;
               controlInfo.containerXPath = mapping.containerDesc.xpath;
+              
+              // Check if the mapping has an aicode and store it
+              if (mapping.aicode) {
+                controlInfo.aicode = mapping.aicode;
+              }
+              
               formControls.push(controlInfo);
               processedElements.set(element, true);
               
@@ -422,7 +443,12 @@ const formAnalysisV2 = (() => {
     function highlightFormControl(control) {
       // Highlight the container element
       if (control.container) {
-        control.container.classList.add(CONTAINER_HIGHLIGHT_CLASS);
+        // Apply the appropriate highlight class based on whether the control has aicode
+        if (control.aicode) {
+          control.container.classList.add(CONTAINER_HIGHLIGHT_AICODE_CLASS);
+        } else {
+          control.container.classList.add(CONTAINER_HIGHLIGHT_CLASS);
+        }
         
         // Add navigation buttons
         const navButtonsContainer = document.createElement('div');
@@ -475,12 +501,17 @@ const formAnalysisV2 = (() => {
           if (currentContainer.parentElement && currentContainer.parentElement.tagName !== 'BODY') {
             // Remove highlight from current container
             currentContainer.classList.remove(CONTAINER_HIGHLIGHT_CLASS);
+            currentContainer.classList.remove(CONTAINER_HIGHLIGHT_AICODE_CLASS);
             
             // Move to parent
             currentContainer = currentContainer.parentElement;
             
             // Apply highlight to new container
-            currentContainer.classList.add(CONTAINER_HIGHLIGHT_CLASS);
+            if (control.aicode) {
+              currentContainer.classList.add(CONTAINER_HIGHLIGHT_AICODE_CLASS);
+            } else {
+              currentContainer.classList.add(CONTAINER_HIGHLIGHT_CLASS);
+            }
             
             // Move navigation buttons to new container
             if (navButtonsContainer.parentNode) {
@@ -519,8 +550,14 @@ const formAnalysisV2 = (() => {
                     className: currentContainer.className,
                     id: currentContainer.id,
                     html: currentContainer.outerHTML,
+                    attributes: Array.from(currentContainer.attributes).map(attr => ({
+                      name: attr.name,
+                      value: attr.value
+                    })),
                     path: getElementPath(currentContainer),
-                    xpath: getElementXPath(currentContainer)
+                    xpath: getElementXPath(currentContainer),
+                    // Keep the aicode reference when container is changed
+                    aicode: formControls[controlIndex].aicode
                   }
                 }
               });
@@ -552,12 +589,17 @@ const formAnalysisV2 = (() => {
           if (validChildren.length > 0) {
             // Remove highlight from current container
             currentContainer.classList.remove(CONTAINER_HIGHLIGHT_CLASS);
+            currentContainer.classList.remove(CONTAINER_HIGHLIGHT_AICODE_CLASS);
             
             // Move to first valid child
             currentContainer = validChildren[0];
             
             // Apply highlight to new container
-            currentContainer.classList.add(CONTAINER_HIGHLIGHT_CLASS);
+            if (control.aicode) {
+              currentContainer.classList.add(CONTAINER_HIGHLIGHT_AICODE_CLASS);
+            } else {
+              currentContainer.classList.add(CONTAINER_HIGHLIGHT_CLASS);
+            }
             
             // Move navigation buttons to new container
             if (navButtonsContainer.parentNode) {
@@ -596,8 +638,14 @@ const formAnalysisV2 = (() => {
                     className: currentContainer.className,
                     id: currentContainer.id,
                     html: currentContainer.outerHTML,
+                    attributes: Array.from(currentContainer.attributes).map(attr => ({
+                      name: attr.name,
+                      value: attr.value
+                    })),
                     path: getElementPath(currentContainer),
-                    xpath: getElementXPath(currentContainer)
+                    xpath: getElementXPath(currentContainer),
+                    // Keep the aicode reference when container is changed
+                    aicode: formControls[controlIndex].aicode
                   }
                 }
               });
@@ -621,7 +669,11 @@ const formAnalysisV2 = (() => {
             e.stopPropagation();
             
             // Toggle highlight
-            this.classList.toggle(CONTAINER_HIGHLIGHT_CLASS);
+            if (control.aicode) {
+              this.classList.toggle(CONTAINER_HIGHLIGHT_AICODE_CLASS);
+            } else {
+              this.classList.toggle(CONTAINER_HIGHLIGHT_CLASS);
+            }
           }
         });
       }
@@ -643,6 +695,7 @@ const formAnalysisV2 = (() => {
         placeholder: element.placeholder,
         required: element.required,
         disabled: element.disabled,
+        aicode: null, // Initialize aicode property to null
         labels: [], // Will contain label text and elements
         options: [], // Will contain options if applicable
         container: null // Will contain parent container element
@@ -1111,6 +1164,11 @@ const formAnalysisV2 = (() => {
           el.classList.remove(CONTAINER_HIGHLIGHT_CLASS);
         });
       
+      document.querySelectorAll(`.${CONTAINER_HIGHLIGHT_AICODE_CLASS}`)
+        .forEach(el => {
+          el.classList.remove(CONTAINER_HIGHLIGHT_AICODE_CLASS);
+        });
+      
       // Remove all tooltips
       document.querySelectorAll('.fm-tooltip').forEach(tooltip => {
         tooltip.parentNode.removeChild(tooltip);
@@ -1135,6 +1193,7 @@ const formAnalysisV2 = (() => {
         required: control.required,
         disabled: control.disabled,
         checked: control.checked,
+        aicode: control.aicode,
         labels: control.labels.map(label => ({
           text: label.text,
           type: label.type
@@ -1155,7 +1214,9 @@ const formAnalysisV2 = (() => {
             value: attr.value
           })),
           path: getElementPath(control.container),
-          xpath: getElementXPath(control.container)
+          xpath: getElementXPath(control.container),
+          // Also save the aicode with the container description
+          aicode: control.aicode
         } : null
       };
     });
