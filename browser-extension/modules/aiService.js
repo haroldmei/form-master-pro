@@ -259,6 +259,35 @@ const aiService = (() => {
             container.containerDesc.aicode = JSON.stringify(aiCodeObj);
 
             console.log('container.containerDesc.aicode', container.containerDesc.aicode);
+
+            // Trigger a highlight update for this container immediately
+            const event = new CustomEvent('fm-container-changed', {
+              detail: {
+                controlIndex: i,
+                newContainer: container.containerDesc,
+                containerInfo: {
+                  ...container.containerDesc,
+                  aicode: container.containerDesc.aicode
+                }
+              }
+            });
+            document.dispatchEvent(event);
+
+            // Save to storage after updating the highlight
+            await new Promise(resolve => {
+              chrome.storage.local.get('fieldMappingsV2', (result) => {
+                const updatedFieldMappings = result.fieldMappingsV2 || {};
+                if (!updatedFieldMappings[url]) {
+                  updatedFieldMappings[url] = [];
+                }
+                updatedFieldMappings[url][i] = container; // Update only the specific container
+                chrome.storage.local.set({ fieldMappingsV2: updatedFieldMappings }, () => {
+                  console.log(`Saved updated container for URL: ${url}, index: ${i}`);
+                  resolve();
+                });
+              });
+            });
+
           } catch (parseError) {
             console.error('Error parsing AI code to add xPath:', parseError);
             // If parsing fails, store the original code string
@@ -267,20 +296,6 @@ const aiService = (() => {
 
           console.log(`AI code generated for container ${i} on URL ${url}:`, container.containerDesc.aicode);
           
-          // Save only the updated container to local storage
-          await new Promise(resolve => {
-            chrome.storage.local.get('fieldMappingsV2', (result) => {
-              const updatedFieldMappings = result.fieldMappingsV2 || {};
-              if (!updatedFieldMappings[url]) {
-                updatedFieldMappings[url] = [];
-              }
-              updatedFieldMappings[url][i] = container; // Update only the specific container
-              chrome.storage.local.set({ fieldMappingsV2: updatedFieldMappings }, () => {
-                console.log(`Saved updated container for URL: ${url}, index: ${i}`);
-                resolve();
-              });
-            });
-          });
         } catch (error) {
           console.error(`Error processing container ${i}:`, error);
           // Continue with next container even if this one fails

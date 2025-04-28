@@ -99,7 +99,7 @@ const formAnalysisHighlighting = (() => {
   }
   
   /**
-   * Highlight a form control and its container
+   * Highlight a form control and add navigation UI
    * @param {Object} control - The control info object with element and container
    * @param {Function} onContainerChange - Callback when container changes
    */
@@ -110,7 +110,7 @@ const formAnalysisHighlighting = (() => {
     initStyles();
     
     // Apply the appropriate highlight class based on whether the control has aicode
-    if (control.aicode) {
+    if (control.containerDesc?.aicode) {
       control.container.classList.add(CONTAINER_HIGHLIGHT_AICODE_CLASS);
     } else {
       control.container.classList.add(CONTAINER_HIGHLIGHT_CLASS);
@@ -170,7 +170,7 @@ const formAnalysisHighlighting = (() => {
         currentContainer = currentContainer.parentElement;
         
         // Apply highlight to new container
-        if (control.aicode) {
+        if (control.containerDesc?.aicode) {
           currentContainer.classList.add(CONTAINER_HIGHLIGHT_AICODE_CLASS);
         } else {
           currentContainer.classList.add(CONTAINER_HIGHLIGHT_CLASS);
@@ -224,7 +224,7 @@ const formAnalysisHighlighting = (() => {
         currentContainer = validChildren[0];
         
         // Apply highlight to new container
-        if (control.aicode) {
+        if (control.containerDesc?.aicode) {
           currentContainer.classList.add(CONTAINER_HIGHLIGHT_AICODE_CLASS);
         } else {
           currentContainer.classList.add(CONTAINER_HIGHLIGHT_CLASS);
@@ -264,7 +264,7 @@ const formAnalysisHighlighting = (() => {
         e.stopPropagation();
         
         // Toggle highlight
-        if (control.aicode) {
+        if (control.containerDesc?.aicode) {
           this.classList.toggle(CONTAINER_HIGHLIGHT_AICODE_CLASS);
         } else {
           this.classList.toggle(CONTAINER_HIGHLIGHT_CLASS);

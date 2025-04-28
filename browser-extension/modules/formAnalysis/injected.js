@@ -69,6 +69,7 @@ const formAnalysisInjected = (() => {
         console.log('Form controls updated:', updatedControls);
         console.log('Requested storage update for URL:', rootUrl);
       }
+
     });
     
     // Clear any existing highlights
@@ -120,8 +121,11 @@ const formAnalysisInjected = (() => {
               controlInfo.containerXPath = mapping.containerDesc.xpath;
               
               // Check if the mapping has an aicode and store it
-              if (mapping.aicode) {
-                controlInfo.aicode = mapping.aicode;
+              if (mapping.containerDesc.aicode) {
+                controlInfo.containerDesc = {
+                  ...mapping.containerDesc,
+                  aicode: mapping.containerDesc.aicode
+                };
               }
               
               formControls.push(controlInfo);
@@ -313,6 +317,7 @@ const formAnalysisInjected = (() => {
         console.log('Container XPath:', formControls[index].containerXPath);
       }
       
+      console.log('Container updated for control:', control);
       // Now apply the highlight after AI code generation
       formAnalysisHighlighting.highlightFormControl(control, async (newContainer) => {
         // Update the control with the new container
