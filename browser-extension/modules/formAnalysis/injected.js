@@ -275,22 +275,22 @@ const formAnalysisInjected = (() => {
    * @param {number} index - Index in the formControls array
    */
   function highlightFormControl(control, index) {
-    formAnalysisHighlighting.highlightFormControl(control, async (newContainer) => {
-      // Update the control in the formControls array
-      if (index >= 0) {
-        // Update the container and its properties
-        formControls[index].container = newContainer;
-        formControls[index].containerPath = formAnalysisDomUtils.getElementPath(newContainer);
-        formControls[index].containerXPath = formAnalysisDomUtils.getElementXPath(newContainer);
-        
-        // Generate new AI code for the updated container using messaging
+    // First update the control in the formControls array
+    if (index >= 0) {
+      // Update the container and its properties
+      formControls[index].container = control.container;
+      formControls[index].containerPath = formAnalysisDomUtils.getElementPath(control.container);
+      formControls[index].containerXPath = formAnalysisDomUtils.getElementXPath(control.container);
+      
+      // Generate new AI code for the updated container using messaging
+      (async () => {
         try {
           // Send message to background script to generate AI code
           const response = await new Promise((resolve, reject) => {
             chrome.runtime.sendMessage({
               type: 'FM_GENERATE_AI_CODE',
               payload: {
-                containerHtml: newContainer.outerHTML,
+                containerHtml: control.container.outerHTML,
                 url: window.location.href
               }
             }, response => {
@@ -320,14 +320,14 @@ const formAnalysisInjected = (() => {
         const event = new CustomEvent('fm-container-changed', {
           detail: {
             controlIndex: index,
-            newContainer: newContainer,
+            newContainer: control.container,
             // Add containerInfo object with serializable details
             containerInfo: {
-              tagName: newContainer.tagName,
-              className: newContainer.className,
-              id: newContainer.id,
-              html: newContainer.outerHTML,
-              attributes: Array.from(newContainer.attributes).map(attr => ({
+              tagName: control.container.tagName,
+              className: control.container.className,
+              id: control.container.id,
+              html: control.container.outerHTML,
+              attributes: Array.from(control.container.attributes).map(attr => ({
                 name: attr.name,
                 value: attr.value
               })),
@@ -343,12 +343,20 @@ const formAnalysisInjected = (() => {
         // Log the container change in dev mode
         if (window.FormMaster && window.FormMaster.devMode) {
           console.log('Container updated for control:', formControls[index]);
-          console.log('New container:', newContainer);
+          console.log('New container:', control.container);
           console.log('Container path:', formControls[index].containerPath);
           console.log('Container XPath:', formControls[index].containerXPath);
         }
-      }
-    });
+        
+        // Now apply the highlight after AI code generation
+        formAnalysisHighlighting.highlightFormControl(control, async (newContainer) => {
+          // Update the control with the new container
+          formControls[index].container = newContainer;
+          formControls[index].containerPath = formAnalysisDomUtils.getElementPath(newContainer);
+          formControls[index].containerXPath = formAnalysisDomUtils.getElementXPath(newContainer);
+        });
+      })();
+    }
   }
   
   /**
