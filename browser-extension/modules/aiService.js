@@ -162,7 +162,7 @@ const aiService = (() => {
       if (!accessToken) {
         throw new Error("Authentication required to use AI code generation");
       }
-      
+
       // Get the containers for the current URL
       const urlMapping = fieldMappingsV2[url];
       if (!urlMapping) {
@@ -171,11 +171,13 @@ const aiService = (() => {
 
       // Process as array - new structure
       for (let i = 0; i < urlMapping.length; i++) {
-        
         const container = urlMapping[i];
-        // Skip if container is not valid
-        if (!container) continue;
-        
+        // Skip if container is not valid or already has aicode
+        if (!container || container.aicode) continue;
+
+        // Add a 1-second delay before making the API call
+        await new Promise(resolve => setTimeout(resolve, 1000));
+
         // Make the API call to generate code for this container
         const response = await fetch(`${typeof API_BASE_URL !== 'undefined' ? API_BASE_URL : 'http://localhost:3001'}/api/aicode`, {
           method: "POST",
@@ -188,18 +190,36 @@ const aiService = (() => {
             url: url
           })
         });
+
         if (!response.ok) {
           const errorData = await response.json().catch(() => ({}));
           throw new Error(`AI code generation error: ${response.status} ${response.statusText} - ${errorData.message || ''}`);
         }
+
         // Get the JavaScript function as a string
         const responseData = await response.json();
         const codeString = responseData.code;
-        
+
         // Update the container with the AI-generated code
         container.aicode = codeString;
+        console.log(`AI code generated for container ${i} on URL ${url}:`, codeString);
+        
+        // Save only the updated container to local storage
+        await new Promise(resolve => {
+          chrome.storage.local.get('fieldMappingsV2', (result) => {
+            const updatedFieldMappings = result.fieldMappingsV2 || {};
+            if (!updatedFieldMappings[url]) {
+              updatedFieldMappings[url] = [];
+            }
+            updatedFieldMappings[url][i] = container; // Update only the specific container
+            chrome.storage.local.set({ fieldMappingsV2: updatedFieldMappings }, () => {
+              console.log(`Saved updated container for URL: ${url}, index: ${i}`);
+              resolve();
+            });
+          });
+        });
       }
-      
+
       return fieldMappingsV2;
     } catch (error) {
       console.error("Error in AI code generation:", error);
