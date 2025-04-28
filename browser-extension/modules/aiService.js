@@ -208,7 +208,7 @@ const aiService = (() => {
       for (let i = 0; i < urlMapping.length; i++) {
         const container = urlMapping[i];
         // Skip if container is not valid or already has aicode
-        if (!container || container.aicode) continue;
+        if (!container || (container.containerDesc && container.containerDesc.aicode)) continue;
 
         // Add a 1-second delay before making the API call
         await new Promise(resolve => setTimeout(resolve, 1000));
@@ -218,8 +218,33 @@ const aiService = (() => {
           const codeString = await generateAiCodeForContainer(container.containerDesc.html, url);
 
           // Update the container with the AI-generated code
-          container.aicode = codeString;
-          console.log(`AI code generated for container ${i} on URL ${url}:`, codeString);
+          if (!container.containerDesc) {
+            container.containerDesc = {};
+          }
+
+          // Parse the AI code to add xPath information
+          try {
+            // Extract JSON content from markdown-formatted response
+            const jsonMatch = codeString.match(/```json\n([\s\S]*?)\n```/) || 
+                            codeString.match(/```([\s\S]*?)```/) || 
+                            [null, codeString];
+            const jsonContent = jsonMatch[1] || codeString;
+
+            // Parse the extracted JSON content
+            const aiCodeObj = JSON.parse(jsonContent);
+            // Add xPath information to the AI code
+            aiCodeObj.xPath = container.containerDesc.xpath;
+            // Convert back to string
+            container.containerDesc.aicode = JSON.stringify(aiCodeObj);
+
+            console.log('container.containerDesc.aicode', container.containerDesc.aicode);
+          } catch (parseError) {
+            console.error('Error parsing AI code to add xPath:', parseError);
+            // If parsing fails, store the original code string
+            container.containerDesc.aicode = codeString;
+          }
+
+          console.log(`AI code generated for container ${i} on URL ${url}:`, container.containerDesc.aicode);
           
           // Save only the updated container to local storage
           await new Promise(resolve => {

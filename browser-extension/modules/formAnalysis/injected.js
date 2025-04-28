@@ -187,7 +187,6 @@ const formAnalysisInjected = (() => {
       required: control.required,
       disabled: control.disabled,
       checked: control.checked,
-      aicode: control.aicode,
       labels: control.labels.map(label => ({
         text: label.text,
         type: label.type
@@ -209,8 +208,8 @@ const formAnalysisInjected = (() => {
         })),
         path: formAnalysisDomUtils.getElementPath(control.container),
         xpath: formAnalysisDomUtils.getElementXPath(control.container),
-        // Also save the aicode with the container description
-        aicode: control.aicode
+        // Store aicode in containerDesc
+        aicode: control.containerDesc?.aicode
       } : null
     };
   }
@@ -282,44 +281,6 @@ const formAnalysisInjected = (() => {
       formControls[index].containerPath = formAnalysisDomUtils.getElementPath(control.container);
       formControls[index].containerXPath = formAnalysisDomUtils.getElementXPath(control.container);
       
-      // Only generate AI code if it doesn't already exist
-      if (!formControls[index].aicode) {
-        // Generate new AI code for the updated container using messaging
-        (async () => {
-          try {
-            // Send message to background script to generate AI code
-            const response = await new Promise((resolve, reject) => {
-              chrome.runtime.sendMessage({
-                type: 'FM_GENERATE_AI_CODE',
-                payload: {
-                  containerHtml: control.container.outerHTML,
-                  url: window.location.href
-                }
-              }, response => {
-                if (chrome.runtime.lastError) {
-                  reject(chrome.runtime.lastError);
-                } else {
-                  resolve(response);
-                }
-              });
-            });
-            
-            if (response && response.code) {
-              // Update the aicode property
-              formControls[index].aicode = response.code;
-              
-              // Log the update if in dev mode
-              if (window.FormMaster && window.FormMaster.devMode) {
-                console.log('Generated new AI code for container:', response.code);
-              }
-            }
-          } catch (error) {
-            console.error('Error generating AI code for container:', error);
-            // Don't throw the error - we want to continue even if AI code generation fails
-          }
-        })();
-      }
-      
       // Fire a custom event to notify about the container change
       const event = new CustomEvent('fm-container-changed', {
         detail: {
@@ -338,7 +299,7 @@ const formAnalysisInjected = (() => {
             path: formControls[index].containerPath,
             xpath: formControls[index].containerXPath,
             // Keep the aicode reference when container is changed
-            aicode: formControls[index].aicode
+            aicode: formControls[index].containerDesc?.aicode
           }
         }
       });
@@ -378,7 +339,6 @@ const formAnalysisInjected = (() => {
       placeholder: element.placeholder,
       required: element.required,
       disabled: element.disabled,
-      aicode: null, // Initialize aicode property to null
       labels: [], // Will contain label text and elements
       options: [], // Will contain options if applicable
       container: null // Will contain parent container element
