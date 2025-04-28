@@ -537,6 +537,20 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       return true;
     }
   }
+
+  // Add message listener for AI code generation
+  if (message.type === 'FM_GENERATE_AI_CODE') {
+    // Generate AI code using the aiService
+    aiService.generateAiCodeForContainer(message.payload.containerHtml, message.payload.url)
+      .then(code => {
+        sendResponse({ code });
+      })
+      .catch(error => {
+        console.error('Error generating AI code:', error);
+        sendResponse({ error: error.message });
+      });
+    return true; // Keep the message channel open for async response
+  }
 });
 
 // Check email verification status
