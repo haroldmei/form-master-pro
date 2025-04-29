@@ -259,8 +259,6 @@ const aiService = (() => {
             // Convert back to string
             container.containerDesc.aicode = JSON.stringify(aiCodeObj);
 
-            console.log('container.containerDesc.aicode', container.containerDesc.aicode);
-
             // Trigger a highlight update for this container immediately
             const event = new CustomEvent('fm-container-changed', {
               detail: {
@@ -294,10 +292,13 @@ const aiService = (() => {
               });
             });
 
+            console.error('container.containerDesc.aicode', container.containerDesc.aicode);
+            
           } catch (parseError) {
             console.error('Error parsing AI code to add xPath:', parseError);
             // If parsing fails, store the original code string
             container.containerDesc.aicode = codeString;
+            throw parseError;
           }
 
           console.log(`AI code generated for container ${i} on URL ${url}:`, container.containerDesc.aicode);
@@ -305,7 +306,7 @@ const aiService = (() => {
         } catch (error) {
           console.error(`Error processing container ${i}:`, error);
           // Continue with next container even if this one fails
-          continue;
+          throw error;
         }
       }
 

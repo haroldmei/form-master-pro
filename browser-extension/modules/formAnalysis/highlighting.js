@@ -227,6 +227,40 @@ const formAnalysisHighlighting = (() => {
           aicode: control.aicode
         };
         
+        // Update local storage with the new container information
+        // This ensures the change persists across page reloads
+        const currentUrl = window.location.origin;
+        chrome.storage.local.get(['fieldMappingsV2'], function(result) {
+          const fieldMappingsV2 = result.fieldMappingsV2 || {};
+          if (fieldMappingsV2[currentUrl]) {
+            // Find the matching control by id or name
+            const controlIndex = fieldMappingsV2[currentUrl].findIndex(mapping => 
+              (control.id && mapping.id === control.id) || 
+              (control.name && mapping.name === control.name)
+            );
+            
+            if (controlIndex !== -1) {
+              // Update the container information
+              fieldMappingsV2[currentUrl][controlIndex].containerDesc = {
+                ...fieldMappingsV2[currentUrl][controlIndex].containerDesc,
+                tagName: newContainerInfo.tagName,
+                className: newContainerInfo.className,
+                id: newContainerInfo.id,
+                html: newContainerInfo.html,
+                attributes: newContainerInfo.attributes,
+                path: newContainerInfo.path,
+                xpath: newContainerInfo.xpath,
+                aicode: newContainerInfo.aicode
+              };
+              
+              // Save the updated mappings back to storage
+              chrome.storage.local.set({ fieldMappingsV2: fieldMappingsV2 }, function() {
+                console.log('Container scope change saved to storage');
+              });
+            }
+          }
+        });
+        
         // Notify of container change with serialized info
         if (onContainerChange && typeof onContainerChange === 'function') {
           onContainerChange(newContainerInfo);
@@ -295,6 +329,40 @@ const formAnalysisHighlighting = (() => {
           xpath: formAnalysisDomUtils.getElementXPath(currentContainer),
           aicode: control.aicode
         };
+        
+        // Update local storage with the new container information
+        // This ensures the change persists across page reloads
+        const currentUrl = window.location.origin;
+        chrome.storage.local.get(['fieldMappingsV2'], function(result) {
+          const fieldMappingsV2 = result.fieldMappingsV2 || {};
+          if (fieldMappingsV2[currentUrl]) {
+            // Find the matching control by id or name
+            const controlIndex = fieldMappingsV2[currentUrl].findIndex(mapping => 
+              (control.id && mapping.id === control.id) || 
+              (control.name && mapping.name === control.name)
+            );
+            
+            if (controlIndex !== -1) {
+              // Update the container information
+              fieldMappingsV2[currentUrl][controlIndex].containerDesc = {
+                ...fieldMappingsV2[currentUrl][controlIndex].containerDesc,
+                tagName: newContainerInfo.tagName,
+                className: newContainerInfo.className,
+                id: newContainerInfo.id,
+                html: newContainerInfo.html,
+                attributes: newContainerInfo.attributes,
+                path: newContainerInfo.path,
+                xpath: newContainerInfo.xpath,
+                aicode: newContainerInfo.aicode
+              };
+              
+              // Save the updated mappings back to storage
+              chrome.storage.local.set({ fieldMappingsV2: fieldMappingsV2 }, function() {
+                console.log('Container scope change saved to storage');
+              });
+            }
+          }
+        });
         
         // Notify of container change with serialized info
         if (onContainerChange && typeof onContainerChange === 'function') {
