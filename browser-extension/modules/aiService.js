@@ -214,26 +214,27 @@ const aiService = (() => {
           continue;
         }
 
-        // Check if container already has aicode
+        // Check if container already has aicode and xpath hasn't changed
         if (container.containerDesc.aicode) {
-          try {
-            // Parse existing aicode to check xpath
-            const jsonMatch = container.containerDesc.aicode.match(/```json\n([\s\S]*?)\n```/) || 
-                            container.containerDesc.aicode.match(/```([\s\S]*?)```/) || 
-                            [null, container.containerDesc.aicode];
-            const jsonContent = jsonMatch[1] || container.containerDesc.aicode;
-            const existingAiCode = JSON.parse(jsonContent);
-
-            // If xpath matches, skip this container
-            if (existingAiCode.xPath === container.containerDesc.xpath) {
-              console.log(`Skipping container ${i} - valid aicode with matching xpath exists`);
-              continue;
-            }
-            console.log(`Container ${i} has different xpath, regenerating aicode`);
-          } catch (parseError) {
-            console.error('Error parsing existing aicode:', parseError);
-            // If parsing fails, assume we need to regenerate
-          }
+          continue;
+          //try {
+          //  // Parse existing aicode to check xpath
+          //  const jsonMatch = container.containerDesc.aicode.match(/```json\n([\s\S]*?)\n```/) || 
+          //                  container.containerDesc.aicode.match(/```([\s\S]*?)```/) || 
+          //                  [null, container.containerDesc.aicode];
+          //  const jsonContent = jsonMatch[1] || container.containerDesc.aicode;
+          //  const existingAiCode = JSON.parse(jsonContent);
+          //
+          //  // If xpath matches, skip this container
+          //  if (existingAiCode.xPath === container.containerDesc.xpath) {
+          //    console.log(`Skipping container ${i} - valid aicode with matching xpath exists`);
+          //    continue;
+          //  }
+          //  console.error(`Container ${i} has different xpath, regenerating aicode`, existingAiCode.xPath, container.containerDesc.xpath);
+          //} catch (parseError) {
+          //  console.error('Error parsing existing aicode:', parseError);
+          //  // If parsing fails, assume we need to regenerate
+          //}
         }
 
         // Add a 1-second delay before making the API call
@@ -264,9 +265,14 @@ const aiService = (() => {
             const event = new CustomEvent('fm-container-changed', {
               detail: {
                 controlIndex: i,
-                newContainer: container.containerDesc,
-                containerInfo: {
-                  ...container.containerDesc,
+                newContainer: {
+                  tagName: container.containerDesc.tagName,
+                  className: container.containerDesc.className,
+                  id: container.containerDesc.id,
+                  html: container.containerDesc.html,
+                  attributes: container.containerDesc.attributes,
+                  path: container.containerDesc.path,
+                  xpath: container.containerDesc.xpath,
                   aicode: container.containerDesc.aicode
                 }
               }

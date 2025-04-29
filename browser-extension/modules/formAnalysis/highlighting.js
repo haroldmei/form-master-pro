@@ -100,20 +100,38 @@ const formAnalysisHighlighting = (() => {
   
   /**
    * Highlight a form control and add navigation UI
-   * @param {Object} control - The control info object with element and container
-   * @param {Function} onContainerChange - Callback when container changes
+   * @param {Object} control - The control object with element, container, and path information
+   * @param {Function} onContainerChange - Optional callback when container changes
    */
   function highlightFormControl(control, onContainerChange) {
-    if (!control.container) return;
+    
+    // Ensure we have the necessary container info
+    if (!control.containerXPath) {
+      console.warn('Missing container xpath in control:', control);
+      return;
+    }
+    
+    // Find the container element using xpath
+    const container = formAnalysisDomUtils.findElementByXPath(control.containerXPath);
+    console.error('1 highlightFormControl aicode', control.aicode);
+    if (!container) {
+      console.warn('Could not find container using xpath:', control.containerXPath);
+      return;
+    }
     
     // Initialize styles if not already done
     initStyles();
     
+    // Clear any existing highlights on this container
+    container.classList.remove(CONTAINER_HIGHLIGHT_CLASS);
+    container.classList.remove(CONTAINER_HIGHLIGHT_AICODE_CLASS);
+    
     // Apply the appropriate highlight class based on whether the control has aicode
-    if (control.containerDesc?.aicode) {
-      control.container.classList.add(CONTAINER_HIGHLIGHT_AICODE_CLASS);
+    console.error('2 highlightFormControl aicode', control.aicode);
+    if (control.aicode) {
+      container.classList.add(CONTAINER_HIGHLIGHT_AICODE_CLASS);
     } else {
-      control.container.classList.add(CONTAINER_HIGHLIGHT_CLASS);
+      container.classList.add(CONTAINER_HIGHLIGHT_CLASS);
     }
     
     // Add navigation buttons
@@ -125,7 +143,7 @@ const formAnalysisHighlighting = (() => {
     upButton.className = 'fm-nav-button';
     upButton.title = 'Move to parent container';
     upButton.innerHTML = '↑';
-    upButton.disabled = !control.container.parentElement || control.container.parentElement.tagName === 'BODY';
+    upButton.disabled = !container.parentElement || container.parentElement.tagName === 'BODY';
     
     // Down button (to child)
     const downButton = document.createElement('button');
@@ -134,10 +152,10 @@ const formAnalysisHighlighting = (() => {
     downButton.innerHTML = '↓';
     
     // Check if there are valid child containers
-    const childContainers = Array.from(control.container.children).filter(child => 
+    const childContainers = Array.from(container.children).filter(child => 
       child.nodeType === Node.ELEMENT_NODE && 
-      child.contains(control.element) && 
-      child !== control.element
+      child.querySelector('input, select, textarea') && 
+      child !== container
     );
     
     downButton.disabled = childContainers.length === 0;
@@ -147,13 +165,12 @@ const formAnalysisHighlighting = (() => {
     navButtonsContainer.appendChild(downButton);
     
     // Only add if not already there
-    if (!control.container.querySelector('.fm-nav-buttons')) {
-      control.container.appendChild(navButtonsContainer);
+    if (!container.querySelector('.fm-nav-buttons')) {
+      container.appendChild(navButtonsContainer);
     }
     
-    // Track the current container and original element
-    let currentContainer = control.container;
-    let originalElement = control.element;
+    // Track the current container
+    let currentContainer = container;
     
     // Up button click handler - move to parent container
     upButton.addEventListener('click', function(e) {
@@ -170,7 +187,7 @@ const formAnalysisHighlighting = (() => {
         currentContainer = currentContainer.parentElement;
         
         // Apply highlight to new container
-        if (control.containerDesc?.aicode) {
+        if (control.aicode) {
           currentContainer.classList.add(CONTAINER_HIGHLIGHT_AICODE_CLASS);
         } else {
           currentContainer.classList.add(CONTAINER_HIGHLIGHT_CLASS);
@@ -189,15 +206,30 @@ const formAnalysisHighlighting = (() => {
         const newChildContainers = Array.from(currentContainer.children).filter(child => 
           child !== navButtonsContainer &&
           child.nodeType === Node.ELEMENT_NODE && 
-          child.contains(originalElement) && 
-          child !== originalElement
+          child.querySelector('input, select, textarea') && 
+          child !== currentContainer
         );
         
         downButton.disabled = newChildContainers.length === 0;
         
-        // Notify of container change
+        // Create serialized container info
+        const newContainerInfo = {
+          tagName: currentContainer.tagName,
+          className: currentContainer.className,
+          id: currentContainer.id,
+          html: currentContainer.outerHTML,
+          attributes: Array.from(currentContainer.attributes).map(attr => ({
+            name: attr.name,
+            value: attr.value
+          })),
+          path: formAnalysisDomUtils.getElementPath(currentContainer),
+          xpath: formAnalysisDomUtils.getElementXPath(currentContainer),
+          aicode: control.aicode
+        };
+        
+        // Notify of container change with serialized info
         if (onContainerChange && typeof onContainerChange === 'function') {
-          onContainerChange(currentContainer);
+          onContainerChange(newContainerInfo);
         }
       }
     });
@@ -207,12 +239,12 @@ const formAnalysisHighlighting = (() => {
       e.preventDefault();
       e.stopPropagation();
       
-      // Find child containers that contain the original form element
+      // Find child containers that contain form elements
       const validChildren = Array.from(currentContainer.children).filter(child => 
         child !== navButtonsContainer &&
         child.nodeType === Node.ELEMENT_NODE && 
-        child.contains(originalElement) && 
-        child !== originalElement
+        child.querySelector('input, select, textarea') && 
+        child !== currentContainer
       );
       
       if (validChildren.length > 0) {
@@ -224,7 +256,7 @@ const formAnalysisHighlighting = (() => {
         currentContainer = validChildren[0];
         
         // Apply highlight to new container
-        if (control.containerDesc?.aicode) {
+        if (control.aicode) {
           currentContainer.classList.add(CONTAINER_HIGHLIGHT_AICODE_CLASS);
         } else {
           currentContainer.classList.add(CONTAINER_HIGHLIGHT_CLASS);
@@ -243,28 +275,43 @@ const formAnalysisHighlighting = (() => {
         const newChildContainers = Array.from(currentContainer.children).filter(child => 
           child !== navButtonsContainer &&
           child.nodeType === Node.ELEMENT_NODE && 
-          child.contains(originalElement) && 
-          child !== originalElement
+          child.querySelector('input, select, textarea') && 
+          child !== currentContainer
         );
         
         downButton.disabled = newChildContainers.length === 0;
         
-        // Notify of container change
+        // Create serialized container info
+        const newContainerInfo = {
+          tagName: currentContainer.tagName,
+          className: currentContainer.className,
+          id: currentContainer.id,
+          html: currentContainer.outerHTML,
+          attributes: Array.from(currentContainer.attributes).map(attr => ({
+            name: attr.name,
+            value: attr.value
+          })),
+          path: formAnalysisDomUtils.getElementPath(currentContainer),
+          xpath: formAnalysisDomUtils.getElementXPath(currentContainer),
+          aicode: control.aicode
+        };
+        
+        // Notify of container change with serialized info
         if (onContainerChange && typeof onContainerChange === 'function') {
-          onContainerChange(currentContainer);
+          onContainerChange(newContainerInfo);
         }
       }
     });
     
     // Add click event to toggle highlighting
-    control.container.addEventListener('click', function(e) {
+    container.addEventListener('click', function(e) {
       // Prevent default only if explicitly clicking the container (not a child input or button)
-      if (e.target === control.container) {
+      if (e.target === container) {
         e.preventDefault();
         e.stopPropagation();
         
         // Toggle highlight
-        if (control.containerDesc?.aicode) {
+        if (control.aicode) {
           this.classList.toggle(CONTAINER_HIGHLIGHT_AICODE_CLASS);
         } else {
           this.classList.toggle(CONTAINER_HIGHLIGHT_CLASS);

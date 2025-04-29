@@ -46,30 +46,28 @@ const formAnalysisInjected = (() => {
     document.addEventListener('fm-container-changed', function(e) {
       // Get the control from the formControls array using the provided index
       const controlIndex = e.detail.controlIndex;
+      const newContainer = e.detail.newContainer;
       
-      // Update the serializable controls when containers change
-      const updatedControls = formControls.map(control => serializeControl(control));
       
-      // Update the global serializable controls
-      FM.serializableControls = updatedControls;
-      
-      // Save updated controls to local storage using current URL as key
-      const rootUrl = window.location.origin;
-      // Use postMessage to communicate with the extension context for storage access
-      window.postMessage({
-        type: 'FM_SAVE_FIELD_MAPPINGS',
-        payload: {
-          rootUrl: rootUrl,
-          controls: updatedControls
+      if (controlIndex >= 0 && controlIndex < formControls.length) {
+        // Update the control with the new container info
+        const control = formControls[controlIndex];
+        
+        // Update the container and its properties
+        control.container = formAnalysisDomUtils.findElementByXPath(newContainer.xpath);
+        control.containerPath = newContainer.path;
+        control.containerXPath = newContainer.xpath;
+        control.aicode = newContainer.aicode;
+        
+        // Apply the highlight
+        formAnalysisHighlighting.highlightFormControl(control);
+        
+        // Log the update if in dev mode
+        if (window.FormMaster && window.FormMaster.devMode) {
+          console.log('Container updated for control:', control);
+          console.log('New container:', newContainer);
         }
-      }, '*');
-      
-      // Log the update if in dev mode
-      if (devMode) {
-        console.log('Form controls updated:', updatedControls);
-        console.log('Requested storage update for URL:', rootUrl);
       }
-
     });
     
     // Clear any existing highlights
@@ -169,6 +167,19 @@ const formAnalysisInjected = (() => {
     // Store on the FormMaster global object
     FM.serializableControls = serializableControls;
     
+    // Save to local storage using current URL as key
+    const rootUrl = window.location.origin;
+    chrome.storage.local.get(['fieldMappingsV2'], function(result) {
+      const fieldMappingsV2 = result.fieldMappingsV2 || {};
+      fieldMappingsV2[rootUrl] = serializableControls;
+      
+      chrome.storage.local.set({ fieldMappingsV2: fieldMappingsV2 }, function() {
+        if (devMode) {
+          console.log('Field mappings saved to local storage for URL:', rootUrl);
+        }
+      });
+    });
+    
     return {
       count: formControls.length,
       controls: serializableControls
@@ -213,7 +224,7 @@ const formAnalysisInjected = (() => {
         path: formAnalysisDomUtils.getElementPath(control.container),
         xpath: formAnalysisDomUtils.getElementXPath(control.container),
         // Store aicode in containerDesc
-        aicode: control.containerDesc?.aicode
+        aicode: control.aicode
       } : null
     };
   }
@@ -289,9 +300,7 @@ const formAnalysisInjected = (() => {
       const event = new CustomEvent('fm-container-changed', {
         detail: {
           controlIndex: index,
-          newContainer: control.container,
-          // Add containerInfo object with serializable details
-          containerInfo: {
+          newContainer: {
             tagName: control.container.tagName,
             className: control.container.className,
             id: control.container.id,
@@ -302,13 +311,13 @@ const formAnalysisInjected = (() => {
             })),
             path: formControls[index].containerPath,
             xpath: formControls[index].containerXPath,
-            // Keep the aicode reference when container is changed
             aicode: formControls[index].containerDesc?.aicode
           }
         }
       });
       document.dispatchEvent(event);
       
+      console.log('Container updated for control:', formControls[index]);
       // Log the container change in dev mode
       if (window.FormMaster && window.FormMaster.devMode) {
         console.log('Container updated for control:', formControls[index]);
@@ -316,15 +325,6 @@ const formAnalysisInjected = (() => {
         console.log('Container path:', formControls[index].containerPath);
         console.log('Container XPath:', formControls[index].containerXPath);
       }
-      
-      console.log('Container updated for control:', control);
-      // Now apply the highlight after AI code generation
-      formAnalysisHighlighting.highlightFormControl(control, async (newContainer) => {
-        // Update the control with the new container
-        formControls[index].container = newContainer;
-        formControls[index].containerPath = formAnalysisDomUtils.getElementPath(newContainer);
-        formControls[index].containerXPath = formAnalysisDomUtils.getElementXPath(newContainer);
-      });
     }
   }
   
