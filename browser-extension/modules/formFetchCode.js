@@ -52,21 +52,19 @@ const formFetchCode = (() => {
             // Call aiService.getAiCode to get AI-generated code for each container
             const updatedMappings = await aiService.getAiCode(fieldMappingsV2, currentUrl);
             
-            // Update the local storage with the updated mappings
-            chrome.storage.local.set({ fieldMappingsV2: updatedMappings }, () => {
-              console.log('Field mappings updated with AI-generated code');
-              
-              // Show success message
-              if (showToastCallback) {
-                showToastCallback('success', 'AI code generated successfully!');
-              }
-              
-              // Re-enable the button
-              if (fetchCodeBtn) {
-                fetchCodeBtn.disabled = false;
-                fetchCodeBtn.innerText = 'Fetch Code';
-              }
-            });
+            // aiService.getAiCode already updates storage, no need to update it again here
+            console.log('Field mappings updated with AI-generated code');
+            
+            // Show success message
+            if (showToastCallback) {
+              showToastCallback('success', 'AI code generated successfully!');
+            }
+            
+            // Re-enable the button
+            if (fetchCodeBtn) {
+              fetchCodeBtn.disabled = false;
+              fetchCodeBtn.innerText = 'Fetch Code';
+            }
           } catch (error) {
             console.error('Error fetching AI code:', error);
             

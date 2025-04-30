@@ -52,8 +52,6 @@ document.addEventListener('DOMContentLoaded', function() {
     // Use the new modular form analysis if available, otherwise fall back to legacy module
     if (typeof self.formAnalysis !== 'undefined') {
       self.formAnalysis.analyzeCurrentForm(analyzeFormBtn, showToast);
-    } else if (typeof self.formAnalysisV2 !== 'undefined') {
-      self.formAnalysisV2.analyzeCurrentForm(analyzeFormBtn, showToast);
     } else {
       showToast('Form analysis module not loaded', 'error');
     }

@@ -129,8 +129,25 @@ const formAnalysisHighlighting = (() => {
     // Apply the appropriate highlight class based on whether the control has aicode
     console.error('2 highlightFormControl aicode', control.aicode);
     if (control.aicode) {
-      container.classList.add(CONTAINER_HIGHLIGHT_AICODE_CLASS);
+      try {
+        // Parse aicode to extract the xpath
+        const aiCodeObj = typeof control.aicode === 'string' ? JSON.parse(control.aicode) : control.aicode;
+        
+        // Check if the aicode contains a valid xpath and it matches the container's xpath
+        if (aiCodeObj && aiCodeObj.xPath && aiCodeObj.xPath === control.containerXPath) {
+          // Green highlight when aicode exists and xpath matches
+          container.classList.add(CONTAINER_HIGHLIGHT_AICODE_CLASS);
+        } else {
+          // Yellow highlight when aicode exists but xpath doesn't match
+          container.classList.add(CONTAINER_HIGHLIGHT_CLASS);
+        }
+      } catch (error) {
+        // If parsing fails, use yellow highlight
+        console.error('Error parsing aicode:', error);
+        container.classList.add(CONTAINER_HIGHLIGHT_CLASS);
+      }
     } else {
+      // No aicode, use yellow highlight
       container.classList.add(CONTAINER_HIGHLIGHT_CLASS);
     }
     
@@ -188,8 +205,26 @@ const formAnalysisHighlighting = (() => {
         
         // Apply highlight to new container
         if (control.aicode) {
-          currentContainer.classList.add(CONTAINER_HIGHLIGHT_AICODE_CLASS);
+          try {
+            // Parse aicode to extract the xpath
+            const aiCodeObj = typeof control.aicode === 'string' ? JSON.parse(control.aicode) : control.aicode;
+            
+            // Check if the aicode contains a valid xpath and it matches the container's xpath
+            const currentXPath = formAnalysisDomUtils.getElementXPath(currentContainer);
+            if (aiCodeObj && aiCodeObj.xPath && aiCodeObj.xPath === currentXPath) {
+              // Green highlight when aicode exists and xpath matches
+              currentContainer.classList.add(CONTAINER_HIGHLIGHT_AICODE_CLASS);
+            } else {
+              // Yellow highlight when aicode exists but xpath doesn't match
+              currentContainer.classList.add(CONTAINER_HIGHLIGHT_CLASS);
+            }
+          } catch (error) {
+            // If parsing fails, use yellow highlight
+            console.error('Error parsing aicode in up button handler:', error);
+            currentContainer.classList.add(CONTAINER_HIGHLIGHT_CLASS);
+          }
         } else {
+          // No aicode, use yellow highlight
           currentContainer.classList.add(CONTAINER_HIGHLIGHT_CLASS);
         }
         
@@ -291,8 +326,26 @@ const formAnalysisHighlighting = (() => {
         
         // Apply highlight to new container
         if (control.aicode) {
-          currentContainer.classList.add(CONTAINER_HIGHLIGHT_AICODE_CLASS);
+          try {
+            // Parse aicode to extract the xpath
+            const aiCodeObj = typeof control.aicode === 'string' ? JSON.parse(control.aicode) : control.aicode;
+            
+            // Check if the aicode contains a valid xpath and it matches the container's xpath
+            const currentXPath = formAnalysisDomUtils.getElementXPath(currentContainer);
+            if (aiCodeObj && aiCodeObj.xPath && aiCodeObj.xPath === currentXPath) {
+              // Green highlight when aicode exists and xpath matches
+              currentContainer.classList.add(CONTAINER_HIGHLIGHT_AICODE_CLASS);
+            } else {
+              // Yellow highlight when aicode exists but xpath doesn't match
+              currentContainer.classList.add(CONTAINER_HIGHLIGHT_CLASS);
+            }
+          } catch (error) {
+            // If parsing fails, use yellow highlight
+            console.error('Error parsing aicode in down button handler:', error);
+            currentContainer.classList.add(CONTAINER_HIGHLIGHT_CLASS);
+          }
         } else {
+          // No aicode, use yellow highlight
           currentContainer.classList.add(CONTAINER_HIGHLIGHT_CLASS);
         }
         
@@ -380,8 +433,26 @@ const formAnalysisHighlighting = (() => {
         
         // Toggle highlight
         if (control.aicode) {
-          this.classList.toggle(CONTAINER_HIGHLIGHT_AICODE_CLASS);
+          try {
+            // Parse aicode to extract the xpath
+            const aiCodeObj = typeof control.aicode === 'string' ? JSON.parse(control.aicode) : control.aicode;
+            
+            // Check if the aicode contains a valid xpath and it matches the container's xpath
+            const currentXPath = formAnalysisDomUtils.getElementXPath(container);
+            if (aiCodeObj && aiCodeObj.xPath && aiCodeObj.xPath === currentXPath) {
+              // Toggle green highlight when aicode exists and xpath matches
+              this.classList.toggle(CONTAINER_HIGHLIGHT_AICODE_CLASS);
+            } else {
+              // Toggle yellow highlight when aicode exists but xpath doesn't match
+              this.classList.toggle(CONTAINER_HIGHLIGHT_CLASS);
+            }
+          } catch (error) {
+            // If parsing fails, toggle yellow highlight
+            console.error('Error parsing aicode in click handler:', error);
+            this.classList.toggle(CONTAINER_HIGHLIGHT_CLASS);
+          }
         } else {
+          // No aicode, toggle yellow highlight
           this.classList.toggle(CONTAINER_HIGHLIGHT_CLASS);
         }
       }

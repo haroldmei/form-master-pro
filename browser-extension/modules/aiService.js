@@ -254,6 +254,13 @@ const aiService = (() => {
 
             // Parse the extracted JSON content
             const aiCodeObj = JSON.parse(jsonContent);
+            
+            // Check if aiCodeObj contains multiple objects, which indicates it needs scope adjustment
+            if (Array.isArray(aiCodeObj)) {
+              console.log(`Skipping container ${i} - aiCodeObj contains multiple objects, needs container scope adjustment`);
+              continue; // Skip to the next container
+            }
+            
             // Add xPath information to the AI code
             aiCodeObj.xPath = container.containerDesc.xpath;
             // Convert back to string
