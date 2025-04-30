@@ -244,6 +244,8 @@ const aiService = (() => {
           // Generate AI code for this container
           const codeString = await generateAiCodeForContainer(container.containerDesc.html, url);
 
+          console.error('codeString', codeString);
+
           // Parse the AI code to add xPath information
           try {
             // Extract JSON content from markdown-formatted response

@@ -113,7 +113,6 @@ const formAnalysisHighlighting = (() => {
     
     // Find the container element using xpath
     const container = formAnalysisDomUtils.findElementByXPath(control.containerXPath);
-    console.error('1 highlightFormControl aicode', control.aicode);
     if (!container) {
       console.warn('Could not find container using xpath:', control.containerXPath);
       return;
@@ -127,7 +126,6 @@ const formAnalysisHighlighting = (() => {
     container.classList.remove(CONTAINER_HIGHLIGHT_AICODE_CLASS);
     
     // Apply the appropriate highlight class based on whether the control has aicode
-    console.error('2 highlightFormControl aicode', control.aicode);
     if (control.aicode) {
       try {
         // Parse aicode to extract the xpath
