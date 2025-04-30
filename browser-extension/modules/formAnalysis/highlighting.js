@@ -194,6 +194,21 @@ const formAnalysisHighlighting = (() => {
       
       // Only proceed if there's a parent and it's not the body
       if (currentContainer.parentElement && currentContainer.parentElement.tagName !== 'BODY') {
+        // Check if parent has multiple valid child containers
+        const siblingContainers = Array.from(currentContainer.parentElement.children).filter(child => 
+          child !== navButtonsContainer &&
+          child.nodeType === Node.ELEMENT_NODE && 
+          child.querySelector('input, select, textarea') && 
+          child !== currentContainer.parentElement
+        );
+        
+        // If parent has multiple valid children (more than just the current container),
+        // don't allow moving up as it would cause issues with moving back down
+        if (siblingContainers.length > 1) {
+          console.log('Parent has multiple form containers, preventing upward navigation to avoid issues');
+          return;
+        }
+        
         // Remove highlight from current container
         currentContainer.classList.remove(CONTAINER_HIGHLIGHT_CLASS);
         currentContainer.classList.remove(CONTAINER_HIGHLIGHT_AICODE_CLASS);

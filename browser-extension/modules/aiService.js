@@ -259,8 +259,8 @@ const aiService = (() => {
             
             // Check if aiCodeObj contains multiple objects, which indicates it needs scope adjustment
             if (Array.isArray(aiCodeObj)) {
-              console.log(`Skipping container ${i} - aiCodeObj contains multiple objects, needs container scope adjustment`);
-              continue; // Skip to the next container
+              console.log(`Skipping container ${i} - aiCodeObj contains multiple objects, use the first one`);
+              aiCodeObj = aiCodeObj[0];
             }
             
             // Add xPath information to the AI code
