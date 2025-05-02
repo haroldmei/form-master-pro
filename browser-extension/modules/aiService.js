@@ -268,23 +268,26 @@ const aiService = (() => {
             // Convert back to string
             container.containerDesc.aicode = JSON.stringify(aiCodeObj);
 
-            // Trigger a highlight update for this container immediately
-            const event = new CustomEvent('fm-container-changed', {
-              detail: {
-                controlIndex: i,
-                newContainer: {
-                  tagName: container.containerDesc.tagName,
-                  className: container.containerDesc.className,
-                  id: container.containerDesc.id,
-                  html: container.containerDesc.html,
-                  attributes: container.containerDesc.attributes,
-                  path: container.containerDesc.path,
-                  xpath: container.containerDesc.xpath,
-                  aicode: container.containerDesc.aicode
+            // Only try to trigger a highlight update if in a content script context (where document exists)
+            if (typeof document !== 'undefined') {
+              // Trigger a highlight update for this container immediately
+              const event = new CustomEvent('fm-container-changed', {
+                detail: {
+                  controlIndex: i,
+                  newContainer: {
+                    tagName: container.containerDesc.tagName,
+                    className: container.containerDesc.className,
+                    id: container.containerDesc.id,
+                    html: container.containerDesc.html,
+                    attributes: container.containerDesc.attributes,
+                    path: container.containerDesc.path,
+                    xpath: container.containerDesc.xpath,
+                    aicode: container.containerDesc.aicode
+                  }
                 }
-              }
-            });
-            document.dispatchEvent(event);
+              });
+              document.dispatchEvent(event);
+            }
 
             // Save to storage after updating the highlight
             await new Promise(resolve => {
