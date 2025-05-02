@@ -70,9 +70,7 @@ const formAnalysisInjected = (() => {
     
     // First try to use existing mappings if available
     if (existingMappings && existingMappings.length > 0) {
-      if (devMode) {
-        console.log('Found existing field mappings, attempting to apply stored containers', existingMappings);
-      }
+      console.log('Found existing field mappings, attempting to apply stored containers', existingMappings);
       
       existingMappings.forEach(mapping => {
         // Try to find the form element by id or name
@@ -97,9 +95,7 @@ const formAnalysisInjected = (() => {
           // Try using xpath if available and container still not found
           if (!container && mapping.containerDesc.xpath) {
             container = formAnalysisDomUtils.findElementByXPath(mapping.containerDesc.xpath);
-            if (devMode) {
-              console.log('Container lookup by XPath:', mapping.containerDesc.xpath, container); 
-            }
+            console.log('Container lookup by XPath:', mapping.containerDesc.xpath, container); 
           }
           
           // If we found the container
@@ -124,9 +120,7 @@ const formAnalysisInjected = (() => {
               formControls.push(controlInfo);
               processedElements.set(element, true);
               
-              if (devMode) {
-                console.log('Applied existing container to element:', element, container);
-              }
+              console.log('Applied existing container to element:', element, container);
             }
           }
         }
@@ -144,17 +138,13 @@ const formAnalysisInjected = (() => {
     processFormElements(textareas);
     
     // If in dev mode, add visual highlights and console output
-    if (devMode) {
-      console.group('FormMasterPro Form Analysis V2');
-      console.log(`Analyzed ${formControls.length} form controls`);
-      
-      formControls.forEach((control, index) => {
-        // Highlight the elements
-        highlightFormControl(control, index);
-      });
-      
-      console.groupEnd();
-    }
+    console.group('FormMasterPro Form Analysis V2');
+    console.log(`Analyzed ${formControls.length} form controls`);
+    formControls.forEach((control, index) => {
+      // Highlight the elements
+      highlightFormControl(control, index);
+    });
+    console.groupEnd();
     
     // Return a serializable version of the form controls
     const serializableControls = formControls.map(control => serializeControl(control));
