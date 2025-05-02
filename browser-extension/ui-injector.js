@@ -14,6 +14,47 @@
   // Check if we're in a frame - only inject in the main frame
   if (self !== self.top) return;
 
+  // Get the base URL for the current page
+  const baseUrl = window.location.origin;
+  
+  // Early check of UI injector state in local storage before doing anything else
+  chrome.storage.local.get('uiInjectorStates', function(result) {
+    console.log('Checking uiInjectorStates for', baseUrl);
+    const uiStates = result.uiInjectorStates || {};
+    
+    // If no state exists for this URL, create one with default false and exit
+    if (!(baseUrl in uiStates)) {
+      uiStates[baseUrl] = false;
+      chrome.storage.local.set({ uiInjectorStates: uiStates }, () => {
+        console.log(`Initialized UI state for ${baseUrl} to default (false)`);
+      });
+      // Only continue with message listeners - do not inject UI by default
+      setupMessageListeners();
+      return;
+    }
+    
+    // Check if UI should be shown
+    const shouldShow = uiStates[baseUrl] === true;
+    console.log(`UI state for ${baseUrl}: ${shouldShow}`);
+    
+    // Only proceed with injection if state is explicitly true
+    if (shouldShow) {
+      // Set up message listeners
+      setupMessageListeners();
+      
+      // Set up event listeners for UI injection
+      self.addEventListener('DOMContentLoaded', () => injectUI(true));
+      
+      // If page is already loaded, inject UI immediately
+      if (document.readyState === 'complete' || document.readyState === 'interactive') {
+        injectUI(true);
+      }
+    } else {
+      // If state is false, only set up message listeners without injecting UI
+      setupMessageListeners();
+    }
+  });
+
   // Add window message listener for field mappings storage
   window.addEventListener('message', function(event) {
     // Only accept messages from the same frame
@@ -33,53 +74,44 @@
     }
   });
 
-  // Listen for messages from the popup to toggle the UI
-  chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-    // Check if UI is visible
-    if (message.action === 'checkUiInjectorState') {
-      const existingUI = document.getElementById('formmaster-ui');
-      if (existingUI) {
-        // Check if the UI is visible (not display:none)
-        const isVisible = existingUI.style.display !== 'none';
-        sendResponse({ isVisible: isVisible });
-      } else {
-        // UI hasn't been injected yet
-        sendResponse({ isVisible: false });
-      }
-      return true;
-    }
-    
-    // Toggle UI
-    if (message.action === 'toggleUiInjector') {
-      // Check if the UI is already injected
-      const existingUI = document.getElementById('formmaster-ui');
-      
-      if (existingUI) {
-        // If already injected, toggle visibility based on the visible parameter
-        toggleUiVisibility(existingUI, message.visible);
-        sendResponse({ success: true, message: 'UI toggled' });
-      } else {
-        // If not yet injected, inject it and set visibility
-        injectUI();
-        const newUI = document.getElementById('formmaster-ui');
-        if (newUI && message.visible === false) {
-          // If we're supposed to hide it after injection, hide it
-          toggleUiVisibility(newUI, false);
+  function setupMessageListeners() {
+    // Listen for messages from the popup to toggle the UI
+    chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+      // Check if UI is visible
+      if (message.action === 'checkUiInjectorState') {
+        const existingUI = document.getElementById('formmaster-ui');
+        if (existingUI) {
+          // Check if the UI is visible (not display:none)
+          const isVisible = existingUI.style.display !== 'none';
+          sendResponse({ isVisible: isVisible });
+        } else {
+          // UI hasn't been injected yet
+          sendResponse({ isVisible: false });
         }
-        sendResponse({ success: true, message: 'UI injected' });
+        return true;
       }
-      return true;
-    }
-  });
-
-  // Create and inject the UI when the page is ready
-  self.addEventListener('DOMContentLoaded', injectUI);
-  
-  // If page is already loaded, inject UI immediately
-  if (document.readyState === 'complete' || document.readyState === 'interactive') {
-    injectUI();
+      
+      // Toggle UI
+      if (message.action === 'toggleUiInjector') {
+        // Check if the UI is already injected
+        const existingUI = document.getElementById('formmaster-ui');
+        
+        if (existingUI) {
+          // If already injected, toggle visibility based on the visible parameter
+          toggleUiVisibility(existingUI, message.visible);
+          sendResponse({ success: true, message: 'UI toggled' });
+        } else {
+          // If not yet injected, inject it and set visibility
+          injectUI(message.visible);
+          sendResponse({ success: true, message: 'UI injected' });
+        }
+        return true;
+      }
+    });
   }
-  
+
+  // Remove the existing listeners since they're now handled in the initial state check
+
   // Helper function to toggle UI visibility
   function toggleUiVisibility(uiContainer, visible) {
     if (!uiContainer) return;
@@ -107,7 +139,7 @@
     }
   }
   
-  function injectUI() {
+  function injectUI(showUi = true) {
     // Avoid duplicate injection
     if (document.getElementById('formmaster-ui')) return;
     
@@ -118,6 +150,11 @@
     const container = document.createElement('div');
     container.id = 'formmaster-ui';
     document.body.appendChild(container);
+    
+    // Set initial visibility based on parameter
+    if (!showUi) {
+      container.style.display = 'none';
+    }
     
     // Create shadow root
     const shadow = container.attachShadow({ mode: 'closed' });
@@ -142,7 +179,13 @@
     // Create panel for buttons
     const panel = document.createElement('div');
     panel.className = 'formmaster-panel';
-    panel.classList.add('show'); // Make panel always visible by default
+    
+    // Make panel visible or hidden based on showUi parameter
+    if (showUi) {
+      panel.classList.add('show'); // Make panel visible
+    } else {
+      panel.classList.remove('show'); // Make panel hidden
+    }
     
     // Add panel header
     const panelHeader = document.createElement('div');

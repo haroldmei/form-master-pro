@@ -1282,3 +1282,63 @@ function formatFileSize(bytes) {
 }
 
 console.log("Background script loaded in standalone mode");
+
+// Listen for tab updates to automatically show/hide UI injector based on saved preferences
+chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+  // Only run once the tab is fully loaded
+  if (changeInfo.status === 'complete' && tab.url) {
+    try {
+      // Get the base URL
+      const tabUrl = new URL(tab.url);
+      const baseUrl = tabUrl.origin;
+      
+      console.log(`Tab updated: ${baseUrl} - checking UI injector state`);
+      
+      // Get saved UI injector state for this URL
+      chrome.storage.local.get('uiInjectorStates', (result) => {
+        const uiStates = result.uiInjectorStates || {};
+        
+        // Check if this URL exists in uiInjectorStates
+        if (!(baseUrl in uiStates)) {
+          // If not existing, initialize with default value of false
+          uiStates[baseUrl] = false;
+          chrome.storage.local.set({ uiInjectorStates: uiStates }, () => {
+            console.log(`Initialized UI state for ${baseUrl} to default (false)`);
+          });
+          // Don't inject UI since default is false
+          console.log(`UI for ${baseUrl} will not be shown (default state)`);
+          return;
+        }
+        
+        const savedState = uiStates[baseUrl];
+        console.log(`Saved UI state for ${baseUrl}: ${savedState}`);
+        
+        // Only inject and show the UI if the saved state is explicitly true
+        if (savedState === true) {
+          console.log(`Auto-injecting UI for ${baseUrl} based on saved preference (true)`);
+          
+          // Inject the UI injector script
+          chrome.scripting.executeScript({
+            target: { tabId: tabId },
+            files: ['ui-injector.js']
+          }).then(() => {
+            // After injecting, send message to show the UI
+            chrome.tabs.sendMessage(tabId, { 
+              action: 'toggleUiInjector', 
+              visible: true 
+            }).catch(err => {
+              console.error('Error showing UI injector:', err);
+            });
+          }).catch(err => {
+            console.error('Error injecting UI script:', err);
+          });
+        } else {
+          console.log(`UI for ${baseUrl} will not be shown (saved state is ${savedState})`);
+        }
+      });
+    } catch (err) {
+      // Silently handle invalid URLs
+      console.warn('Error handling tab update:', err);
+    }
+  }
+});

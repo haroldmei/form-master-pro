@@ -41,23 +41,58 @@ document.addEventListener('DOMContentLoaded', function() {
     chrome.tabs.query({ active: true, currentWindow: true }, function(tabs) {
       const activeTab = tabs[0];
       if (activeTab) {
-        // Send message to check if UI is visible
-        chrome.tabs.sendMessage(activeTab.id, { action: 'checkUiInjectorState' }, function(response) {
-          // If there's no response, the injector might not be loaded yet, so default to unchecked
-          if (chrome.runtime.lastError || !response) {
-            toggleUiCheckbox.checked = false;
-            return;
-          }
+        const tabUrl = new URL(activeTab.url);
+        const baseUrl = tabUrl.origin;
+        
+        // First load saved state from storage
+        chrome.storage.local.get('uiInjectorStates', function(result) {
+          const uiStates = result.uiInjectorStates || {};
+          const savedState = uiStates[baseUrl];
           
-          // Set checkbox state based on current UI visibility
-          toggleUiCheckbox.checked = response.isVisible;
+          // Default is off (false) if no saved state exists
+          const defaultState = savedState !== undefined ? savedState : false;
+          
+          // Try to get actual UI state from the page
+          chrome.tabs.sendMessage(activeTab.id, { action: 'checkUiInjectorState' }, function(response) {
+            // If there's no response, the injector might not be loaded yet
+            if (chrome.runtime.lastError || !response) {
+              // Use the saved/default state
+              toggleUiCheckbox.checked = defaultState;
+              
+              // If the default/saved state is true, we should try to show the UI
+              if (defaultState) {
+                toggleUiInjector(true);
+              }
+              return;
+            }
+            
+            // Set checkbox state based on current UI visibility
+            toggleUiCheckbox.checked = response.isVisible;
+            
+            // Update saved state if it differs from what's in storage
+            if (response.isVisible !== savedState) {
+              saveUiInjectorState(baseUrl, response.isVisible);
+            }
+          });
         });
       }
     });
     
     // Add change event listener
     toggleUiCheckbox.addEventListener('change', function() {
-      toggleUiInjector(this.checked);
+      // Get current tab info to save state by URL
+      chrome.tabs.query({ active: true, currentWindow: true }, function(tabs) {
+        if (tabs && tabs[0]) {
+          const tabUrl = new URL(tabs[0].url);
+          const baseUrl = tabUrl.origin;
+          
+          // Save state to storage before toggling UI
+          saveUiInjectorState(baseUrl, toggleUiCheckbox.checked);
+          
+          // Toggle the UI
+          toggleUiInjector(toggleUiCheckbox.checked);
+        }
+      });
     });
   }
 
@@ -602,5 +637,16 @@ document.addEventListener('DOMContentLoaded', function() {
       console.error('Error injecting UI:', error);
       showToast('Error injecting UI: ' + error.message, 'error');
     }
+  }
+
+  // Function to save UI injector state by URL
+  function saveUiInjectorState(baseUrl, isVisible) {
+    chrome.storage.local.get('uiInjectorStates', function(result) {
+      const uiStates = result.uiInjectorStates || {};
+      uiStates[baseUrl] = isVisible;
+      chrome.storage.local.set({ uiInjectorStates: uiStates }, function() {
+        console.log(`Saved UI state for ${baseUrl}: ${isVisible}`);
+      });
+    });
   }
 });
