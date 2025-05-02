@@ -239,6 +239,58 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
   
+  if (message.action === 'analyzeCurrentForm') {
+    // This action is called by the content script to analyze form fields for highlighting
+    const tabId = sender.tab.id;
+    
+    // Execute the analysis in the sender tab
+    chrome.scripting.executeScript({
+      target: { tabId: tabId },
+      files: [
+        'modules/formAnalysis/domUtils.js',
+        'modules/formAnalysis/highlighting.js',
+        'modules/formAnalysis/containerDetection.js',
+        'modules/formAnalysis/labelDetection.js',
+        'modules/formAnalysis/injected.js'
+      ]
+    }, () => {
+      // First, check if we have existing mappings for this URL
+      const url = new URL(sender.tab.url);
+      const rootUrl = url.origin;
+      
+      chrome.storage.local.get(['fieldMappingsV2'], function(result) {
+        let existingMappings = [];
+        
+        // Check if we have mappings for this URL
+        if (result && result.fieldMappingsV2 && result.fieldMappingsV2[rootUrl]) {
+          existingMappings = result.fieldMappingsV2[rootUrl];
+          console.log('Found existing mappings for URL:', rootUrl);
+        }
+        
+        // After loading dependencies, execute the analysis
+        chrome.scripting.executeScript({
+          target: { tabId: tabId },
+          function: (params) => {
+            return window.formAnalysisInjected.performFormAnalysis(
+              params.existingMappings
+            );
+          },
+          args: [{
+            existingMappings: existingMappings
+          }]
+        }, results => {
+          // Send the response back to the content script
+          sendResponse({
+            success: true,
+            data: results && results[0] && results[0].result ? results[0].result : null
+          });
+        });
+      });
+    });
+    
+    return true; // Indicate async response
+  }
+  
   if (message.action === 'auto-fill') {
     fillFormInTab(tabId, message.url)
       .then(result => sendResponse({ success: true, ...result }))

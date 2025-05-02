@@ -3,20 +3,14 @@
  * The main entry point for form analysis functionality
  */
 const formAnalysisCore = (() => {
-  // Development mode flag
-  let devMode = true;
   
   // Form control analysis data
   let formControls = [];
   
   /**
    * Initialize the module
-   * @param {boolean} debugMode - Whether to run in debug mode
    */
-  function init(debugMode = true) {
-    devMode = debugMode;
-    console.log('Form Analysis Core initialized, debug mode:', devMode);
-    
+  function init() {    
     // Load dependencies
     if (typeof formAnalysisStorage === 'undefined') {
       console.error('Required dependency missing: formAnalysisStorage');
@@ -51,9 +45,6 @@ const formAnalysisCore = (() => {
         // Check if we have mappings for this URL
         if (result && result.fieldMappingsV2 && result.fieldMappingsV2[rootUrl]) {
           existingMappings = result.fieldMappingsV2[rootUrl];
-          if (devMode) {
-            console.log('Found existing mappings for URL:', rootUrl, existingMappings);
-          }
         }
         
         // Execute script to analyze the form in the active tab

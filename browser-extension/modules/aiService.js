@@ -244,7 +244,7 @@ const aiService = (() => {
           // Generate AI code for this container
           const codeString = await generateAiCodeForContainer(container.containerDesc.html, url);
 
-          console.error('codeString', codeString);
+          console.debug('codeString', codeString);
 
           // Parse the AI code to add xPath information
           try {
@@ -255,7 +255,7 @@ const aiService = (() => {
             const jsonContent = jsonMatch[1] || codeString;
 
             // Parse the extracted JSON content
-            const aiCodeObj = JSON.parse(jsonContent);
+            let aiCodeObj = JSON.parse(jsonContent);
             
             // Check if aiCodeObj contains multiple objects, which indicates it needs scope adjustment
             if (Array.isArray(aiCodeObj)) {
@@ -301,7 +301,7 @@ const aiService = (() => {
               });
             });
 
-            console.error('container.containerDesc.aicode', container.containerDesc.aicode);
+            console.log('container.containerDesc.aicode', container.containerDesc.aicode);
             
           } catch (parseError) {
             console.error('Error parsing AI code to add xPath:', parseError);

@@ -3,9 +3,7 @@ document.addEventListener('DOMContentLoaded', function() {
   
   // Initialize the formAnalysis module if available
   if (typeof self.formAnalysis !== 'undefined') {
-    self.formAnalysis.init({
-      devMode: true
-    });
+    self.formAnalysis.init();
     console.log('Initialized FormAnalysis module');
   }
   

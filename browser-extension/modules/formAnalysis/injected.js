@@ -56,12 +56,6 @@ const formAnalysisInjected = (() => {
         
         // Apply the highlight
         formAnalysisHighlighting.highlightFormControl(control);
-        
-        // Log the update if in dev mode
-        if (window.FormMaster && window.FormMaster.devMode) {
-          console.log('Container updated for control:', control);
-          console.log('New container:', newContainer);
-        }
       }
     });
     
@@ -159,9 +153,6 @@ const formAnalysisInjected = (() => {
       fieldMappingsV2[rootUrl] = serializableControls;
       
       chrome.storage.local.set({ fieldMappingsV2: fieldMappingsV2 }, function() {
-        if (devMode) {
-          console.log('Field mappings saved to local storage for URL:', rootUrl);
-        }
       });
     });
     
@@ -301,15 +292,7 @@ const formAnalysisInjected = (() => {
         }
       });
       document.dispatchEvent(event);
-      
       console.log('Container updated for control:', formControls[index]);
-      // Log the container change in dev mode
-      if (window.FormMaster && window.FormMaster.devMode) {
-        console.log('Container updated for control:', formControls[index]);
-        console.log('New container:', control.container);
-        console.log('Container path:', formControls[index].containerPath);
-        console.log('Container XPath:', formControls[index].containerXPath);
-      }
     }
   }
   

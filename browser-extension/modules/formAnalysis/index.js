@@ -5,23 +5,18 @@
 const formAnalysis = (() => {
   // Form control analysis data
   let formControls = [];
-  let devMode = true;
   
   /**
    * Initialize the form analysis module
    * @param {Object} options - Configuration options
    */
-  function init(options = {}) {
-    devMode = options.devMode !== undefined ? options.devMode : true;
-    
+  function init() {
     // Initialize messaging
     if (formAnalysisMessaging) {
       formAnalysisMessaging.init();
     } else {
       console.error('Messaging module not available');
     }
-    
-    console.log('Form Analysis initialized with devMode:', devMode);
   }
   
   /**
@@ -54,9 +49,6 @@ const formAnalysis = (() => {
         // Check if we have mappings for this URL
         if (result && result.fieldMappingsV2 && result.fieldMappingsV2[rootUrl]) {
           existingMappings = result.fieldMappingsV2[rootUrl];
-          if (devMode) {
-            console.log('Found existing mappings for URL:', rootUrl, existingMappings);
-          }
         }
         
         // Prepare analysis parameters
