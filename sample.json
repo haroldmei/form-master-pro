@@ -1,0 +1,111 @@
+[
+    {
+        "checked": true,
+        "containerDesc": {
+            "aicode": "{\"title\":\"SMS text notification\",\"type\":\"radio\",\"id\":\"sNotificationType\",\"options\":[\"Yes\",\"No\"],\"aicode\":\"function setValue(value) { if (value === 'Yes') { document.getElementById('sNotificationType_yes').checked = true; document.getElementById('sNotificationType').value = 'sms'; } else if (value === 'No') { document.getElementById('sNotificationType_no').checked = true; document.getElementById('sNotificationType').value = '-1'; }}\",\"xPath\":\"//*[@id=\\\"gel-main\\\"]/DIV/DIV[2]/DIV[3]/DIV[3]\"}",
+            "attributes": [
+                {
+                    "name": "class",
+                    "value": "form-group fm-container-highlight-aicode"
+                }
+            ],
+            "className": "form-group fm-container-highlight-aicode",
+            "html": "<div class=\"form-group fm-container-highlight-aicode\"><fieldset role=\"group\" aria-labelledby=\"sNotificationType-label\" aria-required=\"false\">\n\t\t\t\t<label id=\"sNotificationType-label\" class=\"col-sm-12 col-md-3\" for=\"sNotificationType\">SMS text notification:</label>\n                <legend class=\"sr-only\">SMS text notification</legend>\n                <div class=\"col-sm-12 col-md-5\">\n\t\t\t\t\t<label for=\"sNotificationType_yes\" class=\"radio\">\n\t\t\t\t\t\t<input type=\"radio\" name=\"sNotificationType\" value=\"sms\" id=\"sNotificationType_yes\" class=\"radio\" checked=\"checked\">Yes\n\t\t\t\t\t</label>\n\t\t\t\t\t<label for=\"sNotificationType_no\" class=\"radio\">\n\t\t\t\t\t\t<input type=\"radio\" name=\"sNotificationType\" value=\"-1\" id=\"sNotificationType_no\" class=\"radio\">No\n\t\t\t\t\t</label>\n\t\t\n\t\t\t\t\t<div class=\"alert alert-info\" style=\"margin: 15px 0 0;\">          \t\n\t\t\t\t\t\t<input type=\"hidden\" name=\"sNotificationType\" value=\"sms\" id=\"sNotificationType\">Would you like to receive SMS from us? If so, please provide a mobile number above\n\t\t\t\t\t</div>\t\t  \t\t\t\t\t\t\t\t\t\t\n\t\t\n\t\t\t</div>\n\t\t</fieldset><div class=\"fm-nav-buttons\"><button class=\"fm-nav-button\" title=\"Move to parent container\">↑</button><button class=\"fm-nav-button\" title=\"Move to child container\">↓</button></div></div>",
+            "id": "",
+            "path": "div#wrapper > div#main > div#mainInner > form#frmPersonalDetails > main#gel-main > div.profile-wrapper.col-md-12.col-sm-12 > div.profile-actions.col-md-10.col-sm-9.col-xs-9:nth-child(2) > div.personalDetailsSection.phoneNumbersSection:nth-child(3) > div.form-group.fm-container-highlight-aicode:nth-child(3)",
+            "tagName": "DIV",
+            "xpath": "//*[@id=\"gel-main\"]/DIV/DIV[2]/DIV[3]/DIV[3]"
+        },
+        "disabled": false,
+        "id": "sNotificationType_yes",
+        "labels": [
+            {
+                "text": "Yes",
+                "type": "explicit"
+            },
+            {
+                "text": "Yes",
+                "type": "implicit"
+            }
+        ],
+        "name": "sNotificationType",
+        "options": [
+            {
+                "selected": true,
+                "text": "Yes",
+                "value": "sms"
+            },
+            {
+                "selected": false,
+                "text": "No",
+                "value": "-1"
+            }
+        ],
+        "placeholder": "",
+        "required": false,
+        "type": "radio",
+        "value": true
+    },
+    {
+        "containerDesc": {
+            "aicode": "{\"title\":\"Title\",\"type\":\"select\",\"id\":\"sTitle\",\"options\":[\"Select\",\"Mr\",\"Ms\",\"Mrs\",\"Miss\",\"Mx\"],\"aicode\":\"function setValue(value) { var options = {'Select': '', 'Mr': 'Mr', 'Ms': 'Ms', 'Mrs': 'Mrs', 'Miss': 'Miss', 'Mx': 'Mx'}; document.getElementById('sTitle-postback').value = options[value]; document.getElementById('sTitle-edit').value = value; }\",\"xPath\":\"//*[@id=\\\"gel-main\\\"]/DIV/DIV[2]/DIV/DIV\"}",
+            "attributes": [
+                {
+                    "name": "class",
+                    "value": "form-group fm-container-highlight-aicode"
+                }
+            ],
+            "className": "form-group fm-container-highlight-aicode",
+            "html": "<div class=\"form-group fm-container-highlight-aicode\">\n\t\t <label id=\"sTitle_label\" class=\"col-sm-12 col-md-3\" for=\"sTitle\">Title*<br><i>(Select Mx if you don't identify with any of the other choices)</i>:</label>\n\t\t <span class=\"col-sm-12 col-md-5\"><div id=\"sTitle\" class=\"input-group cb pu-select\">\n<input autocomplete=\"off\" id=\"sTitle-edit\" class=\"sTitle_edit form-control dropdownEdit\" type=\"text\" tabindex=\"0\" role=\"combobox\" aria-labelledby=\"sTitle_label\" aria-activedescendant=\"sTitle--ID\" aria-autocomplete=\"both\" aria-owns=\"sTitle-list\" aria-expanded=\"false\" aria-describedby=\"sTitle-current-value\" onfocus=\"this.value=''\" aria-controls=\"sTitle-list\" aria-required=\"false\">\n<div id=\"sTitle-button-label\" class=\"hidden\">Open list</div><span class=\"input-group-btn\"><button id=\"sTitle-button\" aria-labelledby=\"sTitle-button-label\" aria-controls=\"sTitle-list\" tabindex=\"-1\" class=\"btn\" type=\"button\"><span class=\"caret\"></span></button></span>\n<input type=\"hidden\" name=\"sTitle\" id=\"sTitle-postback\" class=\"hidden dropdownvalue\" value=\"\">\n<span id=\"sTitle-current-value\" class=\"sr-only\"></span>\n<ul id=\"sTitle-list\" class=\"cb_list\" tabindex=\"-1\" role=\"listbox\" aria-expanded=\"false\" style=\"display: none;\">\n  <li role=\"option\" id=\"sTitle--ID\" data-value=\"\" class=\"cb_option selected\">Select</li>\n  <li role=\"option\" id=\"sTitle-Mr-ID\" data-value=\"Mr\" class=\"cb_option\">Mr</li>\n  <li role=\"option\" id=\"sTitle-Ms-ID\" data-value=\"Ms\" class=\"cb_option\">Ms</li>\n  <li role=\"option\" id=\"sTitle-Mrs-ID\" data-value=\"Mrs\" class=\"cb_option\">Mrs</li>\n  <li role=\"option\" id=\"sTitle-Miss-ID\" data-value=\"Miss\" class=\"cb_option\">Miss</li>\n  <li role=\"option\" id=\"sTitle-Mx-ID\" data-value=\"Mx\" class=\"cb_option\">Mx</li>\n</ul>\n</div>\n</span>\n\t   <div class=\"fm-nav-buttons\"><button class=\"fm-nav-button\" title=\"Move to parent container\">↑</button><button class=\"fm-nav-button\" title=\"Move to child container\">↓</button></div></div>",
+            "id": "",
+            "path": "div#wrapper > div#main > div#mainInner > form#frmPersonalDetails > main#gel-main > div.profile-wrapper.col-md-12.col-sm-12 > div.profile-actions.col-md-10.col-sm-9.col-xs-9:nth-child(2) > div.personalDetailsSection > div.form-group.fm-container-highlight-aicode",
+            "tagName": "DIV",
+            "xpath": "//*[@id=\"gel-main\"]/DIV/DIV[2]/DIV/DIV"
+        },
+        "disabled": false,
+        "id": "sTitle-edit",
+        "labels": [
+            {
+                "text": "Title*(Select Mx if you don't identify with any of the other choices):",
+                "type": "aria-labelledby"
+            }
+        ],
+        "name": "",
+        "options": [],
+        "placeholder": "",
+        "required": false,
+        "type": "text",
+        "value": "Select"
+    },
+    {
+        "containerDesc": {
+            "aicode": "{\"title\":\"First name\",\"type\":\"text\",\"id\":\"sFName\",\"options\":[],\"aicode\":\"function setValue(value) { document.getElementById('sFName').value = value; }\",\"xPath\":\"//*[@id=\\\"gel-main\\\"]/DIV/DIV[2]/DIV/DIV[2]\"}",
+            "attributes": [
+                {
+                    "name": "class",
+                    "value": "form-group fm-container-highlight-aicode"
+                }
+            ],
+            "className": "form-group fm-container-highlight-aicode",
+            "html": "<div class=\"form-group fm-container-highlight-aicode\">\n\t\t                <label class=\"col-sm-12 col-md-3\" for=\"sFName\">First name*<br><i>(As stated on legal documents)</i>:<span class=\"asterisk\" aria-hidden=\"true\">*</span></label>\n\t\t                <span class=\"col-sm-12 col-md-5\"><input type=\"text\" name=\"sFName\" size=\"11\" maxlength=\"50\" id=\"sFName\" autocomplete=\"given-name\" aria-required=\"true\"></span>\n\t                <div class=\"fm-nav-buttons\"><button class=\"fm-nav-button\" title=\"Move to parent container\">↑</button><button class=\"fm-nav-button\" title=\"Move to child container\">↓</button></div></div>",
+            "id": "",
+            "path": "div#wrapper > div#main > div#mainInner > form#frmPersonalDetails > main#gel-main > div.profile-wrapper.col-md-12.col-sm-12 > div.profile-actions.col-md-10.col-sm-9.col-xs-9:nth-child(2) > div.personalDetailsSection > div.form-group.fm-container-highlight-aicode:nth-child(2)",
+            "tagName": "DIV",
+            "xpath": "//*[@id=\"gel-main\"]/DIV/DIV[2]/DIV/DIV[2]"
+        },
+        "disabled": false,
+        "id": "sFName",
+        "labels": [
+            {
+                "text": "First name*(As stated on legal documents):*",
+                "type": "explicit"
+            }
+        ],
+        "name": "sFName",
+        "options": [],
+        "placeholder": "",
+        "required": false,
+        "type": "text",
+        "value": ""
+    }
+]

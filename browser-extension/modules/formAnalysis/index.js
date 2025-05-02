@@ -61,11 +61,6 @@ const formAnalysis = (() => {
         
         // Prepare analysis parameters
         const params = {
-          devMode,
-          containerClass: 'fm-container-highlight',
-          labelClass: 'fm-label-highlight',
-          optionClass: 'fm-option-highlight',
-          inputClass: 'fm-input-highlight',
           existingMappings
         };
         
@@ -107,11 +102,6 @@ const formAnalysis = (() => {
               function: (params) => {
                 if (window.formAnalysisInjected) {
                   return window.formAnalysisInjected.performFormAnalysis(
-                    params.devMode, 
-                    params.containerClass, 
-                    params.labelClass, 
-                    params.optionClass, 
-                    params.inputClass, 
                     params.existingMappings
                   );
                 }

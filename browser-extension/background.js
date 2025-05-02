@@ -81,11 +81,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         target: { tabId: sender.tab.id },
         function: (params) => {
           return window.formAnalysisInjected.performFormAnalysis(
-            params.devMode, 
-            params.containerClass, 
-            params.labelClass, 
-            params.optionClass, 
-            params.inputClass, 
             params.existingMappings
           );
         },

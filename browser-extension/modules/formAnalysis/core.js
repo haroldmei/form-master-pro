@@ -72,20 +72,10 @@ const formAnalysisCore = (() => {
             target: { tabId: tabs[0].id },
             function: (params) => {
               return window.formAnalysisInjected.performFormAnalysis(
-                params.devMode, 
-                params.containerClass, 
-                params.labelClass, 
-                params.optionClass, 
-                params.inputClass, 
                 params.existingMappings
               );
             },
             args: [{
-              devMode,
-              containerClass: 'fm-container-highlight',
-              labelClass: 'fm-label-highlight',
-              optionClass: 'fm-option-highlight',
-              inputClass: 'fm-input-highlight',
               existingMappings
             }]
           }, results => {

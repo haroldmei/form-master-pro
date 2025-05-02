@@ -11,15 +11,10 @@ const formAnalysisInjected = (() => {
   
   /**
    * Perform form analysis on the current page
-   * @param {boolean} devMode - Whether to run in development mode with debugging
-   * @param {string} containerClass - CSS class for container highlights
-   * @param {string} labelClass - CSS class for label highlights
-   * @param {string} optionClass - CSS class for option highlights
-   * @param {string} inputClass - CSS class for input highlights
    * @param {Array} existingMappings - Existing mappings from storage
    * @returns {Object} Analysis results with control count and data
    */
-  function performFormAnalysis(devMode, containerClass, labelClass, optionClass, inputClass, existingMappings = []) {
+  function performFormAnalysis(existingMappings = []) {
     // Check for dependencies
     if (!formAnalysisHighlighting || !formAnalysisLabels || 
         !formAnalysisContainers || !formAnalysisDomUtils) {
