@@ -7,16 +7,6 @@ document.addEventListener('DOMContentLoaded', function() {
     console.log('Initialized FormAnalysis module');
   }
   
-  // Helper function to safely add event listeners
-  function addSafeEventListener(id, event, handler) {
-    const element = document.getElementById(id);
-    if (element) {
-      element.addEventListener(event, handler);
-    } else {
-      console.warn(`Element with ID "${id}" not found in the DOM`);
-    }
-  }
-  
   // Auth-related elements
   const loginButton = document.getElementById('login-button');
   const logoutButton = document.getElementById('logout-button');
@@ -26,8 +16,8 @@ document.addEventListener('DOMContentLoaded', function() {
   const userPicture = document.getElementById('user-picture');
 
   // Button elements
-  const analyzeFormBtn = document.getElementById('analyze-form');
-  const fetchCodeBtn = document.getElementById('fetch-code');
+  const toggleUiCheckbox = document.getElementById('toggle-ui-injector');
+  
   // Email verification elements
   const verificationAlert = document.getElementById('verification-alert');
   const resendVerificationBtn = document.getElementById('resend-verification');
@@ -45,20 +35,31 @@ document.addEventListener('DOMContentLoaded', function() {
   if (loginButton) loginButton.addEventListener('click', login);
   if (logoutButton) logoutButton.addEventListener('click', logout);
 
-  // Set up event listeners
-  addSafeEventListener('analyze-form', 'click', function() {
-    // Use the new modular form analysis if available, otherwise fall back to legacy module
-    if (typeof self.formAnalysis !== 'undefined') {
-      self.formAnalysis.analyzeCurrentForm(analyzeFormBtn, showToast);
-    } else {
-      showToast('Form analysis module not loaded', 'error');
-    }
-  });
-  addSafeEventListener('fetch-code', 'click', function() {
-    // Call the formFetchCode module's fetchCode function
-    self.formFetchCode.fetchCode(fetchCodeBtn, showToast);
-  });
-  addSafeEventListener('clear-data', 'click', clearSavedData);
+  // Set up UI toggle checkbox event listener and initialize state
+  if (toggleUiCheckbox) {
+    // Check current state when popup opens
+    chrome.tabs.query({ active: true, currentWindow: true }, function(tabs) {
+      const activeTab = tabs[0];
+      if (activeTab) {
+        // Send message to check if UI is visible
+        chrome.tabs.sendMessage(activeTab.id, { action: 'checkUiInjectorState' }, function(response) {
+          // If there's no response, the injector might not be loaded yet, so default to unchecked
+          if (chrome.runtime.lastError || !response) {
+            toggleUiCheckbox.checked = false;
+            return;
+          }
+          
+          // Set checkbox state based on current UI visibility
+          toggleUiCheckbox.checked = response.isVisible;
+        });
+      }
+    });
+    
+    // Add change event listener
+    toggleUiCheckbox.addEventListener('change', function() {
+      toggleUiInjector(this.checked);
+    });
+  }
 
   // Add verification-related event listeners
   if (resendVerificationBtn) resendVerificationBtn.addEventListener('click', resendVerificationEmail);
@@ -306,20 +307,13 @@ document.addEventListener('DOMContentLoaded', function() {
 
   // Enable/disable form features based on auth state and verification
   function enableFormFeatures(enabled) {
-    // Update to handle all form-related buttons
-    if (analyzeFormBtn) analyzeFormBtn.disabled = !enabled;
-    
-    // Add any other buttons that require authentication
-    const buttons = [analyzeFormBtn]; // Add other form buttons here
-    
-    buttons.forEach(button => {
-      if (button) {
-        button.disabled = !enabled;
-        if (!enabled && button.title) {
-          button.title = 'Email verification required';
-        }
+    // Toggle UI button requires authentication
+    if (toggleUiCheckbox) {
+      toggleUiCheckbox.disabled = !enabled;
+      if (!enabled && toggleUiCheckbox.title) {
+        toggleUiCheckbox.title = 'Email verification required';
       }
-    });
+    }
   }
 
   // Helper function to show toast messages
@@ -468,6 +462,7 @@ document.addEventListener('DOMContentLoaded', function() {
       console.error('Error checking subscription status:', error);
       subscriptionStatus.textContent = 'Unknown';
       subscriptionStatus.className = 'subscription-badge subscription-inactive';
+      subscriptionLink.textContent = 'Upgrade';
       subscriptionLink.classList.remove('hidden');
       
       // Hide expiry element on error
@@ -526,21 +521,86 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   }
 
-  // Function to clear saved data
-  async function clearSavedData() {
+  // Function to toggle the UI injector in the active tab
+  async function toggleUiInjector(checked) {
     try {
-      // Use the new Storage module if available, otherwise fall back to direct calls
-      if (typeof self.formAnalysis !== 'undefined' && self.formAnalysis.storage) {
-        await self.formAnalysis.storage.clearAll();
-        showToast('All saved form data has been cleared', 'success');
-      } else {
-        // Legacy approach
-        await chrome.storage.local.clear();
-        showToast('All saved form data has been cleared', 'success');
+      // First check if user is verified
+      const isVerified = await checkEmailVerification(false);
+      if (!isVerified) {
+        showToast('Email verification required to use this feature', 'warning');
+        return;
+      }
+      
+      // Get the current active tab
+      const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+      const activeTab = tabs[0];
+      
+      if (!activeTab) {
+        showToast('No active tab found', 'error');
+        return;
+      }
+      
+      // Disable checkbox while processing
+      if (toggleUiCheckbox) {
+        toggleUiCheckbox.disabled = true;
+        
+        // Send message to the tab to toggle the UI injector
+        chrome.tabs.sendMessage(activeTab.id, { action: 'toggleUiInjector', visible: checked }, (response) => {
+          // Re-enable checkbox
+          toggleUiCheckbox.disabled = false;
+          
+          // Handle response
+          if (chrome.runtime.lastError) {
+            console.error('Error toggling UI injector:', chrome.runtime.lastError);
+            // The injector might not be ready yet, try to inject it first
+            injectUiInjector(activeTab.id, checked);
+          } else if (response && response.success) {
+            // Show appropriate message based on whether we're showing or hiding the UI
+            const actionText = checked ? 'shown' : 'hidden';
+            showToast(`In-page tools ${actionText} successfully`, 'success');
+            
+            // Ensure checkbox state is still consistent with what we requested
+            toggleUiCheckbox.checked = checked;
+          } else {
+            // If no response or error response, try to inject the injector first
+            injectUiInjector(activeTab.id, checked);
+          }
+        });
       }
     } catch (error) {
-      console.error('Error clearing data:', error);
-      showToast('Error clearing saved data', 'error');
+      console.error('Error toggling UI injector:', error);
+      showToast('Error toggling UI: ' + error.message, 'error');
+    }
+  }
+  
+  // Helper function to inject the UI injector if it's not already there
+  async function injectUiInjector(tabId, visible) {
+    try {
+      // Inject the UI injector script if it's not already there
+      await chrome.scripting.executeScript({
+        target: { tabId: tabId },
+        files: ['ui-injector.js']
+      });
+      
+      // After injecting, send the toggle message again
+      chrome.tabs.sendMessage(tabId, { action: 'toggleUiInjector', visible: visible }, (response) => {
+        if (chrome.runtime.lastError) {
+          console.error('Failed to toggle UI after injection:', chrome.runtime.lastError);
+          showToast('Unable to toggle UI in this page', 'error');
+        } else {
+          // Show appropriate message based on whether we're showing or hiding the UI
+          const actionText = visible ? 'shown' : 'hidden';
+          showToast(`In-page tools ${actionText} successfully`, 'success');
+          
+          // Ensure checkbox state matches the UI visibility
+          if (toggleUiCheckbox) {
+            toggleUiCheckbox.checked = visible;
+          }
+        }
+      });
+    } catch (error) {
+      console.error('Error injecting UI:', error);
+      showToast('Error injecting UI: ' + error.message, 'error');
     }
   }
 });

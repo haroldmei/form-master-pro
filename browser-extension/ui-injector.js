@@ -33,12 +33,78 @@
     }
   });
 
+  // Listen for messages from the popup to toggle the UI
+  chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+    // Check if UI is visible
+    if (message.action === 'checkUiInjectorState') {
+      const existingUI = document.getElementById('formmaster-ui');
+      if (existingUI) {
+        // Check if the UI is visible (not display:none)
+        const isVisible = existingUI.style.display !== 'none';
+        sendResponse({ isVisible: isVisible });
+      } else {
+        // UI hasn't been injected yet
+        sendResponse({ isVisible: false });
+      }
+      return true;
+    }
+    
+    // Toggle UI
+    if (message.action === 'toggleUiInjector') {
+      // Check if the UI is already injected
+      const existingUI = document.getElementById('formmaster-ui');
+      
+      if (existingUI) {
+        // If already injected, toggle visibility based on the visible parameter
+        toggleUiVisibility(existingUI, message.visible);
+        sendResponse({ success: true, message: 'UI toggled' });
+      } else {
+        // If not yet injected, inject it and set visibility
+        injectUI();
+        const newUI = document.getElementById('formmaster-ui');
+        if (newUI && message.visible === false) {
+          // If we're supposed to hide it after injection, hide it
+          toggleUiVisibility(newUI, false);
+        }
+        sendResponse({ success: true, message: 'UI injected' });
+      }
+      return true;
+    }
+  });
+
   // Create and inject the UI when the page is ready
   self.addEventListener('DOMContentLoaded', injectUI);
   
   // If page is already loaded, inject UI immediately
   if (document.readyState === 'complete' || document.readyState === 'interactive') {
     injectUI();
+  }
+  
+  // Helper function to toggle UI visibility
+  function toggleUiVisibility(uiContainer, visible) {
+    if (!uiContainer) return;
+    
+    // If visible parameter is provided, use it; otherwise toggle
+    if (typeof visible === 'boolean') {
+      uiContainer.style.display = visible ? 'block' : 'none';
+    } else {
+      // Toggle visibility
+      const isVisible = uiContainer.style.display !== 'none';
+      uiContainer.style.display = isVisible ? 'none' : 'block';
+    }
+    
+    // Show/hide the panel directly
+    const panel = uiContainer.shadowRoot?.querySelector('.formmaster-panel');
+    
+    if (panel) {
+      if (uiContainer.style.display !== 'none') {
+        // If the container is visible, show the panel
+        panel.classList.add('show');
+      } else {
+        // If the container is hidden, hide the panel
+        panel.classList.remove('show');
+      }
+    }
   }
   
   function injectUI() {
@@ -62,28 +128,26 @@
     // Create the main container
     const mainContainer = document.createElement('div');
     mainContainer.className = 'formmaster-container';
+    // Add styles to make it draggable and properly positioned
+    mainContainer.style.position = 'fixed';
+    mainContainer.style.bottom = '20px';
+    mainContainer.style.right = '20px';
+    mainContainer.style.zIndex = '9999';
+    mainContainer.style.userSelect = 'none';
     
-    // Create toggle button
-    const toggleButton = document.createElement('div');
-    toggleButton.className = 'formmaster-toggle';
-    toggleButton.textContent = 'FM';
-    toggleButton.title = `FormMasterPro v${VERSION}`;
-    
-    // Change from hover to click toggle
-    toggleButton.addEventListener('click', togglePanel);
+    // Track dragging state
+    let isDragging = false;
+    let dragOffsetX, dragOffsetY;
     
     // Create panel for buttons
     const panel = document.createElement('div');
     panel.className = 'formmaster-panel';
-    
-    // Prevent panel clicks from closing the panel
-    panel.addEventListener('click', (e) => {
-      e.stopPropagation();
-    });
+    panel.classList.add('show'); // Make panel always visible by default
     
     // Add panel header
     const panelHeader = document.createElement('div');
     panelHeader.className = 'panel-header';
+    panelHeader.style.cursor = 'move'; // Show move cursor on header
     
     const panelTitle = document.createElement('div');
     panelTitle.className = 'panel-title';
@@ -97,6 +161,9 @@
     panelHeader.appendChild(panelVersion);
     panel.appendChild(panelHeader);
     
+    // Make the header draggable
+    panelHeader.addEventListener('mousedown', startDrag);
+    
     // Add buttons to panel
     const buttons = [
       { id: 'load-data', text: 'Load File', icon: '📂' }
@@ -109,6 +176,11 @@
     
     // Add Auto Fill button (always visible)
     buttons.push({ id: 'auto-fill', text: 'Auto Fill', icon: '✏️' });
+    
+    // Add the three buttons from popup.html
+    buttons.push({ id: 'analyze-form', text: 'Analyze Current Form', icon: '🔍' });
+    buttons.push({ id: 'fetch-code', text: 'Fetch Code', icon: '💻' });
+    buttons.push({ id: 'clear-data', text: 'Clear Saved Data', icon: '🗑️' });
     
     // Do not add Click-to-Fill button as it's now enabled by default
     
@@ -160,7 +232,6 @@
     
     // Add all elements to the shadow DOM
     mainContainer.appendChild(panel);
-    mainContainer.appendChild(toggleButton);
     shadow.appendChild(mainContainer);
     
     // Create toast element for notifications
@@ -168,19 +239,12 @@
     toast.className = 'formmaster-toast';
     shadow.appendChild(toast);
     
-    // Add document click handler to close panel when clicking outside
-    document.addEventListener('click', (e) => {
-      // Close panel if it's open and the click is outside the panel
-      if (panel.classList.contains('show') && e.target !== toggleButton) {
-        panel.classList.remove('show');
-        toggleButton.classList.remove('active');
-      }
-    });
+    // Remove document click handler that closes panel when clicking outside
+    // Only the toggle button will now control the panel visibility
     
-    // Prevent clicks on the container from closing the panel
-    mainContainer.addEventListener('click', (e) => {
-      e.stopPropagation();
-    });
+    // Add drag event handlers to document
+    document.addEventListener('mousemove', onDrag);
+    document.addEventListener('mouseup', stopDrag);
     
     // Helper function to load CSS from external file
     function loadCSS(shadowRoot) {
@@ -189,30 +253,107 @@
       link.type = 'text/css';
       link.href = chrome.runtime.getURL('styles/injector-ui.css');
       shadowRoot.appendChild(link);
+      
+      // Add additional styles for draggable behavior and panel without FM button
+      const style = document.createElement('style');
+      style.textContent = `
+        .formmaster-container {
+          transition: none;
+          margin-bottom: 10px;  /* Add margin at bottom */
+        }
+        .formmaster-container.dragging {
+          opacity: 0.8;
+        }
+        .formmaster-panel {
+          position: relative;
+          opacity: 1;
+          transform: none;
+          pointer-events: auto;
+          display: block;
+          border-radius: 8px;
+          box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+          margin-bottom: 0;
+        }
+        .formmaster-panel.show {
+          opacity: 1;
+          visibility: visible;
+          transform: none;
+          pointer-events: auto;
+        }
+        .panel-header {
+          cursor: move;
+          background-color: #4285f4;
+          color: white;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding: 8px 12px;
+          border-top-left-radius: 8px;
+          border-top-right-radius: 8px;
+        }
+        /* Add a subtle indicator that the panel can be moved */
+        .panel-header:before {
+          content: "≡ ";
+          opacity: 0.7;
+          margin-right: 5px;
+        }
+      `;
+      shadowRoot.appendChild(style);
     }
     
-    // Replace hover functions with toggle function
-    function togglePanel(e) {
-      e.stopPropagation(); // Prevent document click handler from firing
+    // Drag handler functions
+    function startDrag(e) {
+      // Only start drag on left mouse button
+      if (e.button !== 0) return;
       
-      if (panel.classList.contains('show')) {
-        // Hide panel
-        panel.classList.remove('show');
-        toggleButton.classList.remove('active');
-      } else {
-        // Show panel
-        panel.classList.add('show');
-        toggleButton.classList.add('active');
-        loadProfileInfo();
-        
-        // Reset animation for panel border glow
-        panel.style.animation = 'none';
-        panel.offsetHeight; // Trigger reflow
-        panel.style.animation = null;
+      e.preventDefault();
+      e.stopPropagation();
+      
+      // Calculate offset from the click position to the top-left corner of the container
+      const rect = mainContainer.getBoundingClientRect();
+      dragOffsetX = e.clientX - rect.left;
+      dragOffsetY = e.clientY - rect.top;
+      
+      isDragging = true;
+      mainContainer.classList.add('dragging');
+    }
+    
+    function onDrag(e) {
+      if (!isDragging) return;
+      
+      e.preventDefault();
+      
+      // Calculate new position
+      const x = e.clientX - dragOffsetX;
+      const y = e.clientY - dragOffsetY;
+      
+      // Ensure the menu stays within viewport bounds
+      const maxX = window.innerWidth - mainContainer.offsetWidth;
+      const maxY = window.innerHeight - mainContainer.offsetHeight;
+      
+      // When dragging starts, convert from bottom positioning to top positioning
+      if (mainContainer.style.bottom && !mainContainer.style.top) {
+        // Calculate equivalent top position from bottom
+        const currentBottom = parseInt(mainContainer.style.bottom, 10) || 20;
+        mainContainer.style.top = `${window.innerHeight - currentBottom - mainContainer.offsetHeight}px`;
+        mainContainer.style.bottom = 'auto';
+      }
+      
+      // Set position using top/left coordinates
+      mainContainer.style.left = `${Math.max(0, Math.min(x, maxX))}px`;
+      mainContainer.style.top = `${Math.max(0, Math.min(y, maxY))}px`;
+      
+      // When dragging, use left/top positioning
+      mainContainer.style.right = 'auto';
+      mainContainer.style.bottom = 'auto';
+    }
+    
+    function stopDrag() {
+      if (isDragging) {
+        isDragging = false;
+        mainContainer.classList.remove('dragging');
       }
     }
-    
-    // Remove the showPanel and hidePanel functions as they're replaced by togglePanel
     
     function handleButtonClick(action, buttonElement) {
       // Don't proceed if an API call is already in progress
@@ -233,6 +374,40 @@
         
         // Send message to clear suggestions data
         chrome.runtime.sendMessage({ action: 'clearSuggestions' }, function(response) {
+          // Attempt to clear all saved form data (local storage)
+          chrome.storage.local.get('fieldMappingsV2', function(result) {
+            // Keep auth state but clear form mappings
+            chrome.storage.local.set({ fieldMappingsV2: {} }, function() {
+              // Reset button state
+              buttonElement.classList.remove('loading');
+              buttonElement.disabled = false;
+              buttonElement.innerHTML = originalHTML;
+              setToggleBusy(false);
+              
+              showToast('All saved form data has been cleared', 'success');
+            });
+          });
+        });
+        return;
+      }
+      
+      // Handle analyze form action
+      if (action === 'analyze-form') {
+        // Store original HTML before showing loading state
+        const originalHTML = buttonElement.innerHTML;
+        
+        // Show loading state
+        buttonElement.classList.add('loading');
+        buttonElement.disabled = true;
+        buttonElement.textContent = 'Analyzing...';
+        setToggleBusy(true);
+        
+        // Send message to background script to analyze the form
+        // Use window.location instead of chrome.tabs which isn't available in content scripts
+        chrome.runtime.sendMessage({ 
+          action: 'analyzeFormInTab',
+          url: window.location.href
+        }, function(response) {
           // Reset button state
           buttonElement.classList.remove('loading');
           buttonElement.disabled = false;
@@ -240,11 +415,46 @@
           setToggleBusy(false);
           
           if (response && response.success) {
-            showToast('Form data cleared successfully', 'success');
+            const count = response.count || 0;
+            showToast(`Analyzed ${count} form controls`, 'success');
           } else {
-            showToast(response?.error || 'Error clearing form data', 'error');
+            showToast(response?.error || 'No form controls detected or error analyzing form', 'error');
           }
         });
+        
+        return;
+      }
+      
+      // Handle fetch code action
+      if (action === 'fetch-code') {
+        // Store original HTML before showing loading state
+        const originalHTML = buttonElement.innerHTML;
+        
+        // Show loading state
+        buttonElement.classList.add('loading');
+        buttonElement.disabled = true;
+        buttonElement.textContent = 'Processing...';
+        setToggleBusy(true);
+        
+        // Send message to background script to fetch AI code
+        // Use window.location instead of chrome.tabs
+        chrome.runtime.sendMessage({ 
+          action: 'fetchAiCode',
+          url: window.location.origin
+        }, function(response) {
+          // Reset button state
+          buttonElement.classList.remove('loading');
+          buttonElement.disabled = false;
+          buttonElement.innerHTML = originalHTML;
+          setToggleBusy(false);
+          
+          if (response && response.success) {
+            showToast('AI code generated successfully!', 'success');
+          } else {
+            showToast(response?.error || 'Error generating code', 'error');
+          }
+        });
+        
         return;
       }
       
@@ -403,32 +613,9 @@
     // Helper function to set the toggle button to busy/loading state
     function setToggleBusy(isBusy) {
       if (isBusy) {
-        toggleButton.classList.add('fm-loading');
-        
-        // Store original text
-        if (!toggleButton.dataset.originalText) {
-          toggleButton.dataset.originalText = toggleButton.textContent;
-        }
-        
-        // Create spinner element if it doesn't exist
-        if (!toggleButton.querySelector('.fm-spinner')) {
-          const spinner = document.createElement('div');
-          spinner.className = 'fm-spinner';
-          toggleButton.textContent = '';
-          toggleButton.appendChild(spinner);
-        }
-        
-        // Set the busy flag to prevent concurrent operations
+        // Store the busy flag to prevent concurrent operations
         isApiCallInProgress = true;
       } else {
-        toggleButton.classList.remove('fm-loading');
-        
-        // Restore original text
-        if (toggleButton.dataset.originalText) {
-          toggleButton.textContent = toggleButton.dataset.originalText;
-          delete toggleButton.dataset.originalText;
-        }
-        
         // Remove loading state
         isApiCallInProgress = false;
       }

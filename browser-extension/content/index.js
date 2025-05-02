@@ -105,7 +105,7 @@
           }
           
           // Show initial field highlights
-          FM.showInitialFieldHighlights();
+          //FM.showInitialFieldHighlights();
         } else {
           console.warn("No form values available for click-to-fill");
           
@@ -115,7 +115,7 @@
           }
           
           // Still show initial field highlights
-          FM.showInitialFieldHighlights();
+          //FM.showInitialFieldHighlights();
         }
       });
     }, 1000);

@@ -381,7 +381,19 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   
   if (message.action === 'clearSuggestions') {
     formProcessor.clearSuggestions()
-      .then(result => sendResponse(result))
+      .then(result => {
+        // Also clear field mappings when clearing suggestions
+        chrome.storage.local.get(['fieldMappingsV2'], function(mappingsResult) {
+          // Keep the fieldMappingsV2 structure but clear all mappings
+          chrome.storage.local.set({ fieldMappingsV2: {} }, function() {
+            console.log('All field mappings cleared');
+            sendResponse({
+              success: true,
+              message: 'All form mappings and suggestions cleared'
+            });
+          });
+        });
+      })
       .catch(error => sendResponse({ success: false, error: error.message }));
     return true;
   }
@@ -597,6 +609,155 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         sendResponse({ error: error.message });
       });
     return true; // Keep the message channel open for async response
+  }
+
+  // New handler for analyzeFormInTab
+  if (message.action === 'analyzeFormInTab') {
+    const tabId = sender.tab.id;
+    const url = message.url;
+    
+    if (!tabId) {
+      sendResponse({ success: false, error: 'No tab ID available' });
+      return false;
+    }
+    
+    const rootUrl = new URL(url).origin;
+    
+    // Load any existing mappings
+    chrome.storage.local.get(['fieldMappingsV2'], function(result) {
+      let existingMappings = [];
+      
+      // Check if we have mappings for this URL
+      if (result && result.fieldMappingsV2 && result.fieldMappingsV2[rootUrl]) {
+        existingMappings = result.fieldMappingsV2[rootUrl];
+      }
+      
+      // Execute form analysis scripts in the tab
+      chrome.scripting.executeScript({
+        target: { tabId: tabId },
+        files: [
+          'modules/formAnalysis/domUtils.js',
+          'modules/formAnalysis/highlighting.js',
+          'modules/formAnalysis/containerDetection.js',
+          'modules/formAnalysis/labelDetection.js',
+          'modules/formAnalysis/injected.js'
+        ]
+      }, () => {
+        // Execute the analysis
+        chrome.scripting.executeScript({
+          target: { tabId: tabId },
+          function: (params) => {
+            return window.formAnalysisInjected ? 
+              window.formAnalysisInjected.performFormAnalysis(params.existingMappings) : 
+              { error: 'Form analysis module not available' };
+          },
+          args: [{ existingMappings }]
+        }, results => {
+          if (chrome.runtime.lastError) {
+            sendResponse({ 
+              success: false, 
+              error: chrome.runtime.lastError.message
+            });
+            return;
+          }
+          
+          if (!results || !results[0]) {
+            sendResponse({ 
+              success: false, 
+              error: 'No results from form analysis'
+            });
+            return;
+          }
+          
+          const result = results[0].result;
+          if (result && result.controls) {
+            // Save the results to storage
+            chrome.storage.local.get(['fieldMappingsV2'], function(storedData) {
+              let fieldMappingsV2 = storedData.fieldMappingsV2 || {};
+              fieldMappingsV2[rootUrl] = result.controls;
+              
+              chrome.storage.local.set({ fieldMappingsV2 }, function() {
+                console.log(`Saved ${result.controls.length} form controls for ${rootUrl}`);
+                
+                sendResponse({
+                  success: true,
+                  count: result.controls.length,
+                  message: `Analyzed ${result.controls.length} form controls`
+                });
+              });
+            });
+          } else if (results[0].error) {
+            sendResponse({ 
+              success: false, 
+              error: results[0].error
+            });
+          } else {
+            sendResponse({ 
+              success: false, 
+              error: 'No controls found in form analysis result'
+            });
+          }
+        });
+      });
+    });
+    
+    return true; // Indicate async response
+  }
+
+  // New handler for fetchAiCode
+  if (message.action === 'fetchAiCode') {
+    const url = message.url;
+    
+    if (!url) {
+      sendResponse({ success: false, error: 'No URL provided' });
+      return false;
+    }
+    
+    // Load field mappings for the URL
+    chrome.storage.local.get(['fieldMappingsV2'], async function(result) {
+      try {
+        if (!result || !result.fieldMappingsV2 || !result.fieldMappingsV2[url]) {
+          sendResponse({ 
+            success: false, 
+            error: 'No form mappings found for this URL. Please analyze the form first.'
+          });
+          return;
+        }
+        
+        // Check if aiService is available
+        if (typeof aiService === 'undefined') {
+          sendResponse({ 
+            success: false, 
+            error: 'AI Service module not available'
+          });
+          return;
+        }
+        
+        // Use the aiService to generate code for the mappings
+        try {
+          const updatedMappings = await aiService.getAiCode(result.fieldMappingsV2, url);
+          sendResponse({
+            success: true,
+            message: 'AI code generated successfully',
+            count: updatedMappings ? Object.keys(updatedMappings).length : 0
+          });
+        } catch (error) {
+          console.error('Error generating AI code:', error);
+          sendResponse({ 
+            success: false, 
+            error: error.message || 'Error generating AI code'
+          });
+        }
+      } catch (error) {
+        console.error('Error in fetchAiCode handler:', error);
+        sendResponse({ 
+          success: false, 
+          error: error.message || 'Unknown error in fetchAiCode'
+        });
+      }
+    });
+    
+    return true; // Indicate async response
   }
 });
 

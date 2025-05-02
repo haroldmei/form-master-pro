@@ -256,6 +256,23 @@
       margin-bottom: 16px;
     }
     
+    .toggle-container {
+      display: flex;
+      align-items: center;
+    }
+    
+    .toggle-checkbox {
+      margin-right: 8px;
+    }
+    
+    .toggle-label {
+      font-size: 12px;
+      color: var(--text-secondary);
+      text-align: center;
+      margin-top: 8px;
+      line-height: 1.4;
+    }
+    
     #field-count {
       background: var(--primary-color);
       color: white;
@@ -502,10 +519,10 @@
     
     <!-- Add the analyze form button here -->
     <div class="main-actions panel">
-      <button id="analyze-form">Analyze Current Form</button>
-      <button id="fetch-code">Fetch Code</button>
-      <button id="clear-data">Clear Saved Data</button>
-      <!-- Note: The analysis results will now appear in a dialog on the page -->
+      <div class="toggle-container">
+        <input type="checkbox" id="toggle-ui-injector" class="toggle-checkbox">
+        <label for="toggle-ui-injector">Show in-page tools</label>
+      </div>
     </div>
     
     <!-- Subscription Status -->
