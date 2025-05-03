@@ -84,6 +84,12 @@ const formAnalysisInjected = (() => {
         
         // If we found the element and it has a valid container mapping
         if (element && mapping.containerDesc) {
+          // Check if element is visible before processing
+          if (!isElementVisible(element)) {
+            console.log('Skipping hidden element from existing mappings:', element);
+            return; // Skip this iteration
+          }
+          
           let container = null;
           
           // Try using xpath if available and container still not found
@@ -126,10 +132,18 @@ const formAnalysisInjected = (() => {
     const selects = document.querySelectorAll('select');
     const textareas = document.querySelectorAll('textarea');
     
-    // Process form elements
-    processFormElements(inputs);
-    processFormElements(selects);
-    processFormElements(textareas);
+    // Filter for only visible elements
+    const visibleInputs = Array.from(inputs).filter(isElementVisible);
+    const visibleSelects = Array.from(selects).filter(isElementVisible);
+    const visibleTextareas = Array.from(textareas).filter(isElementVisible);
+    
+    console.log(`Total form controls: ${inputs.length + selects.length + textareas.length}`);
+    console.log(`Visible form controls: ${visibleInputs.length + visibleSelects.length + visibleTextareas.length}`);
+    
+    // Process form elements - only the visible ones
+    processFormElements(visibleInputs);
+    processFormElements(visibleSelects);
+    processFormElements(visibleTextareas);
     
     // If in dev mode, add visual highlights and console output
     console.group('FormMasterPro Form Analysis V2');
@@ -150,9 +164,36 @@ const formAnalysisInjected = (() => {
     const rootUrl = window.location.origin;
     chrome.storage.local.get(['fieldMappingsV2'], function(result) {
       const fieldMappingsV2 = result.fieldMappingsV2 || {};
-      fieldMappingsV2[rootUrl] = serializableControls;
+      
+      // Check if there are existing controls for this URL and append instead of overwrite
+      if (fieldMappingsV2[rootUrl] && Array.isArray(fieldMappingsV2[rootUrl])) {
+        // Create a map of existing controls by ID or name to avoid duplicates
+        const existingControlsMap = new Map();
+        fieldMappingsV2[rootUrl].forEach(control => {
+          // Use ID if available, otherwise use name as the key
+          const key = control.id || control.name;
+          if (key) {
+            existingControlsMap.set(key, control);
+          }
+        });
+        
+        // Add new controls, overriding existing ones with same ID/name
+        serializableControls.forEach(control => {
+          const key = control.id || control.name;
+          if (key) {
+            existingControlsMap.set(key, control);
+          }
+        });
+        
+        // Convert map back to array
+        fieldMappingsV2[rootUrl] = Array.from(existingControlsMap.values());
+      } else {
+        // If no existing controls, just set the new ones
+        fieldMappingsV2[rootUrl] = serializableControls;
+      }
       
       chrome.storage.local.set({ fieldMappingsV2: fieldMappingsV2 }, function() {
+        console.log(`Saved ${fieldMappingsV2[rootUrl].length} controls for ${rootUrl}`);
       });
     });
     
@@ -160,6 +201,41 @@ const formAnalysisInjected = (() => {
       count: formControls.length,
       controls: serializableControls
     };
+  }
+  
+  /**
+   * Check if an element is visible on the page
+   * @param {HTMLElement} element - The element to check
+   * @returns {boolean} - True if element is visible, false otherwise
+   */
+  function isElementVisible(element) {
+    if (!element) return false;
+    
+    // Check if element or any of its ancestors have display:none or visibility:hidden
+    const style = window.getComputedStyle(element);
+    if (style.display === 'none' || style.visibility === 'hidden') {
+      return false;
+    }
+    
+    // Check if element has 0 dimensions (effectively hidden)
+    if (element.offsetWidth === 0 && element.offsetHeight === 0) {
+      // Special case for radio/checkbox which might be small but still visible
+      if (element.type !== 'radio' && element.type !== 'checkbox') {
+        return false;
+      }
+    }
+    
+    // Check all ancestors as well
+    let parent = element.parentElement;
+    while (parent) {
+      const parentStyle = window.getComputedStyle(parent);
+      if (parentStyle.display === 'none' || parentStyle.visibility === 'hidden') {
+        return false;
+      }
+      parent = parent.parentElement;
+    }
+    
+    return true;
   }
   
   /**

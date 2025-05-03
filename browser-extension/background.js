@@ -671,20 +671,12 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           
           const result = results[0].result;
           if (result && result.controls) {
-            // Save the results to storage
-            chrome.storage.local.get(['fieldMappingsV2'], function(storedData) {
-              let fieldMappingsV2 = storedData.fieldMappingsV2 || {};
-              fieldMappingsV2[rootUrl] = result.controls;
-              
-              chrome.storage.local.set({ fieldMappingsV2 }, function() {
-                console.log(`Saved ${result.controls.length} form controls for ${rootUrl}`);
-                
-                sendResponse({
-                  success: true,
-                  count: result.controls.length,
-                  message: `Analyzed ${result.controls.length} form controls`
-                });
-              });
+            // The storage update is already handled by formAnalysisInjected.performFormAnalysis()
+            // No need to update storage again here
+            sendResponse({
+              success: true,
+              count: result.count || result.controls.length,
+              message: `Analyzed ${result.count || result.controls.length} form controls`
             });
           } else if (results[0].error) {
             sendResponse({ 
