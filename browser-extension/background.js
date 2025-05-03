@@ -292,9 +292,13 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
   
   if (message.action === 'auto-fill') {
-    fillFormInTab(tabId, message.url)
-      .then(result => sendResponse({ success: true, ...result }))
-      .catch(err => sendResponse({ success: false, error: err.message }));
+    // Use the consolidated function with fillForm=true
+    (async () => {
+      await processAndFillForm(tabId, message.url, { 
+        fillForm: true, 
+        sendResponse 
+      });
+    })();
     return true;
   }
   
@@ -401,87 +405,11 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.action === 'getFormValues') {
     console.log('Processing getFormValues request for:', message.url);
     
-    // Wrap the async code in an immediately-invoked async function
+    // Use the consolidated function with fillForm=false (default)
     (async () => {
-      try {
-        // Check if user is verified before proceeding
-        const isVerified = await checkEmailVerification();
-        if (!isVerified) {
-          sendResponse({ 
-            success: false, 
-            error: 'Email verification required to use this feature',
-            requiresVerification: true
-          });
-          return;
-        }
-        
-        // Get the current user profile
-        const userProfile = userProfileManager.getUserProfileSync();
-        
-        if (!userProfile || !userProfile.filename) {
-          console.log('No profile loaded for getFormValues');
-          sendResponse({ 
-            success: false, 
-            error: 'No profile loaded. Please load a profile first.' 
-          });
-          return;
-        }
-        
-        const tabId = sender.tab?.id;
-        
-        // Extract form data from the page
-        const formData = await extractFormData(tabId);
-        if (!formData) {
-          sendResponse({ 
-            success: false, 
-            error: 'No form detected on page' 
-          });
-          return;
-        }
-        
-        // Flatten form fields into a single array
-        const allFields = flattenFormFields(formData);    
-        console.log(`Found ${allFields.length} form fields to process`);
-        
-        if (allFields.length === 0) {
-          sendResponse({ 
-            success: false, 
-            error: 'No fillable form fields detected' 
-          });
-          return;
-        }
-        
-        // Process form fields with user profile data
-        const processedForm = await processFormFields(allFields, message.url);
-        if (!processedForm.success) {
-          sendResponse({
-            success: false, 
-            error: processedForm.error || 'Error processing form'
-          });
-          return;
-        }
-        
-        if (!processedForm.fields || processedForm.fields.length === 0) {
-          sendResponse({
-            success: false, 
-            error: 'No fields could be mapped for filling'
-          });
-          return;
-        }
-        
-        // Return processed fields without actually filling the form
-        console.log(`Returning ${processedForm.fields.length} fields for click-to-fill`);
-        sendResponse({ 
-          success: true, 
-          fields: processedForm.fields
-        });
-      } catch (error) {
-        console.error('Error in getFormValues:', error);
-        sendResponse({ 
-          success: false, 
-          error: error.message || 'Unknown error in getFormValues'
-        });
-      }
+      await processAndFillForm(sender.tab?.id, message.url, { 
+        sendResponse 
+      });
     })();
     
     return true; // Keep the messaging channel open for the async response
@@ -489,63 +417,13 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
   // Also fix the click-fill handler in a similar way
   if (message.action === 'click-fill') {
-    console.log('Handling click-fill request - redirecting to getFormValues');
+    console.log('Handling click-fill request');
     
-    // Wrap in an IIFE async function
+    // Use the consolidated function with fillForm=false
     (async () => {
-      try {
-        const isVerified = await checkEmailVerification();
-        if (!isVerified) {
-          sendResponse({ 
-            success: false, 
-            error: 'Email verification required to use this feature',
-            requiresVerification: true
-          });
-          return;
-        }
-        
-        const userProfile = userProfileManager.getUserProfileSync();
-        
-        if (!userProfile || !userProfile.filename) {
-          sendResponse({ 
-            success: false, 
-            error: 'No profile loaded. Please load a profile first.' 
-          });
-          return;
-        }
-
-        const formData = await extractFormData(sender.tab?.id);
-        if (!formData) {
-          sendResponse({
-            success: false,
-            error: 'No form detected on page'
-          });
-          return;
-        }
-        
-        const allFields = flattenFormFields(formData);
-        const processedForm = await processFormFields(allFields, message.url);
-        
-        if (!processedForm.success || !processedForm.fields || processedForm.fields.length === 0) {
-          sendResponse({
-            success: false,
-            error: processedForm.error || 'No fields could be mapped for filling'
-          });
-          return;
-        }
-        
-        sendResponse({
-          success: true,
-          fields: processedForm.fields,
-          message: 'Click-to-fill is enabled by default'
-        });
-      } catch (error) {
-        console.error('Error handling click-fill:', error);
-        sendResponse({ 
-          success: false, 
-          error: error.message || 'Unknown error in click-fill'
-        });
-      }
+      await processAndFillForm(sender.tab?.id, message.url, { 
+        sendResponse 
+      });
     })();
     
     return true;
@@ -793,42 +671,12 @@ async function resendVerificationEmail() {
   }
 }
 
-// Fill form in the current tab - Modified to use injected formFiller functions
+// Fill form in the current tab - Modified to use processAndFillForm
 async function fillFormInTab(tabId, url) {
   try {
-    // Check if user is verified before proceeding
-    if (!(await isUserVerified())) {
-      return { message: 'Email verification required to use this feature', requiresVerification: true };
-    }
-    
-    console.log(`Filling form in tab ${tabId} for URL: ${url}`);
-    
-    // Extract form data from the page
-    const formData = await extractFormData(tabId);
-    if (!formData) {
-      return { message: 'No form detected on page' };
-    }
-    
-    // Flatten form fields into a single array
-    const allFields = flattenFormFields(formData);    
-    console.log(`Found ${allFields.length} form fields to process`);
-    
-    if (allFields.length === 0) {
-      return { message: 'No fillable form fields detected' };
-    }
-    
-    // Process form fields with user profile data
-    const processedForm = await processFormFields(allFields, url);
-    if (!processedForm.success) {
-      return { message: processedForm.error || 'Error processing form' };
-    }
-    
-    if (!processedForm.fields || Object.keys(processedForm.fields).length === 0) {
-      return { message: 'No fields could be mapped for filling' };
-    }
-    
-    // Fill the form with the processed data
-    return await executeFormFilling(tabId, processedForm.fields);
+    // Use the consolidated function with fillForm=true
+    const result = await processAndFillForm(tabId, url, { fillForm: true });
+    return result.success ? result : { message: result.error || 'Error filling form' };
   } catch (error) {
     console.error('Error in fillFormInTab:', error);
     return { message: `Error: ${error.message}` };
@@ -923,6 +771,115 @@ async function processFormFields(allFields, url) {
   
   // Use the formProcessor module to get field values
   return await formProcessor.processForm(allFields, url, userProfile);
+}
+
+// Consolidated function to process form fields and optionally fill them
+async function processAndFillForm(tabId, url, options = {}) {
+  const { fillForm = false, sendResponse = null } = options;
+  
+  try {
+    // Check if user is verified before proceeding
+    const isVerified = await checkEmailVerification();
+    if (!isVerified) {
+      const response = { 
+        success: false, 
+        error: 'Email verification required to use this feature',
+        requiresVerification: true
+      };
+      if (sendResponse) sendResponse(response);
+      return response;
+    }
+    
+    // Get the current user profile
+    const userProfile = userProfileManager.getUserProfileSync();
+    
+    if (!userProfile || !userProfile.filename) {
+      console.log('No profile loaded for form processing');
+      const response = { 
+        success: false, 
+        error: 'No profile loaded. Please load a profile first.' 
+      };
+      if (sendResponse) sendResponse(response);
+      return response;
+    }
+    
+    // Extract form data from the page
+    const formData = await extractFormData(tabId);
+    if (!formData) {
+      const response = { 
+        success: false, 
+        error: 'No form detected on page' 
+      };
+      if (sendResponse) sendResponse(response);
+      return response;
+    }
+    
+    // Flatten form fields into a single array
+    const allFields = flattenFormFields(formData);    
+    console.log(`Found ${allFields.length} form fields to process`);
+    
+    if (allFields.length === 0) {
+      const response = { 
+        success: false, 
+        error: 'No fillable form fields detected' 
+      };
+      if (sendResponse) sendResponse(response);
+      return response;
+    }
+    
+    // Process form fields with user profile data
+    const processedForm = await processFormFields(allFields, url);
+    if (!processedForm.success) {
+      const response = { 
+        success: false, 
+        error: processedForm.error || 'Error processing form'
+      };
+      if (sendResponse) sendResponse(response);
+      return response;
+    }
+    
+    if (!processedForm.fields || 
+       (Array.isArray(processedForm.fields) && processedForm.fields.length === 0) ||
+       (typeof processedForm.fields === 'object' && Object.keys(processedForm.fields).length === 0)) {
+      const response = { 
+        success: false, 
+        error: 'No fields could be mapped for filling'
+      };
+      if (sendResponse) sendResponse(response);
+      return response;
+    }
+
+    if (fillForm) {
+      // Perform actual form filling
+      console.log('Filling form with processed data:', processedForm.fields);
+      const fillResult = await executeFormFilling(tabId, processedForm.fields);
+      const response = { success: true, ...fillResult };
+      if (sendResponse) sendResponse(response);
+      return response;
+    } else {
+      // Just return the processed fields without filling
+      const fieldsCount = Array.isArray(processedForm.fields) 
+        ? processedForm.fields.length 
+        : Object.keys(processedForm.fields).length;
+      
+      console.log(`Returning ${fieldsCount} fields without filling`);
+      const response = { 
+        success: true, 
+        fields: processedForm.fields,
+        message: fillForm ? undefined : 'Fields processed successfully'
+      };
+      if (sendResponse) sendResponse(response);
+      return response;
+    }
+  } catch (error) {
+    console.error('Error in form processing:', error);
+    const response = { 
+      success: false, 
+      error: error.message || 'Unknown error in form processing'
+    };
+    if (sendResponse) sendResponse(response);
+    return response;
+  }
 }
 
 // Check subscription status
@@ -1158,7 +1115,7 @@ async function processFolderFiles(folderName, files) {
           allParagraphs = allParagraphs.concat(paragraphs);
         } else if (file.type === 'docx') {
           if (file.content.strings && Array.isArray(file.content.strings)) {
-            allTextContent.push(`--- From ${file.filename} ---\n${file.content.strings.join('\n')}\n`);
+            allTextContent.push(`--- From ${file.filename} P---\n${file.content.strings.join('\n')}\n`);
             
             // Add all strings as paragraphs
             const paragraphs = file.content.strings
