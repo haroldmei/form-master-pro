@@ -266,7 +266,7 @@ const aiService = (() => {
             // Add xPath information to the AI code
             aiCodeObj.xPath = container.containerDesc.xpath;
             // Convert back to string
-            container.containerDesc.aicode = JSON.stringify(aiCodeObj);
+            container.containerDesc.aicode = aiCodeObj;//SON.stringify(aiCodeObj);
 
             // Only try to trigger a highlight update if in a content script context (where document exists)
             if (typeof document !== 'undefined') {
