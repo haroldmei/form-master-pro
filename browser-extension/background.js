@@ -671,18 +671,6 @@ async function resendVerificationEmail() {
   }
 }
 
-// Fill form in the current tab - Modified to use processAndFillForm
-async function fillFormInTab(tabId, url) {
-  try {
-    // Use the consolidated function with fillForm=true
-    const result = await processAndFillForm(tabId, url, { fillForm: true });
-    return result.success ? result : { message: result.error || 'Error filling form' };
-  } catch (error) {
-    console.error('Error in fillFormInTab:', error);
-    return { message: `Error: ${error.message}` };
-  }
-}
-
 // Execute the form filling on the page - Consolidated implementation
 async function executeFormFilling(tabId, fieldValues) {
   // First ensure the formFiller module is properly injected
@@ -765,10 +753,11 @@ function flattenFormFields(formData) {
 }
 
 // Process form fields with user profile data
-async function processFormFields(allFields, url) {
+async function processFormFields(url) {
   console.log('Processing form fields with user profile data');
   const userProfile = await userProfileManager.getUserProfile();
   
+  const allFields = chrome.storage.local.get('fieldMappingsV2');
   // Use the formProcessor module to get field values
   return await formProcessor.processForm(allFields, url, userProfile);
 }
@@ -790,45 +779,8 @@ async function processAndFillForm(tabId, url, options = {}) {
       return response;
     }
     
-    // Get the current user profile
-    const userProfile = userProfileManager.getUserProfileSync();
-    
-    if (!userProfile || !userProfile.filename) {
-      console.log('No profile loaded for form processing');
-      const response = { 
-        success: false, 
-        error: 'No profile loaded. Please load a profile first.' 
-      };
-      if (sendResponse) sendResponse(response);
-      return response;
-    }
-    
-    // Extract form data from the page
-    const formData = await extractFormData(tabId);
-    if (!formData) {
-      const response = { 
-        success: false, 
-        error: 'No form detected on page' 
-      };
-      if (sendResponse) sendResponse(response);
-      return response;
-    }
-    
-    // Flatten form fields into a single array
-    const allFields = flattenFormFields(formData);    
-    console.log(`Found ${allFields.length} form fields to process`);
-    
-    if (allFields.length === 0) {
-      const response = { 
-        success: false, 
-        error: 'No fillable form fields detected' 
-      };
-      if (sendResponse) sendResponse(response);
-      return response;
-    }
-    
     // Process form fields with user profile data
-    const processedForm = await processFormFields(allFields, url);
+    const processedForm = await processFormFields(url);
     if (!processedForm.success) {
       const response = { 
         success: false, 
