@@ -21,16 +21,14 @@ const formProcessor = (() => {
   }
   
   
-  async function processForm(formFields, url) {
+  async function processForm(formFields, url, userProfile) {
     try {
       console.log("Processing form for URL:", url);
       
       // Extract the root URL (domain + path up to first directory)
       const urlObj = new URL(url);
-      const rootUrl = urlObj.hostname;
+      const rootUrl = urlObj.origin;
       
-      // Get user profile and generate hash
-      const userProfile = userProfileManager.getUserProfileSync();
       console.log("User profile:", userProfile);
       if (!userProfile.filename) {
         throw new Error('Please load data first.');
@@ -39,13 +37,14 @@ const formProcessor = (() => {
       const profileHash = generateProfileHash(userProfile);
       const cacheKey = `${rootUrl}_${profileHash}`;
       
-      // Get existing field mappings and ALL suggestions from storage
-      const result = await chrome.storage.local.get(['fieldMappings', 'allSuggestions']);
-      let siteFieldMappings = result.fieldMappings || {};
+      // Get existing field mappings and ALL suggestions from storage - now using fieldMappingsV2
+      const result = await chrome.storage.local.get(['fieldMappingsV2', 'allSuggestions']);
+      // Get the field mappings from fieldMappingsV2 for this URL
+      const siteFieldMappingsV2 = result.fieldMappingsV2 || {};
       
       // Initialize site mappings if not present
-      if (!siteFieldMappings[rootUrl]) {
-        siteFieldMappings[rootUrl] = [];
+      if (!siteFieldMappingsV2[rootUrl]) {
+        siteFieldMappingsV2[rootUrl] = [];
       }
       
       // Initialize or load ALL suggestions cache
@@ -83,7 +82,6 @@ const formProcessor = (() => {
         if (!allSuggestions || !(fieldKey in allSuggestions)) {
           needApiCall = true;
           console.log("Need API call for field:", fieldKey, currentFormFields[fieldKey]);
-          //break;
         }
       }
       
@@ -94,27 +92,38 @@ const formProcessor = (() => {
         // Gather all known fields for this site (current form + historical mappings)
         const allSiteFields = {...currentFormFields};
         
-        // Add fields from historical site mappings
-        siteFieldMappings[rootUrl].forEach(mapping => {
-          const keyName = mapping.label || mapping.name || mapping.id || '';
-          if (keyName.trim() !== '' && !allSiteFields[keyName]) {
-            // Check if this is a select or radio field with options
-            if ((mapping.type === 'select' || mapping.type === 'radio') && mapping.options) {
-              allSiteFields[keyName] = mapping.options.map(option => 
-                option.text || option.label || option.value || ''
-              ).filter(Boolean);
-            } else {
-              allSiteFields[keyName] = [];
+        // Add fields from historical site mappings - adapted for fieldMappingsV2 structure
+        if (Array.isArray(siteFieldMappingsV2[rootUrl])) {
+          siteFieldMappingsV2[rootUrl].forEach(mapping => {
+            // Get field identifiers
+            const labels = mapping.labels && Array.isArray(mapping.labels) 
+              ? mapping.labels.map(l => l.text).filter(Boolean) : [];
+            
+            const keyName = labels[0] || mapping.name || mapping.id || '';
+            if (keyName.trim() !== '' && !allSiteFields[keyName]) {
+              // Handle different field types appropriately
+              if (mapping.type === 'select' || mapping.type === 'radio') {
+                // Get options from the mapping
+                if (mapping.options && Array.isArray(mapping.options)) {
+                  allSiteFields[keyName] = mapping.options.map(option => 
+                    option.text || option.value || ''
+                  ).filter(Boolean);
+                } else {
+                  allSiteFields[keyName] = [];
+                }
+              } else {
+                allSiteFields[keyName] = [];
+              }
             }
-          }
-        });
+          });
+        }
         
         console.log("Making API call with ALL site fields:", Object.keys(allSiteFields));
         
         try {
           // Make ONE comprehensive API call for all fields
           const aiSuggestions = await aiService.getAiSuggestions(allSiteFields, userProfile, url);
-          console.log("Received AI suggestions: ", aiSuggestions.length);
+          console.log("Received AI suggestions: ", Object.keys(aiSuggestions).length);
           // Fill in any missing fields from allSiteFields with empty string
           Object.keys(allSiteFields).forEach(key => {
             if (!aiSuggestions.hasOwnProperty(key)) {
@@ -136,7 +145,7 @@ const formProcessor = (() => {
         console.log("Using cached suggestions - no API call needed");
       }
       
-      // Load any saved default field values directly from storage rather than from defaultsDialog
+      // Load any saved default field values directly from storage
       const savedDefaultValues = await getDefaultFieldValues(rootUrl);
       console.log(`Loaded ${Object.keys(savedDefaultValues).length} saved default values for ${rootUrl}`);
       
@@ -154,7 +163,7 @@ const formProcessor = (() => {
         if (!keyName || allSuggestions[keyName]) return;
         
         // Check if we have a saved default value for this field
-        if (savedDefaultValues && keyName in savedDefaultValues) { // check if key exists, even if value is empty string
+        if (savedDefaultValues && keyName in savedDefaultValues) {
           allSuggestions[keyName] = savedDefaultValues[keyName];
           console.log("Using saved default value for field:", keyName, savedDefaultValues[keyName]);
           return;
@@ -181,11 +190,6 @@ const formProcessor = (() => {
                       fieldId?.toLowerCase().includes('required') ||
                       fieldName?.toLowerCase().includes('required')
           });
-          
-
-          if (keyName === 'Yes') {
-            console.log("default data for field:", keyName, fieldLabel, fieldId, fieldName, allSuggestions[keyName]);
-          }
 
           // Still set a temporary default value (will be overridden if user provides one)
           if (field.options && Array.isArray(field.options) && field.options.length > 0) {
@@ -199,13 +203,12 @@ const formProcessor = (() => {
           } else if (fieldType === 'text') {
             allSuggestions[keyName] = '';
           } else if (fieldType === 'checkbox' || fieldType === 'radio') {
-            allSuggestions[keyName] = 'on';
+            allSuggestions[keyName] = field.type === 'radio' ? field.options?.[0]?.value || 'on' : 'on';
           } else {
             allSuggestions[keyName] = '';
           }
         }
       });
-
       
       // Save all suggestions to cache
       allSuggestionsCache[cacheKey] = {...allSuggestions};
@@ -218,8 +221,8 @@ const formProcessor = (() => {
       
       // Match form fields with mappings and retrieve values
       const fieldValues = [];
-      const updatedSiteMapping = [...siteFieldMappings[rootUrl]]; // Clone existing mappings
-      let mappingsUpdated = false;
+      // Use the fieldMappingsV2 structure but don't update it
+      const existingMappings = Array.isArray(siteFieldMappingsV2[rootUrl]) ? [...siteFieldMappingsV2[rootUrl]] : [];
       
       console.log("Current page:", formFields.map(f => f.label || f.id || f.name));
       formFields.forEach(field => {
@@ -235,7 +238,7 @@ const formProcessor = (() => {
         // Look for suggestions using various field identifiers
         if (fieldId && allSuggestions[fieldId]) {
           suggestionValue = allSuggestions[fieldId];
-          isAiGenerated = true; // Assume AI-generated by default, we can't easily distinguish the source
+          isAiGenerated = true; // Assume AI-generated by default
         } else if (fieldName && allSuggestions[fieldName]) {
           suggestionValue = allSuggestions[fieldName];
           isAiGenerated = true;
@@ -259,57 +262,30 @@ const formProcessor = (() => {
           }
         }
         
-        // Store this mapping for future use
-        const existingIndex = updatedSiteMapping.findIndex(mapping => 
-          (fieldId && mapping.id === fieldId) || (mapping.name && mapping.name === fieldName) || (mapping.label && mapping.label === fieldLabel)
-          );
-
         // If we found a suggestion, process it according to field type
         if (suggestionValue !== null) {
           // Format the value based on field type
-          let formattedValue = utils.formatValueForFieldType(suggestionValue, fieldType, field);          
+          let formattedValue = utils.formatValueForFieldType(suggestionValue, fieldType, field);
+          
+          // Create a new mapping in the fieldMappingsV2 format
           const newMapping = {
-            id: fieldId, 
-            label: fieldLabel, 
-            ariaLabel: field.ariaLabel || '',
-            name: fieldName, 
-            type: fieldType, 
-            value: formattedValue, 
-            className: field.className || '',
+            id: fieldId,
+            name: fieldName,
+            labels: fieldLabel ? [{ text: fieldLabel, type: 'explicit' }] : [],
+            type: fieldType,
+            value: formattedValue,
+            containerDesc: field.containerDesc || {},
+            options: field.options || [],
+            disabled: field.disabled || false,
+            required: field.required || false,
             aiGenerated: isAiGenerated,
             lastUsed: new Date().toISOString()
           };
           
+          // Add to our field values collection to return to the caller
           fieldValues.push(newMapping);
-          if (existingIndex < 0) {
-            updatedSiteMapping.push(newMapping);
-            mappingsUpdated = true;
-          } else {
-            // Update the existing mapping with the new value
-            updatedSiteMapping[existingIndex].value = formattedValue;
-            updatedSiteMapping[existingIndex].lastUsed = new Date().toISOString();
-          }
         }
       });
-      
-      // If we made updates to the mappings, save them back to storage
-      if (mappingsUpdated) {
-        siteFieldMappings[rootUrl] = updatedSiteMapping;
-        console.log("Saving updated field mappings for site:", rootUrl);
-        
-        // Limit storage size by keeping only the last 200 mappings per site
-        if (updatedSiteMapping.length > 200) {
-          // Sort by lastUsed and keep only the most recent 200
-          siteFieldMappings[rootUrl] = updatedSiteMapping
-            .sort((a, b) => new Date(b.lastUsed) - new Date(a.lastUsed))
-            .slice(0, 200);
-        }
-        
-        // Save the updated mappings
-        chrome.storage.local.set({ fieldMappings: siteFieldMappings }, function() {
-          console.log("Field mappings updated successfully");
-        });
-      }
       
       console.log("Processed field values:", fieldValues);
       return { success: true, fields: fieldValues };
