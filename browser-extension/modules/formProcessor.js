@@ -21,7 +21,7 @@ const formProcessor = (() => {
   }
   
   
-  async function processForm(formFields, url, userProfile) {
+  async function processForm(url, userProfile) {
     try {
       console.log("Processing form for URL:", url);
       
@@ -55,10 +55,12 @@ const formProcessor = (() => {
         allSuggestionsCache[cacheKey] = {};
       }
       
+      formFields = siteFieldMappingsV2[rootUrl]
+      console.log("Current form fields:", formFields);  
       // Create fieldKeywords for current form
       const currentFormFields = {};
       formFields.forEach(field => {
-        const keyName = field.label || field.name || field.id || '';
+        const keyName = field.containerDesc.aicode.title || field.name || field.id || '';
         if (keyName.trim() === '') return;
         
         if (field.options && Array.isArray(field.options) && field.options.length > 0) {
@@ -95,11 +97,10 @@ const formProcessor = (() => {
         if (Array.isArray(siteFieldMappingsV2[rootUrl])) {
           siteFieldMappingsV2[rootUrl].forEach(mapping => {
             // Get field identifiers
-            const labels = mapping.labels && Array.isArray(mapping.labels) 
-              ? mapping.labels.map(l => l.text).filter(Boolean) : [];
             
-            const keyName = labels[0] || mapping.name || mapping.id || '';
+            const keyName = mapping.containerDesc.aicode.title || '';// || mapping.name || mapping.id || '';
             if (keyName.trim() !== '' && !allSiteFields[keyName]) {
+              console.log("Adding field from historical mappings:", keyName);
               // Handle different field types appropriately
               if (mapping.type === 'select' || mapping.type === 'radio') {
                 // Get options from the mapping
@@ -151,7 +152,7 @@ const formProcessor = (() => {
       formFields.forEach(field => {
         const fieldId = field.id || '';
         const fieldName = field.name || '';
-        const fieldLabel = field.label || '';
+        const fieldLabel = field.containerDesc.aicode.title || '';
         
         // Skip if we already have a suggestion for this field
         const keyName = fieldLabel || fieldName || fieldId;

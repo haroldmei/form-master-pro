@@ -757,9 +757,8 @@ async function processFormFields(url) {
   console.log('Processing form fields with user profile data');
   const userProfile = await userProfileManager.getUserProfile();
   
-  const allFields = chrome.storage.local.get('fieldMappingsV2');
   // Use the formProcessor module to get field values
-  return await formProcessor.processForm(allFields, url, userProfile);
+  return await formProcessor.processForm(url, userProfile);
 }
 
 // Consolidated function to process form fields and optionally fill them
