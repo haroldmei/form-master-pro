@@ -438,7 +438,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       const wrappedCode = `(function() {
         ${message.codeString}
         try {
-          setValue(${message.value});
+          setValue('${message.value}');
           return { success: true, message: 'Explora script executed successfully' };
         } catch (error) {
           console.error('Explora execution error:', error);

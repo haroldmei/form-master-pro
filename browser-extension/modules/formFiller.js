@@ -977,26 +977,8 @@ const formFiller = (() => {
         const title = aiCodeObj.title;
         
         // Find a matching value from suggestions
-        let valueToSet = control.value;
-        
-        // If no direct value on the control, try to find a matching field in suggestions
-        if (valueToSet === undefined || valueToSet === null) {
-          const matchingSuggestion = fieldValues.find(f => 
-            (f.id === control.id) || 
-            (f.name === control.name) ||
-            (f.id === id) ||
-            (f.labels && f.labels.some(l => l.text && title && l.text.includes(title)))
-          );
-          
-          if (matchingSuggestion) {
-            valueToSet = matchingSuggestion.value;
-            console.log(`Found matching suggestion for ${title || id}: ${valueToSet}`);
-          } else {
-            console.log(`No matching suggestion found for ${title || id}, skipping`);
-            stats.skipped++;
-            continue;
-          }
-        }
+        let valueToSet = fieldValues[control.containerDesc.aicode.title];
+        console.log('valueToSet', control.containerDesc.aicode.title, valueToSet);
         
         // Skip if value is still undefined
         if (valueToSet === undefined || valueToSet === null) {
