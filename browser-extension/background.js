@@ -671,46 +671,6 @@ async function resendVerificationEmail() {
   }
 }
 
-// Execute the form filling on the page - Consolidated implementation
-async function executeFormFilling(tabId, fieldValues) {
-  // First ensure the formFiller module is properly injected
-  await chrome.scripting.executeScript({
-    target: { tabId },
-    files: ['modules/formFiller.js']
-  }).catch(err => console.warn('FormFiller module might already be loaded:', err));
-  
-  // Execute form filling script in the page context
-  const fillResult = await chrome.scripting.executeScript({
-    target: { tabId },
-    function: (fields) => {
-      // Access formFiller through the self object in the page context
-      if (!self.formFiller || typeof self.formFiller.performFormFilling !== 'function') {
-        console.error('FormFiller module not properly loaded or initialized');
-        return { error: 'FormFiller module not available' };
-      }
-      
-      return self.formFiller.performFormFilling(fields);
-    },
-    args: [fieldValues]
-  });
-  
-  console.log('Form filling result:', fillResult);
-  
-  // Process and return results
-  if (!fillResult || !fillResult[0] || !fillResult[0].result) {
-    return { message: 'Error filling form' };
-  }
-  
-  const stats = fillResult[0].result;
-  return {
-    message: `Filled ${stats.filled} of ${stats.total} fields`,
-    filledCount: stats.filled,
-    failedCount: stats.failed,
-    totalFields: stats.total
-  };
-}
-
-
 // Check if user's email is verified
 async function isUserVerified() {
   return await checkEmailVerification();
@@ -763,6 +723,8 @@ async function processFormFields(url) {
 
 // Consolidated function to process form fields and optionally fill them
 async function processAndFillForm(tabId, url, options = {}) {
+  console.log('Processing and filling form in tab context', options);
+
   const { fillForm = false, sendResponse = null } = options;
   
   try {
@@ -778,34 +740,56 @@ async function processAndFillForm(tabId, url, options = {}) {
       return response;
     }
     
-    // Process form fields with user profile data
-    const processedForm = await processFormFields(url);
-    if (!processedForm.success) {
-      const response = { 
-        success: false, 
-        error: processedForm.error || 'Error processing form'
-      };
-      if (sendResponse) sendResponse(response);
-      return response;
-    }
-
+    // Get user profile data
+    const userProfile = await userProfileManager.getUserProfile();
+    console.log('Retrieved user profile for form filling:', userProfile ? userProfile.filename || 'available' : 'not available');
+    
     if (fillForm) {
-      // Perform actual form filling
-      console.log('Filling form with processed data:', processedForm.fields);
-      const fillResult = await executeFormFilling(tabId, processedForm.fields);
-      const response = { success: true, ...fillResult };
-      if (sendResponse) sendResponse(response);
-      return response;
-    } else {
-      // Just return the processed fields without filling
-      const fieldsCount = Array.isArray(processedForm.fields) 
-        ? processedForm.fields.length 
-        : Object.keys(processedForm.fields).length;
+      // Perform actual form filling in the tab context where document is available
+      console.log('Filling form using formFiller module in tab context');
       
-      console.log(`Returning ${fieldsCount} fields without filling`);
+      try {
+        // First inject the formFiller.js script into the tab
+        await chrome.scripting.executeScript({
+          target: { tabId },
+          files: ['modules/formFiller.js']
+        });
+        
+        // Pass the serialized user profile to the tab context
+        const results = await chrome.scripting.executeScript({
+          target: { tabId },
+          function: (url, profileData) => {
+            // This runs in the tab's context where formFiller should now be available
+            if (typeof self.formFiller === 'undefined' || !self.formFiller) {
+              throw new Error('formFiller module not available in tab context');
+            }
+            
+            // Create a window-level variable for the profile so it's available in the tab
+            window.userProfile = profileData;
+            
+            return self.formFiller.performFormFilling(url, profileData);
+          },
+          args: [url, userProfile]
+        });
+        
+        // Extract the result from the execution
+        const fillResult = results && results[0] && results[0].result ? results[0].result : { filled: 0, failed: 0, skipped: 0 };
+        
+        const response = { success: true, ...fillResult };
+        if (sendResponse) sendResponse(response);
+        return response;
+      } catch (error) {
+        console.error('Error executing form filling in tab:', error);
+        const response = { 
+          success: false, 
+          error: error.message || 'Failed to execute form filling in tab context'
+        };
+        if (sendResponse) sendResponse(response);
+        return response;
+      }
+    } else {
       const response = { 
         success: true, 
-        fields: processedForm.fields,
         message: fillForm ? undefined : 'Fields processed successfully'
       };
       if (sendResponse) sendResponse(response);

@@ -851,8 +851,11 @@ const formFiller = (() => {
     }
   }
 
-  async function performFormFilling(fieldValues) {
-    console.log("Starting sequential form filling with", fieldValues.length, "fields");
+  async function performFormFilling(url, profile) {
+
+    const tabUrl = new URL(url);
+    const baseUrl = tabUrl.origin;
+    console.log("Starting form filling for URL:", baseUrl, profile.filename);
     
     // Add visual effects styles to the page
     addVisualEffectStyles();
@@ -884,170 +887,135 @@ const formFiller = (() => {
       `;
       document.head.appendChild(styleEl);
     }
-    
-    // Sort fields by priority - checkboxes and radio buttons first
-    const sortedFieldValues = [...fieldValues].sort((a, b) => {
-      const priorityA = getFieldTypePriority(a);
-      const priorityB = getFieldTypePriority(b);
-      return priorityA - priorityB; // Lower number = higher priority
-    });
-    
-    // Log the processing order
-    console.log("Form filling order:", sortedFieldValues.map(f => 
-      `${f.label || f.name || f.id || 'unnamed'} (${f.type || 'unknown'}) [priority: ${getFieldTypePriority(f)}]`
-    ));
 
+    // Get field values from local storage for the specific URL
+    const result = await new Promise(resolve => {
+      chrome.storage.local.get(['allSuggestions', 'fieldMappingsV2'], function(data) {
+        resolve(data);
+      });
+    });
+
+    // Extract the field values and field mappings for this URL
+    const allSuggestions = result.allSuggestions || {};
+    const fieldMappingsV2 = result.fieldMappingsV2 || {};
+    
+    console.log('allSuggestions', allSuggestions);
+    console.log('fieldMappingsV2', fieldMappingsV2);
+    console.log('baseUrl', baseUrl);
+
+    // Get field values specifically for this URL
+    const fieldValues = allSuggestions[baseUrl + '_profile_' + userProfile.filename] || [];
+    const fieldMappings = fieldMappingsV2[baseUrl] || [];
+    
+    console.log(`Found ${fieldValues.length} suggestions and ${fieldMappings.length} field mappings for URL: ${baseUrl}`);
+    
+    // Initialize stats for tracking fill results
     const stats = {
       filled: 0,
       failed: 0,
-      skipped: 0,  // Counter for skipped hidden fields
-      total: fieldValues.length
+      skipped: 0,
+      total: fieldMappings.length
     };
 
-    // Process fields in priority order rather than original order
-    for (const field of sortedFieldValues) {
+    // Process each field mapping using AI code
+    for (const control of fieldMappings) {
       try {
-        console.log(`Processing field: ${field.label || field.name || field.id}`);
-        
-        const element = findFillableElement(field);
-        if (!element) {
-          console.warn(`No element found for field: ${field.id || field.name || field.label}`);
-          stats.failed++;
-          continue;
-        }
-        
-        // Check if the element is hidden - if so, skip it
-        if (isElementHidden(element)) {
-          console.log(`Skipping hidden field: ${field.label || field.name || field.id}`);
+        // Skip controls without AI code
+        if (!control.containerDesc || !control.containerDesc.aicode) {
+          console.log(`Skipping control without AI code:`, control.id || control.name);
           stats.skipped++;
           continue;
         }
-
-        const tagName = element.tagName.toLowerCase();
-        const inputType = element.type ? element.type.toLowerCase() : '';
-        const value = field.value;
-        if (await fillField(element, tagName, inputType, value)) {
-          stats.filled++;
-          console.log(`Successfully filled field: ${field.label || field.name || field.id}`);
-        } else {
+        
+        // Parse the AI code from the control
+        let aiCodeObj;
+        try {
+          aiCodeObj = JSON.parse(control.containerDesc.aicode);
+        } catch (e) {
+          console.error(`Error parsing AI code for control:`, control.id || control.name, e);
           stats.failed++;
-          console.warn(`Failed to fill field: ${field.label || field.name || field.id}`);
+          continue;
         }
         
-        // Add a small delay between fields for better visual effect
-        await new Promise(resolve => setTimeout(resolve, 300));
+        // Skip if no AI code function available
+        if (!aiCodeObj || !aiCodeObj.aicode) {
+          console.log(`No AI code function found for control:`, control.id || control.name);
+          stats.skipped++;
+          continue;
+        }
+        
+        const id = aiCodeObj.id;
+        const title = aiCodeObj.title;
+        
+        // Find a matching value from suggestions
+        let valueToSet = control.value;
+        
+        // If no direct value on the control, try to find a matching field in suggestions
+        if (valueToSet === undefined || valueToSet === null) {
+          const matchingSuggestion = fieldValues.find(f => 
+            (f.id === control.id) || 
+            (f.name === control.name) ||
+            (f.id === id) ||
+            (f.labels && f.labels.some(l => l.text && title && l.text.includes(title)))
+          );
+          
+          if (matchingSuggestion) {
+            valueToSet = matchingSuggestion.value;
+            console.log(`Found matching suggestion for ${title || id}: ${valueToSet}`);
+          } else {
+            console.log(`No matching suggestion found for ${title || id}, skipping`);
+            stats.skipped++;
+            continue;
+          }
+        }
+        
+        // Skip if value is still undefined
+        if (valueToSet === undefined || valueToSet === null) {
+          console.log(`No value to set for ${title || id}, skipping`);
+          stats.skipped++;
+          continue;
+        }
+        
+        // Create and execute the AI code function
+        console.log(`Executing AI code for ${title || id} with value: ${valueToSet}`);
+        const functionBody = aiCodeObj.aicode;
+        try {
+          // Create a function from the AI code and execute it with the value
+          const setValueFunction = new Function('return ' + functionBody)();
+          
+          // Execute the setValue function with the field value
+          setValueFunction(valueToSet);
+          
+          stats.filled++;
+          console.log(`Successfully filled field: ${title || id}`);
+        } catch (error) {
+          console.error(`Error executing AI code for ${title || id}:`, error);
+          stats.failed++;
+          
+          // Fallback: try using standard form filling as backup
+          try {
+            const element = document.getElementById(id);
+            if (element) {
+              const tagName = element.tagName.toLowerCase();
+              const inputType = element.type ? element.type.toLowerCase() : '';
+              
+              if (await fillField(element, tagName, inputType, valueToSet)) {
+                stats.filled++;
+                stats.failed--; // Correct the stats since we recovered
+                console.log(`Successfully filled field using fallback method: ${title || id}`);
+              }
+            }
+          } catch (fallbackError) {
+            console.error(`Fallback filling also failed for ${title || id}:`, fallbackError);
+          }
+        }
       } catch (error) {
-        console.error(`Error filling field ${field.id || field.name || field.label}:`, error);
+        console.error(`Error processing control:`, error);
         stats.failed++;
       }
     }
 
-    const processedRadioGroups = new Set();
-
-    for (const key in fieldValues) {
-      if (processedRadioGroups.has(key)) continue;
-
-      const value = fieldValues[key];
-      if (value === null || value === undefined) continue;
-
-      const radioGroup = document.querySelectorAll(`input[type="radio"][name="${CSS.escape(key)}"]`);
-
-      if (radioGroup.length > 1) {
-        console.log(`Processing radio group: ${key} with value: ${value}`);
-        processedRadioGroups.add(key);
-        
-        let foundMatch = false;
-
-        for (const strategy of [
-          radio => radio.value === String(value),
-          radio => radio.value.toLowerCase() === String(value).toLowerCase(),
-          radio => {
-            let labelText = '';
-            
-            if (radio.id) {
-              const labelElement = document.querySelector(`label[for="${radio.id}"]`);
-              if (labelElement) labelText = labelElement.textContent.trim();
-            }
-            
-            if (!labelText) {
-              let parent = radio.parentElement;
-              while (parent && parent.tagName !== 'FORM') {
-                if (parent.tagName === 'LABEL') {
-                  labelText = parent.textContent.trim();
-                  break;
-                }
-                parent = parent.parentElement;
-              }
-            }
-            
-            if (!labelText) {
-              let nextSibling = radio.nextSibling;
-              while (nextSibling && !labelText) {
-                if (nextSibling.nodeType === 3) {
-                  labelText = nextSibling.textContent.trim();
-                  if (labelText) break;
-                } else if (nextSibling.nodeType === 1) {
-                  labelText = nextSibling.textContent.trim();
-                  if (labelText) break;
-                }
-                nextSibling = nextSibling.nextSibling;
-              }
-            }
-            
-            return labelText && 
-              (labelText.toLowerCase() === String(value).toLowerCase() ||
-               labelText.toLowerCase().includes(String(value).toLowerCase()));
-          }
-        ]) {
-          for (const radio of radioGroup) {
-            if (strategy(radio)) {
-              radio.checked = true;
-              radio.dispatchEvent(new Event('change', { bubbles: true }));
-              radio.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
-              foundMatch = true;
-              console.log(`Selected radio option: ${radio.value}`);
-              break;
-            }
-          }
-          
-          if (foundMatch) break;
-        }
-
-        if (!foundMatch) {
-          console.log(`Could not find matching radio button for ${key} with value ${value}`);
-        }
-        
-        await new Promise(resolve => setTimeout(resolve, 200));
-      }
-    }
-
-    for (const key in fieldValues) {
-      const value = fieldValues[key];
-
-      if (value && typeof value === 'object' && value.type === 'radio' &&
-        value.name && Array.isArray(value.options)) {
-
-        const groupName = value.name;
-        const selectedValue = value.selectedValue || '';
-
-        if (!selectedValue) continue;
-
-        const radioButtons = document.querySelectorAll(`input[type="radio"][name="${CSS.escape(groupName)}"]`);
-        for (const radio of radioButtons) {
-          if (radio.value === selectedValue) {
-            radio.checked = true;
-            radio.dispatchEvent(new Event('change', { bubbles: true }));
-            radio.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
-            console.log(`Selected radio option from group object: ${radio.value}`);
-            break;
-          }
-        }
-        
-        await new Promise(resolve => setTimeout(resolve, 200));
-      }
-    }
-
-    console.log("Sequential form filling complete:", stats);
+    console.log("Form filling complete:", stats);
     return stats;
   }
 
