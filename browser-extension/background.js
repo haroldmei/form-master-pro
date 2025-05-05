@@ -438,7 +438,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       const wrappedCode = `(function() {
         ${message.codeString}
         try {
-          setTitleValue('Mx');
+          setValue(${message.value});
           return { success: true, message: 'Explora script executed successfully' };
         } catch (error) {
           console.error('Explora execution error:', error);
@@ -446,6 +446,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         }
       })();`;
 
+      console.log('wrappedCode', wrappedCode);
       // Execute the script directly in the page context
       chrome.scripting.executeScript({
         target: { tabId: sender.tab?.id },

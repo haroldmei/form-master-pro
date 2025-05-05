@@ -851,6 +851,34 @@ const formFiller = (() => {
     }
   }
 
+  async function fillField_explore(element, value, codeString) {
+    console.log(`Filling field using explore method: ${element.id || element.name}, value: ${value}`);
+    
+    if (!codeString) {
+      console.warn("No code string provided for fillField_explore");
+      return false;
+    }
+    
+    console.log("Injecting code via Explora...");
+  
+    chrome.runtime.sendMessage({ 
+      action: "injectExplora", 
+      url: window.location.href, 
+      codeString: codeString,
+      value: value
+    }, function(response) {
+      console.log("Received Explora injection response:", response);
+      if (response && response.success) {
+        console.log("Filled field using custom code injection");
+      } else {
+        console.warn("Error executing custom code via Explora:", response?.error || "Unknown error");
+      }
+    });
+    
+    return true;
+  }
+  
+
   async function performFormFilling(url, profile) {
 
     const tabUrl = new URL(url);
@@ -919,6 +947,7 @@ const formFiller = (() => {
 
     // Process each field mapping using AI code
     for (const control of fieldMappings) {
+      console.log('control.containerDesc.aicode', control.containerDesc.aicode);
       try {
         // Skip controls without AI code
         if (!control.containerDesc || !control.containerDesc.aicode) {
@@ -930,7 +959,7 @@ const formFiller = (() => {
         // Parse the AI code from the control
         let aiCodeObj;
         try {
-          aiCodeObj = JSON.parse(control.containerDesc.aicode);
+          aiCodeObj = control.containerDesc.aicode;
         } catch (e) {
           console.error(`Error parsing AI code for control:`, control.id || control.name, e);
           stats.failed++;
@@ -980,34 +1009,60 @@ const formFiller = (() => {
         console.log(`Executing AI code for ${title || id} with value: ${valueToSet}`);
         const functionBody = aiCodeObj.aicode;
         try {
-          // Create a function from the AI code and execute it with the value
-          const setValueFunction = new Function('return ' + functionBody)();
+          // Get the element using the XPath if available
+          let element = null;
+          if (aiCodeObj.xPath) {
+            try {
+              const xpathResult = document.evaluate(
+                aiCodeObj.xPath, 
+                document, 
+                null, 
+                XPathResult.FIRST_ORDERED_NODE_TYPE, 
+                null
+              );
+              
+              if (xpathResult && xpathResult.singleNodeValue) {
+                // Found the container element using XPath
+                const containerElement = xpathResult.singleNodeValue;
+                console.log(`Found container element using XPath: ${aiCodeObj.xPath}`);
+                
+                // First check if the ID is directly available in the container
+                if (id) {
+                  element = containerElement.querySelector(`#${id}`) || document.getElementById(id);
+                }
+                
+                // If element not found by ID, use the container itself
+                if (!element) {
+                  element = containerElement;
+                }
+              }
+            } catch (xpathError) {
+              console.error(`Error evaluating XPath: ${aiCodeObj.xPath}`, xpathError);
+            }
+          }
           
-          // Execute the setValue function with the field value
-          setValueFunction(valueToSet);
+          // Fallback to getElementById if XPath didn't work
+          if (!element && id) {
+            element = document.getElementById(id);
+          }
+          
+          if (element) {
+            // Try filling using fillField_explore with the AI code
+            console.log(`Using fillField_explore with element and AI code`);
+            const fillResult = await fillField_explore(element, valueToSet, functionBody);
+            if (fillResult) {
+              stats.filled++;
+              console.log(`Successfully filled field using fillField_explore: ${title || id}`);
+              continue; // Skip the other methods if this succeeds
+            }
+          }
+          
           
           stats.filled++;
           console.log(`Successfully filled field: ${title || id}`);
         } catch (error) {
           console.error(`Error executing AI code for ${title || id}:`, error);
           stats.failed++;
-          
-          // Fallback: try using standard form filling as backup
-          try {
-            const element = document.getElementById(id);
-            if (element) {
-              const tagName = element.tagName.toLowerCase();
-              const inputType = element.type ? element.type.toLowerCase() : '';
-              
-              if (await fillField(element, tagName, inputType, valueToSet)) {
-                stats.filled++;
-                stats.failed--; // Correct the stats since we recovered
-                console.log(`Successfully filled field using fallback method: ${title || id}`);
-              }
-            }
-          } catch (fallbackError) {
-            console.error(`Fallback filling also failed for ${title || id}:`, fallbackError);
-          }
         }
       } catch (error) {
         console.error(`Error processing control:`, error);
