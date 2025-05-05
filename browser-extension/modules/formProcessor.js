@@ -63,10 +63,8 @@ const formProcessor = (() => {
         const keyName = field.containerDesc.aicode.title || field.name || field.id || '';
         if (keyName.trim() === '') return;
         
-        if (field.options && Array.isArray(field.options) && field.options.length > 0) {
-          currentFormFields[keyName] = field.options.map(option => 
-            option.text || option.label || option.value || ''
-          ).filter(Boolean);
+        if (field.containerDesc.aicode.options && Array.isArray(field.containerDesc.aicode.options) && field.containerDesc.aicode.options.length > 0) {
+          currentFormFields[keyName] = field.containerDesc.aicode.options
         } else {
           currentFormFields[keyName] = [];
         }
@@ -104,10 +102,8 @@ const formProcessor = (() => {
               // Handle different field types appropriately
               if (mapping.type === 'select' || mapping.type === 'radio') {
                 // Get options from the mapping
-                if (mapping.options && Array.isArray(mapping.options)) {
-                  allSiteFields[keyName] = mapping.options.map(option => 
-                    option.text || option.value || ''
-                  ).filter(Boolean);
+                if (mapping.containerDesc.aicode.options && Array.isArray(mapping.containerDesc.aicode.options)) {
+                  allSiteFields[keyName] = mapping.containerDesc.aicode;
                 } else {
                   allSiteFields[keyName] = [];
                 }
@@ -144,54 +140,6 @@ const formProcessor = (() => {
       } else {
         console.log("Using cached suggestions - no API call needed");
       }
-      
-      // Load any saved default field values directly from storage
-      const savedDefaultValues = await getDefaultFieldValues(rootUrl);
-      console.log(`Loaded ${Object.keys(savedDefaultValues).length} saved default values for ${rootUrl}`);
-      
-      formFields.forEach(field => {
-        const fieldId = field.id || '';
-        const fieldName = field.name || '';
-        const fieldLabel = field.containerDesc.aicode.title || '';
-        
-        // Skip if we already have a suggestion for this field
-        const keyName = fieldLabel || fieldName || fieldId;
-        
-        if (!keyName || allSuggestions[keyName]) return;
-        
-        // Check if we have a saved default value for this field
-        if (savedDefaultValues && keyName in savedDefaultValues) {
-          allSuggestions[keyName] = savedDefaultValues[keyName];
-          console.log("Using saved default value for field:", keyName, savedDefaultValues[keyName]);
-          return;
-        }
-        
-        // Apply rule-based mapping for this field
-        const fieldType = field.type || 'text';
-        const result = getValueFromGeneralMappings(field, fieldId, fieldName, fieldLabel, fieldType);
-        
-        if (result.value) {
-          // Add rule-based suggestion to our collection
-          allSuggestions[keyName] = result.value;
-        } else {
-          // Still set a temporary default value (will be overridden if user provides one)
-          if (field.options && Array.isArray(field.options) && field.options.length > 0) {
-            allSuggestions[keyName] = field.options[0].value || field.options[0].text || field.options[0].label;
-          } else if (fieldType === 'date') {
-            const today = new Date();
-            const yyyy = today.getFullYear();
-            const mm = String(today.getMonth() + 1).padStart(2, '0'); // Months are 0-based
-            const dd = String(today.getDate()).padStart(2, '0');
-            allSuggestions[keyName] = `${yyyy}-${mm}-${dd}`;
-          } else if (fieldType === 'text') {
-            allSuggestions[keyName] = '';
-          } else if (fieldType === 'checkbox' || fieldType === 'radio') {
-            allSuggestions[keyName] = field.type === 'radio' ? field.options?.[0]?.value || 'on' : 'on';
-          } else {
-            allSuggestions[keyName] = '';
-          }
-        }
-      });
       
       // Save all suggestions to cache
       allSuggestionsCache[cacheKey] = {...allSuggestions};
