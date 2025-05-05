@@ -788,17 +788,6 @@ async function processAndFillForm(tabId, url, options = {}) {
       if (sendResponse) sendResponse(response);
       return response;
     }
-    
-    if (!processedForm.fields || 
-       (Array.isArray(processedForm.fields) && processedForm.fields.length === 0) ||
-       (typeof processedForm.fields === 'object' && Object.keys(processedForm.fields).length === 0)) {
-      const response = { 
-        success: false, 
-        error: 'No fields could be mapped for filling'
-      };
-      if (sendResponse) sendResponse(response);
-      return response;
-    }
 
     if (fillForm) {
       // Perform actual form filling
