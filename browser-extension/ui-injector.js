@@ -167,7 +167,7 @@
     mainContainer.className = 'formmaster-container';
     // Add styles to make it draggable and properly positioned
     mainContainer.style.position = 'fixed';
-    mainContainer.style.top = '60px'; // Move down to ensure all buttons are visible
+    mainContainer.style.top = '120px'; // Move much lower to ensure tooltips are visible (was 60px)
     mainContainer.style.right = '20px'; // Ensure it's on the right side
     mainContainer.style.zIndex = '9999';
     mainContainer.style.userSelect = 'none';
@@ -235,7 +235,7 @@
       }
       
       btnElement.innerHTML = `
-        <span class="formmaster-icon" title="${tooltipText}">${button.icon}</span>
+        <span class="formmaster-icon">${button.icon}</span>
       `;
       
       // Make sure the entire button is clickable
@@ -245,8 +245,8 @@
         handleButtonClick(button.id, btnElement);
       });
       
-      // Add title attribute to the button for tooltip
-      btnElement.title = tooltipText;
+      // Store tooltip text in a data attribute instead of title
+      btnElement.dataset.tooltip = tooltipText;
       
       panel.appendChild(btnElement);
     });
@@ -329,6 +329,7 @@
           background-color: transparent;
           border: none;
           cursor: pointer;
+          position: relative; /* Required for custom tooltip positioning */
         }
         .formmaster-button.icon-only:hover {
           background-color: rgba(0, 0, 0, 0.05);
@@ -338,6 +339,51 @@
         }
         .formmaster-button.icon-only .formmaster-icon {
           font-size: 20px;
+        }
+        /* Custom tooltip styling */
+        .formmaster-button.icon-only:hover::after {
+          content: attr(data-tooltip);
+          position: absolute;
+          bottom: 120%; /* Move lower than before (was 100%) */
+          left: 50%;
+          transform: translateX(-50%);
+          background-color: #333;
+          color: white;
+          padding: 5px 10px;
+          border-radius: 4px;
+          font-size: 12px;
+          white-space: nowrap;
+          z-index: 10000;
+          margin-bottom: 5px; /* Reduced margin (was 10px) */
+          box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+          pointer-events: none;
+          /* Ensure tooltip breaks out of any container boundaries */
+          filter: none !important;
+          clip: none !important;
+          overflow: visible !important;
+        }
+        /* Modify the container and panel to ensure tooltips can escape */
+        .formmaster-container, .formmaster-panel {
+          overflow: visible !important;
+          filter: none !important;
+          clip: none !important;
+        }
+        /* Tooltip arrow */
+        .formmaster-button.icon-only:hover::before {
+          content: '';
+          position: absolute;
+          bottom: 120%; /* Match the tooltip position (was 100%) */
+          left: 50%;
+          transform: translateX(-50%);
+          border-width: 5px;
+          border-style: solid;
+          border-color: #333 transparent transparent transparent;
+          margin-bottom: 0px; /* Reduced margin (was 5px) */
+          pointer-events: none;
+          /* Ensure arrow breaks out of any container boundaries */
+          filter: none !important;
+          clip: none !important;
+          overflow: visible !important;
         }
         .status-indicator {
           width: 12px;
