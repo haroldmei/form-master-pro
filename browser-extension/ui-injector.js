@@ -167,8 +167,8 @@
     mainContainer.className = 'formmaster-container';
     // Add styles to make it draggable and properly positioned
     mainContainer.style.position = 'fixed';
-    mainContainer.style.bottom = '20px';
-    mainContainer.style.right = '20px';
+    mainContainer.style.top = '60px'; // Move down to ensure all buttons are visible
+    mainContainer.style.right = '20px'; // Ensure it's on the right side
     mainContainer.style.zIndex = '9999';
     mainContainer.style.userSelect = 'none';
     
@@ -178,7 +178,7 @@
     
     // Create panel for buttons
     const panel = document.createElement('div');
-    panel.className = 'formmaster-panel';
+    panel.className = 'formmaster-panel vertical';
     
     // Make panel visible or hidden based on showUi parameter
     if (showUi) {
@@ -186,26 +186,6 @@
     } else {
       panel.classList.remove('show'); // Make panel hidden
     }
-    
-    // Add panel header
-    const panelHeader = document.createElement('div');
-    panelHeader.className = 'panel-header';
-    panelHeader.style.cursor = 'move'; // Show move cursor on header
-    
-    const panelTitle = document.createElement('div');
-    panelTitle.className = 'panel-title';
-    panelTitle.textContent = 'FormMaster Pro';
-    
-    const panelVersion = document.createElement('div');
-    panelVersion.className = 'panel-version';
-    panelVersion.textContent = `v${VERSION}`;
-    
-    panelHeader.appendChild(panelTitle);
-    panelHeader.appendChild(panelVersion);
-    panel.appendChild(panelHeader);
-    
-    // Make the header draggable
-    panelHeader.addEventListener('mousedown', startDrag);
     
     // Add buttons to panel
     const buttons = [
@@ -221,21 +201,41 @@
     buttons.push({ id: 'auto-fill', text: 'Auto Fill', icon: '✏️' });
     
     // Add the three buttons from popup.html
-    buttons.push({ id: 'analyze-form', text: 'Analyze Current Form', icon: '🔍' });
+    buttons.push({ id: 'analyze-form', text: 'Analyze Form', icon: '🔍' });
     buttons.push({ id: 'fetch-code', text: 'Fetch Code', icon: '💻' });
-    buttons.push({ id: 'clear-data', text: 'Clear Saved Data', icon: '🗑️' });
-    
-    // Do not add Click-to-Fill button as it's now enabled by default
+    // buttons.push({ id: 'clear-data', text: 'Clear Saved Data', icon: '🗑️' });
     
     // Make sure buttons are added with the correct structure
     buttons.forEach(button => {
       const btnElement = document.createElement('button');
-      btnElement.className = 'formmaster-button';
+      btnElement.className = 'formmaster-button icon-only';
       btnElement.id = `formmaster-${button.id}`;
       
+      // Determine the appropriate tooltip for each button
+      let tooltipText = button.text;
+      switch (button.id) {
+        case 'load-data':
+          tooltipText = 'Load PDF or DOCX file to extract information';
+          break;
+        case 'load-folder':
+          tooltipText = 'Load multiple files from a folder';
+          break;
+        case 'auto-fill':
+          tooltipText = 'Automatically fill forms with your data';
+          break;
+        case 'analyze-form':
+          tooltipText = 'Analyze the current page form fields';
+          break;
+        case 'fetch-code':
+          tooltipText = 'Generate AI-powered filling code for this site';
+          break;
+        case 'clear-data':
+          tooltipText = 'Clear all saved form data and mappings';
+          break;
+      }
+      
       btnElement.innerHTML = `
-        <span class="formmaster-icon">${button.icon}</span>
-        <span class="formmaster-text">${button.text}</span>
+        <span class="formmaster-icon" title="${tooltipText}">${button.icon}</span>
       `;
       
       // Make sure the entire button is clickable
@@ -245,33 +245,18 @@
         handleButtonClick(button.id, btnElement);
       });
       
+      // Add title attribute to the button for tooltip
+      btnElement.title = tooltipText;
+      
       panel.appendChild(btnElement);
     });
     
-    // Add status bar to display profile info
-    const statusBar = document.createElement('div');
-    statusBar.className = 'formmaster-status-bar no-profile';
-    statusBar.id = 'formmaster-status-bar';
-    
-    // Create file info container
-    const fileInfo = document.createElement('div');
-    fileInfo.className = 'file-info';
-    
-    // Create file name and size elements
-    const fileName = document.createElement('div');
-    fileName.className = 'file-name';
-    fileName.textContent = 'No profile loaded';
-    
-    const fileSize = document.createElement('div');
-    fileSize.className = 'file-size';
-    fileSize.textContent = '';
-    fileSize.style.display = 'none';
-    
-    fileInfo.appendChild(fileName);
-    fileInfo.appendChild(fileSize);
-    statusBar.appendChild(fileInfo);
-    
-    panel.appendChild(statusBar);
+    // Add compact status indicator
+    const statusIndicator = document.createElement('div');
+    statusIndicator.className = 'status-indicator no-profile';
+    statusIndicator.id = 'formmaster-status-indicator';
+    statusIndicator.title = 'No profile loaded';
+    panel.appendChild(statusIndicator);
     
     // Add all elements to the shadow DOM
     mainContainer.appendChild(panel);
@@ -297,12 +282,14 @@
       link.href = chrome.runtime.getURL('styles/injector-ui.css');
       shadowRoot.appendChild(link);
       
-      // Add additional styles for draggable behavior and panel without FM button
+      // Add additional styles for vertical icon-only layout
       const style = document.createElement('style');
       style.textContent = `
         .formmaster-container {
           transition: none;
-          margin-bottom: 10px;  /* Add margin at bottom */
+          margin-bottom: 10px;
+          right: 20px !important; /* Force right alignment */
+          left: auto !important; /* Prevent left positioning */
         }
         .formmaster-container.dragging {
           opacity: 0.8;
@@ -316,6 +303,14 @@
           border-radius: 8px;
           box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
           margin-bottom: 0;
+          background-color: #fff;
+          padding: 8px 4px;
+        }
+        .formmaster-panel.vertical {
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+          width: auto;
         }
         .formmaster-panel.show {
           opacity: 1;
@@ -323,22 +318,39 @@
           transform: none;
           pointer-events: auto;
         }
-        .panel-header {
-          cursor: move;
-          background-color: #4285f4;
-          color: white;
+        .formmaster-button.icon-only {
+          padding: 8px;
           display: flex;
-          justify-content: space-between;
+          justify-content: center;
           align-items: center;
-          padding: 8px 12px;
-          border-top-left-radius: 8px;
-          border-top-right-radius: 8px;
+          border-radius: 50%;
+          width: 36px;
+          height: 36px;
+          background-color: transparent;
+          border: none;
+          cursor: pointer;
         }
-        /* Add a subtle indicator that the panel can be moved */
-        .panel-header:before {
-          content: "≡ ";
-          opacity: 0.7;
-          margin-right: 5px;
+        .formmaster-button.icon-only:hover {
+          background-color: rgba(0, 0, 0, 0.05);
+        }
+        .formmaster-button.icon-only .formmaster-text {
+          display: none;
+        }
+        .formmaster-button.icon-only .formmaster-icon {
+          font-size: 20px;
+        }
+        .status-indicator {
+          width: 12px;
+          height: 12px;
+          border-radius: 50%;
+          margin: 4px auto;
+          background-color: #ccc;
+        }
+        .status-indicator.no-profile {
+          background-color: #ccc;
+        }
+        .status-indicator:not(.no-profile) {
+          background-color: #4CAF50;
         }
       `;
       shadowRoot.appendChild(style);
@@ -1122,15 +1134,12 @@
         
         if (response && response.success && response.profile) {
           const userProfile = response.profile;
-          const statusBar = shadow.getElementById('formmaster-status-bar');
-          const fileName = statusBar.querySelector('.file-name');
-          const fileSize = statusBar.querySelector('.file-size');
+          const statusIndicator = shadow.getElementById('formmaster-status-indicator');
           
           // Update UI with profile data
           if (userProfile) {
             // Extract profile name information
             let profileName = '';
-            let profileSize = userProfile.fileSize || userProfile.size || 0;
             
             if (userProfile.source && userProfile.filename) {
               // If it's a file-based profile
@@ -1145,28 +1154,12 @@
               profileName = 'Custom profile';
             }
             
-            // Update file name
-            fileName.textContent = profileName;
-            
-            // Get formatted file size from background script
-            if (profileSize > 0) {
-              chrome.runtime.sendMessage({ action: 'formatFileSize', size: profileSize }, response => {
-                if (response && response.success) {
-                  fileSize.textContent = response.formattedSize;
-                  fileSize.style.display = 'block';
-                } else {
-                  fileSize.style.display = 'none';
-                }
-              });
-            } else {
-              fileSize.style.display = 'none';
-            }
-            
-            statusBar.classList.remove('no-profile');
+            // Update status indicator
+            statusIndicator.classList.remove('no-profile');
+            statusIndicator.title = profileName;
           } else {
-            fileName.textContent = 'No profile loaded';
-            fileSize.style.display = 'none';
-            statusBar.classList.add('no-profile');
+            statusIndicator.classList.add('no-profile');
+            statusIndicator.title = 'No profile loaded';
           }
         }
       });
