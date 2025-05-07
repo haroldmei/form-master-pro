@@ -37,9 +37,6 @@ module.exports = (env, argv) => {
       // UI injection script
       'ui-injector': './browser-extension/ui-injector.js',
       // Form extraction script
-      'forms/form_extract': './browser-extension/forms/form_extract.js',
-      'forms/form_checkboxgroup': './browser-extension/forms/form_checkboxgroup.js',
-      'forms/form_radios': './browser-extension/forms/form_radios.js',
       'libs/jszip.min': './browser-extension/libs/jszip.min.js',
       'libs/pdf.min': './browser-extension/libs/pdf.min.js',
       'libs/pdf.worker.min': './browser-extension/libs/pdf.worker.min.js',
@@ -146,8 +143,8 @@ module.exports = (env, argv) => {
             noErrorOnMissing: true
           },
           {
-            from: './browser-extension/forms',
-            to: 'forms',
+            from: './browser-extension/modules',
+            to: 'modules',
             noErrorOnMissing: true
           },
           {

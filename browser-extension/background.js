@@ -664,29 +664,6 @@ async function isUserVerified() {
   return await checkEmailVerification();
 }
 
-// Extract form data from the page
-async function extractFormData(tabId) {
-  // Inject the form extraction scripts
-  await chrome.scripting.executeScript({
-    target: { tabId },
-    files: ['forms/form_radios.js', 'forms/form_checkboxgroup.js', 'forms/form_extract.js']
-  });
-  
-  // Execute the form extraction
-  const results = await chrome.scripting.executeScript({
-    target: { tabId },
-    function: () => {
-      return self.FormExtract.extractFormControls();
-    }
-  });
-  
-  if (!results || !results[0] || !results[0].result) {
-    return null;
-  }
-  
-  return results[0].result;
-}
-
 // Flatten form fields from different types into a single array
 function flattenFormFields(formData) {
   const allFields = [];
