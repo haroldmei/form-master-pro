@@ -18,20 +18,22 @@ module.exports = (env, argv) => {
       popup: './browser-extension/popup.js',
       callback: './browser-extension/callback.js',
 
-      'content/positionUpdater': './browser-extension/content/positionUpdater.js',
-      'content/uiState': './browser-extension/content/uiState.js',
-      'content/highlighters': './browser-extension/content/highlighters.js',
-      'content/eventHandlers': './browser-extension/content/eventHandlers.js',
-      'content/formFields': './browser-extension/content/formFields.js',
-
       // Include all other JS files in the modules folder
       'modules/userProfile': './browser-extension/modules/userProfile.js',
       'modules/aiService': './browser-extension/modules/aiService.js',
       'modules/formFiller': './browser-extension/modules/formFiller.js',
       'modules/formProcessor': './browser-extension/modules/formProcessor.js',
-      'modules/formAnalysis': './browser-extension/modules/formAnalysis.js',
       'modules/utils': './browser-extension/modules/utils.js',
       'modules/auth': './browser-extension/modules/auth.js',
+      
+      'modules/formAnalysis/storage': './browser-extension/modules/formAnalysis/storage.js',
+      'modules/formAnalysis/core': './browser-extension/modules/formAnalysis/core.js',
+      'modules/formAnalysis/index': './browser-extension/modules/formAnalysis/index.js',
+      'modules/formAnalysis/domUtils': './browser-extension/modules/formAnalysis/domUtils.js',
+      'modules/formAnalysis/highlighting': './browser-extension/modules/formAnalysis/highlighting.js',
+      'modules/formAnalysis/containerDetection': './browser-extension/modules/formAnalysis/containerDetection.js',
+      'modules/formAnalysis/labelDetection': './browser-extension/modules/formAnalysis/labelDetection.js',
+      
       // UI injection script
       'ui-injector': './browser-extension/ui-injector.js',
       // Form extraction script
