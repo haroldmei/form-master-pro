@@ -23,7 +23,6 @@ module.exports = (env, argv) => {
       'content/highlighters': './browser-extension/content/highlighters.js',
       'content/eventHandlers': './browser-extension/content/eventHandlers.js',
       'content/formFields': './browser-extension/content/formFields.js',
-      'content/index': './browser-extension/content/index.js', 
 
       // Include all other JS files in the modules folder
       'modules/userProfile': './browser-extension/modules/userProfile.js',

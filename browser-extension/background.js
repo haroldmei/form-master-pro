@@ -402,19 +402,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
 
-  if (message.action === 'getFormValues') {
-    console.log('Processing getFormValues request for:', message.url);
-    
-    // Use the consolidated function with fillForm=false (default)
-    (async () => {
-      await processAndFillForm(sender.tab?.id, message.url, { 
-        sendResponse 
-      });
-    })();
-    
-    return true; // Keep the messaging channel open for the async response
-  }
-
   // Also fix the click-fill handler in a similar way
   if (message.action === 'click-fill') {
     console.log('Handling click-fill request');
