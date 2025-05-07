@@ -141,8 +141,44 @@
   
   function injectUI(showUi = true) {
     // Avoid duplicate injection
-    if (document.getElementById('formmaster-ui')) return;
-    
+    if (document.getElementById('fm-main-container')) {
+      return;
+    }
+
+    // Listen for storage changes to update highlights
+    chrome.storage.onChanged.addListener((changes, namespace) => {
+      if (namespace === 'local' && changes.fieldMappingsV2) {
+        const newValue = changes.fieldMappingsV2.newValue;
+        const oldValue = changes.fieldMappingsV2.oldValue;
+        const currentUrl = window.location.origin;
+
+        if (newValue && newValue[currentUrl]) {
+          // Find containers that were updated
+          newValue[currentUrl].forEach((container, index) => {
+            if (container.containerDesc && container.containerDesc.aicode) {
+              // Dispatch event for each updated container
+              const event = new CustomEvent('fm-container-changed', {
+                detail: {
+                  controlIndex: index,
+                  newContainer: {
+                    tagName: container.containerDesc.tagName,
+                    className: container.containerDesc.className,
+                    id: container.containerDesc.id,
+                    html: container.containerDesc.html,
+                    attributes: container.containerDesc.attributes,
+                    path: container.containerDesc.path,
+                    xpath: container.containerDesc.xpath,
+                    aicode: container.containerDesc.aicode
+                  }
+                }
+              });
+              document.dispatchEvent(event);
+            }
+          });
+        }
+      }
+    });
+
     // Track API call status to prevent duplicate calls
     let isApiCallInProgress = false;
     

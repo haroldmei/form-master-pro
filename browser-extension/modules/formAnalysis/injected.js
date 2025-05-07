@@ -43,6 +43,7 @@ const formAnalysisInjected = (() => {
       const controlIndex = e.detail.controlIndex;
       const newContainer = e.detail.newContainer;
       
+      console.log('fm-container-changed event received:', e);
       
       if (controlIndex >= 0 && controlIndex < formControls.length) {
         // Update the control with the new container info

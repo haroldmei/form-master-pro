@@ -104,7 +104,8 @@ const formAnalysisHighlighting = (() => {
    * @param {Function} onContainerChange - Optional callback when container changes
    */
   function highlightFormControl(control, onContainerChange) {
-    
+    console.log('Highlighting form control:', control);
+
     // Ensure we have the necessary container info
     if (!control.containerXPath) {
       console.warn('Missing container xpath in control:', control);
@@ -134,9 +135,11 @@ const formAnalysisHighlighting = (() => {
         // Check if the aicode contains a valid xpath and it matches the container's xpath
         if (aiCodeObj && aiCodeObj.xPath && aiCodeObj.xPath === control.containerXPath) {
           // Green highlight when aicode exists and xpath matches
+          console.log('Green highlight when aicode exists and xpath matches');
           container.classList.add(CONTAINER_HIGHLIGHT_AICODE_CLASS);
         } else {
           // Yellow highlight when aicode exists but xpath doesn't match
+          console.log('Yellow highlight when aicode exists but xpath doesn\'t match');
           container.classList.add(CONTAINER_HIGHLIGHT_CLASS);
         }
       } catch (error) {
