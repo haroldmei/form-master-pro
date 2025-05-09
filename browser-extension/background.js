@@ -433,7 +433,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         }
       })();`;
 
-      console.log('wrappedCode', wrappedCode);
       // Execute the script directly in the page context
       chrome.scripting.executeScript({
         target: { tabId: sender.tab?.id },
@@ -448,9 +447,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         },
         args: [wrappedCode]
       }).then(results => {
-        console.log('Script injection result:', results);
         if (results && results[0] && results[0].result) {
-          console.log('Explora script execution complete');
+          console.log('Done script: ', message.codeString, message.value);
         }
       }).catch(error => {
         console.error('Error executing script via scripting API:', error);
