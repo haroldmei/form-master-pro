@@ -677,15 +677,6 @@ function flattenFormFields(formData) {
   return allFields;
 }
 
-// Process form fields with user profile data
-async function processFormFields(url) {
-  console.log('Processing form fields with user profile data');
-  const userProfile = await userProfileManager.getUserProfile();
-  
-  // Use the formProcessor module to get field values
-  return await formProcessor.processForm(url, userProfile);
-}
-
 // Consolidated function to process form fields and optionally fill them
 async function processAndFillForm(tabId, url, options = {}) {
   console.log('Processing and filling form in tab context', options);
@@ -704,11 +695,21 @@ async function processAndFillForm(tabId, url, options = {}) {
       if (sendResponse) sendResponse(response);
       return response;
     }
-    
+
     // Get user profile data
     const userProfile = await userProfileManager.getUserProfile();
     console.log('Retrieved user profile for form filling:', userProfile ? userProfile.filename || 'available' : 'not available');
-    
+
+    const processedForm = await formProcessor.processForm(url, userProfile);
+    if (!processedForm.success) {
+      const response = { 
+        success: false, 
+        error: processedForm.error || 'Error processing form'
+      };
+      if (sendResponse) sendResponse(response);
+      return response;
+    }
+
     if (fillForm) {
       // Perform actual form filling in the tab context where document is available
       console.log('Filling form using formFiller module in tab context');
