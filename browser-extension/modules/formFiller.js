@@ -852,6 +852,12 @@ const formFiller = (() => {
   }
 
   async function fillField_explore(element, value, codeString) {
+    
+    if (typeof value === 'undefined' || value === null || value === '') {
+      console.warn("value is not a string, skipping fillField_explore");
+      return false;
+    }
+    
     console.log(`Filling field using explore method: ${element.id || element.name}, value: ${value}`);
     
     if (!codeString) {
