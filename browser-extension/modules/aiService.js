@@ -190,117 +190,93 @@ const aiService = (() => {
   }
 
   /**
-   * Get AI-generated code for each container in the fieldMappings for a URL
-   *
-   * @param {Object} fieldMappingsV2 - The field mappings object from local storage
+   * Get AI-generated code for form fields
+   * @param {Array} fields - Array of form field objects
    * @param {string} url - URL of the page containing the form
-   * @returns {Object} Updated fieldMappings with aicode for each container
+   * @returns {Object} Generated code for the form fields
    */
-  async function getAiCode(fieldMappingsV2, url) {
+  async function getAiCode(fields, url) {
     try {
-      // Get the containers for the current URL
-      const urlMapping = fieldMappingsV2[url];
-      if (!urlMapping) {
-        throw new Error(`No field mappings found for URL: ${url}`);
+      if (!fields || !fields.length) {
+        throw new Error('No form fields provided');
       }
 
-      // Process as array - new structure
-      for (let i = 0; i < urlMapping.length; i++) {
-        const container = urlMapping[i];
-        
-        // Skip if container is not valid
-        if (!container || !container.containerDesc) {
-          console.log(`Skipping invalid container at index ${i}`);
-          continue;
-        }
-
-        // Check if container already has aicode and xpath hasn't changed
-        if (container.containerDesc.aicode) {
-          try {
-            // It's already an object, check xpath directly
-            if (container.containerDesc.aicode.xPath === container.containerDesc.xpath) {
-              console.log(`Skipping container ${i} - valid aicode object with matching xpath exists`);
-              continue;
-            }
-            console.log(`Container ${i} has different xpath, regenerating aicode`, 
-              container.containerDesc.aicode.xPath, container.containerDesc.xpath);
-          } catch (parseError) {
-            console.error('Error parsing existing aicode:', parseError);
-            // If parsing fails, assume we need to regenerate
-          }
-        }
-
-        // Add a 1-second delay before making the API call
-        await new Promise(resolve => setTimeout(resolve, 1000));
-
+      // Process each field
+      const processedFields = await Promise.all(fields.map(async field => {
         try {
-          // Generate AI code for this container
-          const codeString = await generateAiCodeForContainer(container.containerDesc.html, url);
-
-          console.debug('codeString', codeString);
-
-          // Parse the AI code to add xPath information
-          try {
-            // Extract JSON content from markdown-formatted response
-            const jsonMatch = codeString.match(/```json\n([\s\S]*?)\n```/) || 
-                            codeString.match(/```([\s\S]*?)```/) || 
-                            [null, codeString];
-            const jsonContent = jsonMatch[1] || codeString;
-
-            // Parse the extracted JSON content
-            let aiCodeObj = JSON.parse(jsonContent);
-            
-            // Check if aiCodeObj contains multiple objects, which indicates it needs scope adjustment
-            if (Array.isArray(aiCodeObj)) {
-              console.log(`Skipping container ${i} - aiCodeObj contains multiple objects, use the first one`);
-              aiCodeObj = aiCodeObj[0];
-            }
-            
-            // Add xPath information to the AI code
-            aiCodeObj.xPath = container.containerDesc.xpath;
-            // Convert back to string
-            container.containerDesc.aicode = aiCodeObj;
-
-            // Save to storage after updating
-            await new Promise(resolve => {
-              chrome.storage.local.get('fieldMappingsV2', (result) => {
-                const updatedFieldMappings = result.fieldMappingsV2 || {};
-                if (!updatedFieldMappings[url]) {
-                  updatedFieldMappings[url] = [];
-                }
-                updatedFieldMappings[url][i] = container; // Update only the specific container
-                chrome.storage.local.set({ fieldMappingsV2: updatedFieldMappings }, () => {
-                  console.log(`Saved updated container for URL: ${url}, index: ${i}`);
-                  resolve();
-                });
-              });
-            });
-
-            console.log('container.containerDesc.aicode', container.containerDesc.aicode);
-            
-          } catch (parseError) {
-            console.error('Error parsing AI code to add xPath:', parseError);
-            // If parsing fails, store the original code string
-            container.containerDesc.aicode = codeString;
-            throw parseError;
-          }
-
-          console.log(`AI code generated for container ${i} on URL ${url}:`, container.containerDesc.aicode);
+          // Generate AI code for this field
+          const codeString = await generateAiCodeForField(field, url);
           
+          // Parse the AI code
+          const aiCode = parseAiCode(codeString);
+          
+          return {
+            ...field,
+            aiCode
+          };
         } catch (error) {
-          console.error(`Error processing container ${i}:`, error);
-          // Continue with next container even if this one fails
-          throw error;
+          console.error(`Error processing field ${field.id || field.name}:`, error);
+          return {
+            ...field,
+            aiCode: null,
+            error: error.message
+          };
         }
-      }
+      }));
 
-      return fieldMappingsV2;
+      return {
+        url,
+        fields: processedFields,
+        generatedAt: new Date().toISOString()
+      };
     } catch (error) {
-      console.error("Error in AI code generation:", error);
+      console.error('Error generating AI code:', error);
       throw error;
     }
   }
-  
+
+  // Helper function to generate AI code for a single field
+  async function generateAiCodeForField(field, url) {
+    // Add a delay to avoid rate limiting
+    await new Promise(resolve => setTimeout(resolve, 1000));
+
+    // Generate code based on field properties
+    const code = {
+      id: field.id,
+      name: field.name,
+      type: field.type,
+      tagName: field.tagName,
+      className: field.className,
+      placeholder: field.placeholder,
+      options: field.options,
+      selectors: {
+        id: field.id ? `#${field.id}` : null,
+        name: field.name ? `[name="${field.name}"]` : null,
+        className: field.className ? `.${field.className.split(' ').join('.')}` : null,
+        type: field.type ? `[type="${field.type}"]` : null
+      }
+    };
+
+    return JSON.stringify(code, null, 2);
+  }
+
+  // Helper function to parse AI code
+  function parseAiCode(codeString) {
+    try {
+      // Extract JSON content from markdown-formatted response
+      const jsonMatch = codeString.match(/```json\n([\s\S]*?)\n```/) || 
+                       codeString.match(/```([\s\S]*?)```/) || 
+                       [null, codeString];
+      const jsonContent = jsonMatch[1] || codeString;
+
+      // Parse the extracted JSON content
+      return JSON.parse(jsonContent);
+    } catch (error) {
+      console.error('Error parsing AI code:', error);
+      throw new Error('Invalid AI code format');
+    }
+  }
+
   // Return public API
   return {
     getAiSuggestions,

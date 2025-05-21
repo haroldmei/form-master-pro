@@ -7,6 +7,7 @@ importScripts(
   'modules/formFiller.js',
   'modules/utils.js',
   'modules/formAnalysis/storage.js',
+  'modules/formAnalysis/core.js',
   'libs/pdf.min.js',
   'libs/pdf.worker.min.js'
 );
@@ -40,19 +41,46 @@ if (typeof pdfjsLib !== 'undefined') {
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   const tabId = sender.tab?.id;
   
-  // Handle field mappings storage
+  // Handle clear suggestions
+  if (message.action === 'clearSuggestions') {
+    formProcessor.clearSuggestions()
+      .then(result => {
+        sendResponse({
+          success: true,
+          message: 'All form suggestions cleared'
+        });
+      })
+      .catch(error => sendResponse({ success: false, error: error.message }));
+    return true;
+  }
+
+  // Handle click-fill
+  if (message.action === 'click-fill') {
+    console.log('Handling click-fill request');
+    
+    // Use the consolidated function with fillForm=false
+    (async () => {
+      await processAndFillForm(sender.tab?.id, message.url, { 
+        sendResponse 
+      });
+    })();
+    
+    return true;
+  }
+
+  // Handle other message types...
   if (message.type === 'FM_SAVE_FIELD_MAPPINGS') {
     const { rootUrl, controls } = message.payload;
     
-    // First get current mappings
-    chrome.storage.local.get(['fieldMappingsV2'], function(result) {
-      let fieldMappingsV2 = result.fieldMappingsV2 || {};
+    // Get current suggestions
+    chrome.storage.local.get(['allSuggestions'], function(result) {
+      let allSuggestions = result.allSuggestions || {};
       
       // Update with new data
-      fieldMappingsV2[rootUrl] = controls;
+      allSuggestions[rootUrl] = controls;
       
       // Save back to storage
-      chrome.storage.local.set({'fieldMappingsV2': fieldMappingsV2}, function() {
+      chrome.storage.local.set({'allSuggestions': allSuggestions}, function() {
         console.log('Field mappings saved to local storage for URL:', rootUrl);
         sendResponse({success: true});
       });
@@ -61,7 +89,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true; // Indicate async response
   }
   
-  // Handle form analysis actions through new message types
   if (message.type === 'FM_ANALYZE_FORM') {
     const { id, data } = message;
     
@@ -105,9 +132,9 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (data && data.url) {
       const rootUrl = new URL(data.url).origin;
       
-      chrome.storage.local.get(['fieldMappingsV2'], function(result) {
-        const mappings = result.fieldMappingsV2 && result.fieldMappingsV2[rootUrl] 
-          ? result.fieldMappingsV2[rootUrl] : [];
+      chrome.storage.local.get(['allSuggestions'], function(result) {
+        const mappings = result.allSuggestions && result.allSuggestions[rootUrl] 
+          ? result.allSuggestions[rootUrl] : [];
         
         // Send the response back to the caller
         chrome.tabs.sendMessage(sender.tab.id, {
@@ -239,58 +266,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
   
-  if (message.action === 'analyzeCurrentForm') {
-    // This action is called by the content script to analyze form fields for highlighting
-    const tabId = sender.tab.id;
-    
-    // Execute the analysis in the sender tab
-    chrome.scripting.executeScript({
-      target: { tabId: tabId },
-      files: [
-        'modules/formAnalysis/domUtils.js',
-        'modules/formAnalysis/highlighting.js',
-        'modules/formAnalysis/containerDetection.js',
-        'modules/formAnalysis/labelDetection.js',
-        'modules/formAnalysis/injected.js'
-      ]
-    }, () => {
-      // First, check if we have existing mappings for this URL
-      const url = new URL(sender.tab.url);
-      const rootUrl = url.origin;
-      
-      chrome.storage.local.get(['fieldMappingsV2'], function(result) {
-        let existingMappings = [];
-        
-        // Check if we have mappings for this URL
-        if (result && result.fieldMappingsV2 && result.fieldMappingsV2[rootUrl]) {
-          existingMappings = result.fieldMappingsV2[rootUrl];
-          console.log('Found existing mappings for URL:', rootUrl);
-        }
-        
-        // After loading dependencies, execute the analysis
-        chrome.scripting.executeScript({
-          target: { tabId: tabId },
-          function: (params) => {
-            return window.formAnalysisInjected.performFormAnalysis(
-              params.existingMappings
-            );
-          },
-          args: [{
-            existingMappings: existingMappings
-          }]
-        }, results => {
-          // Send the response back to the content script
-          sendResponse({
-            success: true,
-            data: results && results[0] && results[0].result ? results[0].result : null
-          });
-        });
-      });
-    });
-    
-    return true; // Indicate async response
-  }
-  
   if (message.action === 'auto-fill') {
     // Use the consolidated function with fillForm=true
     (async () => {
@@ -383,84 +358,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
   
-  if (message.action === 'clearSuggestions') {
-    formProcessor.clearSuggestions()
-      .then(result => {
-        // Also clear field mappings when clearing suggestions
-        chrome.storage.local.get(['fieldMappingsV2'], function(mappingsResult) {
-          // Keep the fieldMappingsV2 structure but clear all mappings
-          chrome.storage.local.set({ fieldMappingsV2: {} }, function() {
-            console.log('All field mappings cleared');
-            sendResponse({
-              success: true,
-              message: 'All form mappings and suggestions cleared'
-            });
-          });
-        });
-      })
-      .catch(error => sendResponse({ success: false, error: error.message }));
-    return true;
-  }
-
-  // Also fix the click-fill handler in a similar way
-  if (message.action === 'click-fill') {
-    console.log('Handling click-fill request');
-    
-    // Use the consolidated function with fillForm=false
-    (async () => {
-      await processAndFillForm(sender.tab?.id, message.url, { 
-        sendResponse 
-      });
-    })();
-    
-    return true;
-  }
-
-  // Explora code injection
-  if (message.action === 'injectExplora') {
-    console.log('Injecting Explora script into tab:', sender.tab?.id);
-
-    try {
-      // Prepare the code script - add some safeguards by wrapping in IIFE
-      const wrappedCode = `(function() {
-        ${message.codeString}
-        try {
-          setValue('${message.value}');
-          return { success: true, message: 'Explora script executed successfully' };
-        } catch (error) {
-          console.error('Explora execution error:', error);
-          return { success: false, error: error.message };
-        }
-      })();`;
-
-      // Execute the script directly in the page context
-      chrome.scripting.executeScript({
-        target: { tabId: sender.tab?.id },
-        world: "MAIN", // This executes in the page's JavaScript context
-        func: (code) => {
-          // Create a function from string in a way that avoids CSP issues
-          const script = document.createElement('script');
-          script.textContent = code;
-          (document.head || document.documentElement).appendChild(script);
-          script.remove();
-          return { success: true };
-        },
-        args: [wrappedCode]
-      }).then(results => {
-        if (results && results[0] && results[0].result) {
-          console.log('Done script: ', message.codeString, message.value);
-        }
-      }).catch(error => {
-        console.error('Error executing script via scripting API:', error);
-      });
-
-      return true; // Keep the messaging channel open for async response
-    } catch (error) {
-      console.error('Error preparing Explora injection:', error);
-      return true;
-    }
-  }
-
   // Add message listener for AI code generation
   if (message.type === 'FM_GENERATE_AI_CODE') {
     // Generate AI code using the aiService
@@ -488,12 +385,12 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     const rootUrl = new URL(url).origin;
     
     // Load any existing mappings
-    chrome.storage.local.get(['fieldMappingsV2'], function(result) {
+    chrome.storage.local.get(['allSuggestions'], function(result) {
       let existingMappings = [];
       
       // Check if we have mappings for this URL
-      if (result && result.fieldMappingsV2 && result.fieldMappingsV2[rootUrl]) {
-        existingMappings = result.fieldMappingsV2[rootUrl];
+      if (result && result.allSuggestions && result.allSuggestions[rootUrl]) {
+        existingMappings = result.allSuggestions[rootUrl];
       }
       
       // Execute form analysis scripts in the tab
@@ -570,9 +467,9 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     }
     
     // Load field mappings for the URL
-    chrome.storage.local.get(['fieldMappingsV2'], async function(result) {
+    chrome.storage.local.get(['allSuggestions'], async function(result) {
       try {
-        if (!result || !result.fieldMappingsV2 || !result.fieldMappingsV2[url]) {
+        if (!result || !result.allSuggestions || !result.allSuggestions[url]) {
           sendResponse({ 
             success: false, 
             error: 'No form mappings found for this URL. Please analyze the form first.'
@@ -591,7 +488,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         
         // Use the aiService to generate code for the mappings
         try {
-          const updatedMappings = await aiService.getAiCode(result.fieldMappingsV2, url);
+          const updatedMappings = await aiService.getAiCode(result.allSuggestions, url);
           sendResponse({
             success: true,
             message: 'AI code generated successfully',
@@ -614,6 +511,48 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     });
     
     return true; // Indicate async response
+  }
+
+  // Explora code injection
+  if (message.action === 'injectExplora') {
+    console.log('Injecting Explora script into tab:', sender.tab?.id);
+    try {
+      // Prepare the code script - add some safeguards by wrapping in IIFE
+      const wrappedCode = `(function() {
+        ${message.codeString}
+        try {
+          setValue('${message.value}');
+          return { success: true, message: 'Explora script executed successfully' };
+        } catch (error) {
+          console.error('Explora execution error:', error);
+          return { success: false, error: error.message };
+        }
+      })();`;
+      // Execute the script directly in the page context
+      chrome.scripting.executeScript({
+        target: { tabId: sender.tab?.id },
+        world: "MAIN", // This executes in the page's JavaScript context
+        func: (code) => {
+          // Create a function from string in a way that avoids CSP issues
+          const script = document.createElement('script');
+          script.textContent = code;
+          (document.head || document.documentElement).appendChild(script);
+          script.remove();
+          return { success: true };
+        },
+        args: [wrappedCode]
+      }).then(results => {
+        if (results && results[0] && results[0].result) {
+          console.log('Done script: ', message.codeString, message.value);
+        }
+      }).catch(error => {
+        console.error('Error executing script via scripting API:', error);
+      });
+      return true; // Keep the messaging channel open for async response
+    } catch (error) {
+      console.error('Error preparing Explora injection:', error);
+      return true;
+    }
   }
 });
 
@@ -685,88 +624,165 @@ async function processAndFillForm(tabId, url, options = {}) {
     // Check if user is verified before proceeding
     const isVerified = await checkEmailVerification();
     if (!isVerified) {
-      const response = { 
+      const errorResponse = { 
         success: false, 
         error: 'Email verification required to use this feature',
         requiresVerification: true
       };
-      if (sendResponse) sendResponse(response);
-      return response;
+      if (sendResponse) sendResponse(errorResponse);
+      return errorResponse;
     }
 
-    // Get user profile data
+    // Step 1: Get user profile data
     const userProfile = await userProfileManager.getUserProfile();
-    console.log('Retrieved user profile for form filling:', userProfile ? userProfile.filename || 'available' : 'not available');
-
-    const processedForm = await formProcessor.processForm(url, userProfile);
-    if (!processedForm.success) {
-      const response = { 
+    if (!userProfile || !userProfile.filename) {
+      const errorResponse = { 
         success: false, 
-        error: processedForm.error || 'Error processing form'
+        error: 'No user profile available. Please load data first.'
       };
-      if (sendResponse) sendResponse(response);
-      return response;
+      if (sendResponse) sendResponse(errorResponse);
+      return errorResponse;
+    }
+    console.log('Retrieved user profile:', userProfile.filename);
+
+    // Step 2: Analyze current form to get main container content
+    const analysisResult = await formAnalysisCore.analyzeCurrentForm();
+    if (!analysisResult.success) {
+      const errorResponse = { 
+        success: false, 
+        error: analysisResult.error || 'Error analyzing form'
+      };
+      if (sendResponse) sendResponse(errorResponse);
+      return errorResponse;
+    }
+    console.log('Form analysis completed:', analysisResult);
+
+    // Step 3: Make API call to /api/aicode with profile and container content
+    try {
+      const accessToken = await auth0Service.getAccessToken();
+      const apiResponse = await fetch(`${typeof API_BASE_URL !== 'undefined' ? API_BASE_URL : 'http://localhost:3001'}/api/aicode`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${accessToken}`
+        },
+        body: JSON.stringify({
+          profile: userProfile,
+          container: analysisResult.mainContainer,
+          url: url
+        })
+      });
+
+      if (!apiResponse.ok) {
+        const errorData = await apiResponse.json().catch(() => ({}));
+        throw new Error(errorData.message || `API error: ${apiResponse.status}`);
+      }
+
+      // Step 4: Print the returned JavaScript code
+      const result = await apiResponse.json();
+      console.log('Generated AI code:', result.code);
+
+      // Step 5: Execute the AI code in the tab context if fillForm is true
+      if (fillForm && result.code) {
+        try {
+          // Prepare the code script - add some safeguards by wrapping in IIFE
+          const wrappedCode = `(function() {
+            try {
+              ${result.code}
+              return { success: true, message: 'Form filling code executed successfully' };
+            } catch (error) {
+              console.error('Form filling execution error:', error);
+              return { success: false, error: error.message };
+            }
+          })();`;
+
+          // Execute the script in the page context
+          const executionResult = await chrome.scripting.executeScript({
+            target: { tabId: tabId },
+            world: "MAIN", // Execute in the page's JavaScript context
+            func: (code) => {
+              return new Promise((resolve) => {
+                try {
+                  // Create a script element to inject the code
+                  const script = document.createElement('script');
+                  script.textContent = code;
+                  
+                  // Add error handling
+                  script.onerror = (error) => {
+                    console.error('Script execution error:', error);
+                    resolve({ success: false, error: 'Script execution failed' });
+                  };
+                  
+                  // Execute the script
+                  (document.head || document.documentElement).appendChild(script);
+                  script.remove();
+                  
+                  // Give a small delay to allow the script to execute
+                  setTimeout(() => resolve({ success: true }), 100);
+                } catch (error) {
+                  console.error('Error injecting script:', error);
+                  resolve({ success: false, error: error.message });
+                }
+              });
+            },
+            args: [wrappedCode]
+          });
+
+          if (chrome.runtime.lastError) {
+            throw new Error(chrome.runtime.lastError.message);
+          }
+
+          if (!executionResult || !executionResult[0] || !executionResult[0].result.success) {
+            throw new Error(executionResult?.[0]?.result?.error || 'Failed to execute form filling code');
+          }
+
+          const successResponse = { 
+            success: true, 
+            code: result.code,
+            message: 'Form filled successfully using AI code'
+          };
+          if (sendResponse) sendResponse(successResponse);
+          return successResponse;
+
+        } catch (executionError) {
+          console.error('Error executing form filling code:', executionError);
+          const errorResponse = { 
+            success: false, 
+            error: executionError.message || 'Error executing form filling code',
+            code: result.code // Still return the code even if execution failed
+          };
+          if (sendResponse) sendResponse(errorResponse);
+          return errorResponse;
+        }
+      }
+
+      // If not filling form, just return the code
+      const successResponse = { 
+        success: true, 
+        code: result.code,
+        message: 'AI code generated successfully'
+      };
+      if (sendResponse) sendResponse(successResponse);
+      return successResponse;
+
+    } catch (error) {
+      console.error('Error generating AI code:', error);
+      const errorResponse = { 
+        success: false, 
+        error: error.message || 'Error generating AI code'
+      };
+      if (sendResponse) sendResponse(errorResponse);
+      return errorResponse;
     }
 
-    if (fillForm) {
-      // Perform actual form filling in the tab context where document is available
-      console.log('Filling form using formFiller module in tab context');
-      
-      try {
-        // First inject the formFiller.js script into the tab
-        await chrome.scripting.executeScript({
-          target: { tabId },
-          files: ['modules/formFiller.js']
-        });
-        
-        // Pass the serialized user profile to the tab context
-        const results = await chrome.scripting.executeScript({
-          target: { tabId },
-          function: (url, profileData) => {
-            // This runs in the tab's context where formFiller should now be available
-            if (typeof self.formFiller === 'undefined' || !self.formFiller) {
-              throw new Error('formFiller module not available in tab context');
-            }
-            
-            // Create a window-level variable for the profile so it's available in the tab
-            window.userProfile = profileData;
-            
-            return self.formFiller.performFormFilling(url, profileData);
-          },
-          args: [url, userProfile]
-        });
-        
-        // Extract the result from the execution
-        const fillResult = results && results[0] && results[0].result ? results[0].result : { filled: 0, failed: 0, skipped: 0 };
-        
-        const response = { success: true, ...fillResult };
-        if (sendResponse) sendResponse(response);
-        return response;
-      } catch (error) {
-        console.error('Error executing form filling in tab:', error);
-        const response = { 
-          success: false, 
-          error: error.message || 'Failed to execute form filling in tab context'
-        };
-        if (sendResponse) sendResponse(response);
-        return response;
-      }
-    } else {
-      const response = { 
-        success: true, 
-        message: fillForm ? undefined : 'Fields processed successfully'
-      };
-      if (sendResponse) sendResponse(response);
-      return response;
-    }
   } catch (error) {
     console.error('Error in form processing:', error);
-    const response = { 
+    const errorResponse = { 
       success: false, 
       error: error.message || 'Unknown error in form processing'
     };
-    if (sendResponse) sendResponse(response);
-    return response;
+    if (sendResponse) sendResponse(errorResponse);
+    return errorResponse;
   }
 }
 

@@ -37,15 +37,8 @@ const formProcessor = (() => {
       const profileHash = generateProfileHash(userProfile);
       const cacheKey = `${rootUrl}_${profileHash}`;
       
-      // Get existing field mappings and ALL suggestions from storage - now using fieldMappingsV2
-      const result = await chrome.storage.local.get(['fieldMappingsV2', 'allSuggestions']);
-      // Get the field mappings from fieldMappingsV2 for this URL
-      const siteFieldMappingsV2 = result.fieldMappingsV2 || {};
-      
-      // Initialize site mappings if not present
-      if (!siteFieldMappingsV2[rootUrl]) {
-        siteFieldMappingsV2[rootUrl] = [];
-      }
+      // Get suggestions from storage
+      const result = await chrome.storage.local.get(['allSuggestions']);
       
       // Initialize or load ALL suggestions cache
       const storedSuggestions = result.allSuggestions || {};
@@ -55,16 +48,18 @@ const formProcessor = (() => {
         allSuggestionsCache[cacheKey] = {};
       }
       
-      formFields = siteFieldMappingsV2[rootUrl]
-      console.log("Current form fields:", formFields);  
+      // Get current form fields from the page
+      const formFields = await getCurrentFormFields();
+      console.log("Current form fields:", formFields);
+      
       // Create fieldKeywords for current form
       const currentFormFields = {};
       formFields.forEach(field => {
-        const keyName = field.containerDesc.aicode.title || field.name || field.id || '';
+        const keyName = field.name || field.id || '';
         if (keyName.trim() === '') return;
         
-        if (field.containerDesc.aicode.options && Array.isArray(field.containerDesc.aicode.options) && field.containerDesc.aicode.options.length > 0) {
-          currentFormFields[keyName] = field.containerDesc.aicode.options
+        if (field.options && Array.isArray(field.options) && field.options.length > 0) {
+          currentFormFields[keyName] = field.options;
         } else {
           currentFormFields[keyName] = [];
         }
@@ -88,73 +83,65 @@ const formProcessor = (() => {
       if (needApiCall && Object.keys(userProfile).length > 0) {
         console.log("API call needed for new fields");
         
-        // Gather all known fields for this site (current form + historical mappings)
+        // Gather all known fields for this site
         const allSiteFields = {...currentFormFields};
         
-        // Add fields from historical site mappings - adapted for fieldMappingsV2 structure
-        if (Array.isArray(siteFieldMappingsV2[rootUrl])) {
-          siteFieldMappingsV2[rootUrl].forEach(mapping => {
-            // Get field identifiers
-            
-            const keyName = mapping.containerDesc.aicode.title || '';// || mapping.name || mapping.id || '';
-            if (keyName.trim() !== '' && !allSiteFields[keyName]) {
-              console.log("Adding field from historical mappings:", keyName);
-              // Handle different field types appropriately
-              if (mapping.type === 'select' || mapping.type === 'radio') {
-                // Get options from the mapping
-                if (mapping.containerDesc.aicode.options && Array.isArray(mapping.containerDesc.aicode.options)) {
-                  allSiteFields[keyName] = mapping.containerDesc.aicode;
-                } else {
-                  allSiteFields[keyName] = [];
-                }
-              } else {
-                allSiteFields[keyName] = [];
-              }
-            }
-          });
-        }
+        // Make API call to get suggestions for all fields
+        const suggestions = await getSuggestionsFromAI(allSiteFields, userProfile);
         
-        console.log("Making API call with ALL site fields:", Object.keys(allSiteFields));
+        // Update suggestions cache
+        allSuggestionsCache[cacheKey] = {
+          ...allSuggestionsCache[cacheKey],
+          ...suggestions
+        };
         
-        try {
-          // Make ONE comprehensive API call for all fields
-          const aiSuggestions = await aiService.getAiSuggestions(allSiteFields, userProfile, url);
-          console.log("Received AI suggestions: ", Object.keys(aiSuggestions).length);
-          // Fill in any missing fields from allSiteFields with empty string
-          Object.keys(allSiteFields).forEach(key => {
-            if (!aiSuggestions.hasOwnProperty(key)) {
-              aiSuggestions[key] = '';
-            }
-          });
-          
-          // Merge AI suggestions into our combined suggestions
-          allSuggestions = {
-            ...allSuggestions,
-            ...aiSuggestions
-          };
-        } catch (apiError) {
-          console.error("Error getting AI suggestions:", apiError);
-          // Continue with processing - we'll use rule-based suggestions as fallback
-          throw apiError;
-        }
-      } else {
-        console.log("Using cached suggestions - no API call needed");
+        // Save to storage
+        await saveSuggestionsToStorage();
       }
       
-      // Save all suggestions to cache
-      allSuggestionsCache[cacheKey] = {...allSuggestions};
-      
-      // Step 3: Save everything to 'allSuggestions' storage
-      storedSuggestions[cacheKey] = allSuggestionsCache[cacheKey];
-      chrome.storage.local.set({ allSuggestions: storedSuggestions }, function() {
-        console.log("Saved all suggestions for URL + profile");
-      });
-      
-      return { success: true };
+      return {
+        success: true,
+        suggestions: allSuggestionsCache[cacheKey],
+        fields: currentFormFields
+      };
     } catch (error) {
       console.error("Error processing form:", error);
-      return { success: false, error: error.message };
+      return {
+        success: false,
+        error: error.message
+      };
     }
+  }
+  
+  // Helper function to get current form fields from the page
+  async function getCurrentFormFields() {
+    return new Promise((resolve) => {
+      chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
+        if (tabs && tabs[0]) {
+          chrome.scripting.executeScript({
+            target: { tabId: tabs[0].id },
+            function: () => {
+              const fields = [];
+              document.querySelectorAll('input, select, textarea').forEach(element => {
+                if (element.offsetParent !== null) { // Only visible elements
+                  fields.push({
+                    id: element.id,
+                    name: element.name,
+                    type: element.type,
+                    options: element.options ? Array.from(element.options).map(opt => opt.value) : []
+                  });
+                }
+              });
+              return fields;
+            }
+          }, (results) => {
+            resolve(results && results[0] ? results[0].result : []);
+          });
+        } else {
+          resolve([]);
+        }
+      });
+    });
   }
   
   /**

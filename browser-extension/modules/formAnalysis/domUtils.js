@@ -229,27 +229,44 @@ if (typeof formAnalysisDomUtils === 'undefined') {
      * @returns {HTMLElement} The common ancestor element
      */
     function findCommonAncestor(elements) {
-      if (!elements || elements.length === 0) return null;
-      if (elements.length === 1) return elements[0].parentElement;
+      // Validate input
+      if (!elements || !Array.isArray(elements) || elements.length === 0) {
+        console.warn('Invalid elements array provided to findCommonAncestor');
+        return document.body;
+      }
+
+      // Filter out any null/undefined elements
+      const validElements = elements.filter(el => el && el.nodeType === Node.ELEMENT_NODE);
+      
+      if (validElements.length === 0) {
+        console.warn('No valid elements found in array');
+        return document.body;
+      }
+      
+      if (validElements.length === 1) {
+        return validElements[0].parentElement || document.body;
+      }
       
       // Get all ancestors of the first element
       const firstElementAncestors = [];
-      let parent = elements[0].parentElement;
+      let parent = validElements[0].parentElement;
       
-      while (parent && parent.tagName !== 'BODY' && parent.tagName !== 'HTML') {
+      while (parent && parent !== document.body && parent !== document.documentElement) {
         firstElementAncestors.push(parent);
         parent = parent.parentElement;
       }
       
-      if (firstElementAncestors.length === 0) return document.body;
+      if (firstElementAncestors.length === 0) {
+        return document.body;
+      }
       
       // Find the closest common ancestor
       for (let ancestor of firstElementAncestors) {
         let isCommonAncestor = true;
         
         // Check if this ancestor contains all other elements
-        for (let i = 1; i < elements.length; i++) {
-          if (!ancestor.contains(elements[i])) {
+        for (let i = 1; i < validElements.length; i++) {
+          if (!ancestor.contains(validElements[i])) {
             isCommonAncestor = false;
             break;
           }

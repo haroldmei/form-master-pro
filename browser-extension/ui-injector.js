@@ -145,36 +145,20 @@
       return;
     }
 
-    // Listen for storage changes to update highlights
-    chrome.storage.onChanged.addListener((changes, namespace) => {
-      if (namespace === 'local' && changes.fieldMappingsV2) {
-        const newValue = changes.fieldMappingsV2.newValue;
-        const oldValue = changes.fieldMappingsV2.oldValue;
-        const currentUrl = window.location.origin;
-
-        if (newValue && newValue[currentUrl]) {
-          // Find containers that were updated
-          newValue[currentUrl].forEach((container, index) => {
-            if (container.containerDesc && container.containerDesc.aicode) {
-              // Dispatch event for each updated container
-              const event = new CustomEvent('fm-container-changed', {
-                detail: {
-                  controlIndex: index,
-                  newContainer: {
-                    tagName: container.containerDesc.tagName,
-                    className: container.containerDesc.className,
-                    id: container.containerDesc.id,
-                    html: container.containerDesc.html,
-                    attributes: container.containerDesc.attributes,
-                    path: container.containerDesc.path,
-                    xpath: container.containerDesc.xpath,
-                    aicode: container.containerDesc.aicode
-                  }
-                }
-              });
-              document.dispatchEvent(event);
+    // Listen for storage changes
+    chrome.storage.onChanged.addListener(function(changes, namespace) {
+      if (namespace === 'local') {
+        // Handle allSuggestions changes
+        if (changes.allSuggestions) {
+          const newValue = changes.allSuggestions.newValue;
+          const oldValue = changes.allSuggestions.oldValue;
+          
+          // Dispatch event for suggestions update
+          window.dispatchEvent(new CustomEvent('fm-suggestions-updated', {
+            detail: {
+              suggestions: newValue || {}
             }
-          });
+          }));
         }
       }
     });
@@ -238,7 +222,6 @@
     
     // Add the three buttons from popup.html
     buttons.push({ id: 'analyze-form', text: 'Analyze Form', icon: '🔍' });
-    buttons.push({ id: 'fetch-code', text: 'Fetch Code', icon: '💻' });
     // buttons.push({ id: 'clear-data', text: 'Clear Saved Data', icon: '🗑️' });
     
     // Make sure buttons are added with the correct structure
@@ -261,9 +244,6 @@
           break;
         case 'analyze-form':
           tooltipText = 'Analyze the current page form fields';
-          break;
-        case 'fetch-code':
-          tooltipText = 'Generate AI-powered filling code for this site';
           break;
         case 'clear-data':
           tooltipText = 'Clear all saved form data and mappings';
@@ -511,18 +491,15 @@
         
         // Send message to clear suggestions data
         chrome.runtime.sendMessage({ action: 'clearSuggestions' }, function(response) {
-          // Attempt to clear all saved form data (local storage)
-          chrome.storage.local.get('fieldMappingsV2', function(result) {
-            // Keep auth state but clear form mappings
-            chrome.storage.local.set({ fieldMappingsV2: {} }, function() {
-              // Reset button state
-              buttonElement.classList.remove('loading');
-              buttonElement.disabled = false;
-              buttonElement.innerHTML = originalHTML;
-              setToggleBusy(false);
-              
-              showToast('All saved form data has been cleared', 'success');
-            });
+          // Clear all saved form data (local storage)
+          chrome.storage.local.set({ allSuggestions: {} }, function() {
+            // Reset button state
+            buttonElement.classList.remove('loading');
+            buttonElement.disabled = false;
+            buttonElement.innerHTML = originalHTML;
+            setToggleBusy(false);
+            
+            showToast('All saved form data has been cleared', 'success');
           });
         });
         return;
@@ -562,38 +539,6 @@
         return;
       }
       
-      // Handle fetch code action
-      if (action === 'fetch-code') {
-        // Store original HTML before showing loading state
-        const originalHTML = buttonElement.innerHTML;
-        
-        // Show loading state
-        buttonElement.classList.add('loading');
-        buttonElement.disabled = true;
-        buttonElement.textContent = 'Processing...';
-        setToggleBusy(true);
-        
-        // Send message to background script to fetch AI code
-        // Use window.location instead of chrome.tabs
-        chrome.runtime.sendMessage({ 
-          action: 'fetchAiCode',
-          url: window.location.origin
-        }, function(response) {
-          // Reset button state
-          buttonElement.classList.remove('loading');
-          buttonElement.disabled = false;
-          buttonElement.innerHTML = originalHTML;
-          setToggleBusy(false);
-          
-          if (response && response.success) {
-            showToast('AI code generated successfully!', 'success');
-          } else {
-            showToast(response?.error || 'Error generating code', 'error');
-          }
-        });
-        
-        return;
-      }
       
       // Special handling for load-data action (single file)
       if (action === 'load-data') {
@@ -1244,6 +1189,15 @@
             statusIndicator.title = 'No profile loaded';
           }
         }
+      });
+    }
+
+    // Clear all data
+    function clearAllData() {
+      chrome.storage.local.get(['allSuggestions'], function(result) {
+        chrome.storage.local.set({ allSuggestions: {} }, function() {
+          console.log('All data cleared from storage');
+        });
       });
     }
   }

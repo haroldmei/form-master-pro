@@ -1,0 +1,827 @@
+<p id=\"mandatory-message\" style=\"display: flex\">Please fill in all mandatory fields marked with an asterisk (*).</p>
+
+<div class=\"personalDetailsSection\">
+
+
+       <div class=\"form-group\">
+         <label id=\"sTitle_label\" class=\"col-sm-12 col-md-3\" for=\"sTitle\">Title*<br><i>(Select Mx if you don't identify with any of the other choices)</i>:<span class=\"asterisk\" aria-hidden=\"true\">*</span></label>
+         <span class=\"col-sm-12 col-md-5\"><div id=\"sTitle\" class=\"input-group cb pu-select\">
+<input autocomplete=\"off\" id=\"sTitle-edit\" class=\"sTitle_edit form-control dropdownEdit\" type=\"text\" tabindex=\"0\" role=\"combobox\" aria-labelledby=\"sTitle_label\" aria-activedescendant=\"sTitle-Mr-ID\" aria-autocomplete=\"both\" aria-owns=\"sTitle-list\" aria-expanded=\"false\" aria-describedby=\"sTitle-current-value\" onfocus=\"this.value=''\" aria-controls=\"sTitle-list\" aria-required=\"true\">
+<div id=\"sTitle-button-label\" class=\"hidden\">Open list</div><span class=\"input-group-btn\"><button id=\"sTitle-button\" aria-labelledby=\"sTitle-button-label\" aria-controls=\"sTitle-list\" tabindex=\"-1\" class=\"btn\" type=\"button\"><span class=\"caret\"></span></button></span>
+<input type=\"hidden\" name=\"sTitle\" id=\"sTitle-postback\" class=\"hidden dropdownvalue\" value=\"Mr\">
+<span id=\"sTitle-current-value\" class=\"sr-only\"></span>
+<ul id=\"sTitle-list\" class=\"cb_list\" tabindex=\"-1\" role=\"listbox\" aria-expanded=\"false\" style=\"display: none;\">
+  <li role=\"option\" id=\"sTitle--ID\" data-value=\"\" class=\"cb_option\">Select</li>
+  <li role=\"option\" id=\"sTitle-Mr-ID\" data-value=\"Mr\" class=\"cb_option selected\">Mr</li>
+  <li role=\"option\" id=\"sTitle-Ms-ID\" data-value=\"Ms\" class=\"cb_option\">Ms</li>
+  <li role=\"option\" id=\"sTitle-Mrs-ID\" data-value=\"Mrs\" class=\"cb_option\">Mrs</li>
+  <li role=\"option\" id=\"sTitle-Miss-ID\" data-value=\"Miss\" class=\"cb_option\">Miss</li>
+  <li role=\"option\" id=\"sTitle-Mx-ID\" data-value=\"Mx\" class=\"cb_option\">Mx</li>
+</ul>
+</div>
+</span>
+       </div>
+            <div class=\"form-group\">
+                <label class=\"col-sm-12 col-md-3\" for=\"sFName\">First name*<br><i>(As stated on legal documents)</i>:<span class=\"asterisk\" aria-hidden=\"true\">*</span></label>
+                <span class=\"col-sm-12 col-md-5\"><input type=\"text\" name=\"sFName\" size=\"11\" maxlength=\"50\" id=\"sFName\" autocomplete=\"given-name\" value=\"Haiyuan\" aria-required=\"true\"></span>
+            </div>
+        
+             <div class=\"form-group\">
+                 <label class=\"col-sm-12 col-md-3\" for=\"sMName\">Middle name<br><i>(As stated on legal documents)</i>:</label>
+                 <span class=\"col-sm-12 col-md-5\"><input type=\"text\" name=\"sMName\" size=\"11\" maxlength=\"50\" id=\"sMName\" autocomplete=\"additional-name\" aria-required=\"false\"></span>
+             </div>
+        
+            <div class=\"form-group\">
+                <label class=\"col-sm-12 col-md-3\" for=\"sLName\">Last name*<br><i>(As stated on legal documents)</i>:<span class=\"asterisk\" aria-hidden=\"true\">*</span></label>
+                <span class=\"col-sm-12 col-md-5\"><input type=\"text\" name=\"sLName\" size=\"11\" maxlength=\"50\" id=\"sLName\" autocomplete=\"family-name\" value=\"Mei\" aria-required=\"true\"></span>
+            </div>
+                
+        <div class=\"form-group\">
+          <label class=\"col-sm-12 col-md-3\" for=\"sPrefName\">Preferred first name:<span class=\"asterisk\" aria-hidden=\"true\">*</span></label>
+          <span class=\"col-sm-12 col-md-5\"><input type=\"text\" name=\"sPrefName\" size=\"11\" maxlength=\"50\" id=\"sPrefName\" autocomplete=\"nickname\" value=\"Haiyuan\" aria-required=\"true\"></span>
+        </div>
+      
+            <div class=\"form-group\">
+                <label id=\"sOther3_label\" class=\"col-sm-12 col-md-3\" for=\"sOther3\">Pronouns:</label>
+                <span class=\"col-sm-12 col-md-5\"><div id=\"sOther3-dropdown\" class=\"input-group cb pu-select\">
+<input autocomplete=\"off\" id=\"sOther3-dropdown-edit\" class=\"sOther3-dropdown_edit form-control dropdownEdit\" type=\"text\" tabindex=\"0\" role=\"combobox\" aria-labelledby=\"sOther3-dropdown_label\" aria-activedescendant=\"sOther3-dropdown--ID\" aria-autocomplete=\"both\" aria-owns=\"sOther3-dropdown-list\" aria-expanded=\"false\" aria-describedby=\"sOther3-dropdown-current-value\" onfocus=\"this.value=''\" aria-controls=\"sOther3-dropdown-list\" aria-required=\"false\">
+<div id=\"sOther3-dropdown-button-label\" class=\"hidden\">Open list</div><span class=\"input-group-btn\"><button id=\"sOther3-dropdown-button\" aria-labelledby=\"sOther3-dropdown-button-label\" aria-controls=\"sOther3-dropdown-list\" tabindex=\"-1\" class=\"btn\" type=\"button\"><span class=\"caret\"></span></button></span>
+<input type=\"hidden\" name=\"sOther3-dropdown\" id=\"sOther3-dropdown-postback\" class=\"hidden dropdownvalue\" value=\"\" onchange=\"onPronounDropdownChanged(this)\">
+<span id=\"sOther3-dropdown-current-value\" class=\"sr-only\"></span>
+<ul id=\"sOther3-dropdown-list\" class=\"cb_list\" tabindex=\"-1\" role=\"listbox\" aria-expanded=\"false\" style=\"display: none;\">
+  <li role=\"option\" id=\"sOther3-dropdown--ID\" data-value=\"\" class=\"cb_option selected\">Select</li>
+  <li role=\"option\" id=\"sOther3-dropdown-She/her/hers-ID\" data-value=\"She/her/hers\" class=\"cb_option\">She/her/hers</li>
+  <li role=\"option\" id=\"sOther3-dropdown-He/him/his-ID\" data-value=\"He/him/his\" class=\"cb_option\">He/him/his</li>
+  <li role=\"option\" id=\"sOther3-dropdown-They/them/theirs-ID\" data-value=\"They/them/theirs\" class=\"cb_option\">They/them/theirs</li>
+  <li role=\"option\" id=\"sOther3-dropdown-Prefernottosay-ID\" data-value=\"Prefer not to say\" class=\"cb_option\">Prefer not to say</li>
+  <li role=\"option\" id=\"sOther3-dropdown-Letmetellyou-ID\" data-value=\"Let me tell you\" class=\"cb_option\">Let me tell you</li>
+</ul>
+</div>
+</span>
+            </div>
+            <div id=\"hiddenRow_sCustomPronoun\" style=\"display:none;\">
+                  <div class=\"form-group\">
+                        <label class=\"col-sm-12 col-md-3\" for=\"sOther3Custom\">Please specify:</label>
+                        <span class=\"col-sm-12 col-md-5\"><input type=\"text\" name=\"sOther3\" size=\"11\" maxlength=\"50\" id=\"sOther3\" aria-required=\"false\"></span>
+                  </div>
+            </div>
+
+            <script>
+                var savedDisplayPronoun = \"\";
+                var savedPronoun = \"\";
+                var otherPronoun = \"Let me tell you\";
+
+                var dropdownPostbackPronoun = $(\"sOther3-dropdown-postback\").value;
+                var isPostback = dropdownPostbackPronoun !== undefined && dropdownPostbackPronoun !== savedDisplayPronoun;
+                var displayPronoun = isPostback ? dropdownPostbackPronoun : savedDisplayPronoun;
+
+                if (displayPronoun !== undefined && displayPronoun !== null && displayPronoun !== \"\") {
+                    toggleCustomPronounTextField(displayPronoun, isPostback);
+                }
+
+                function onPronounDropdownChanged(e) {
+                    toggleCustomPronounTextField(e.value, false);
+                }
+
+                function toggleCustomPronounTextField(value, isPostback) {
+                    if(value.trim().toLowerCase() === otherPronoun.toLowerCase())
+                    {
+                        $(\"hiddenRow_sCustomPronoun\").style.display = \"\";
+                        
+                        if (!isPostback) {
+                            $(\"sOther3\").value = savedDisplayPronoun === otherPronoun? savedPronoun : \"\" ;
+                        }
+                    }
+                    else
+                    {
+                        $(\"hiddenRow_sCustomPronoun\").style.display = \"none\";
+                        $(\"sOther3\").value = value; 
+                    }
+                }
+
+            </script>
+        
+</div>
+
+<div class=\"personalDetailsSection\">
+  <div>
+    <div style=\"vertical-align: bottom;\">
+      <div>
+               <div class=\"form-group\">
+                <label class=\"col-sm-12 col-md-3\" for=\"sEmail\">Email address:<span class=\"asterisk\" aria-hidden=\"true\">*</span></label>
+                <span class=\"col-sm-12 col-md-5\"><input type=\"email\" name=\"sEmail\" size=\"27\" maxlength=\"255\" id=\"sEmail\" autocomplete=\"email\" value=\"haroldmei.cn@gmail.com\" aria-required=\"true\"></span>
+              </div>
+            
+              <div class=\"form-group\">
+                <label class=\"col-sm-12 col-md-3\" for=\"sStreet1\">Home Address<br>Not a PO box or lot number:<span class=\"asterisk\" aria-hidden=\"true\">*</span></label>
+                <span class=\"col-sm-12 col-md-5\"><input type=\"text\" name=\"sStreet1\" size=\"27\" maxlength=\"255\" id=\"sStreet1\" autocomplete=\"address-line1\" value=\"23 Horace Street\" aria-required=\"true\"></span>
+              </div>
+              <div class=\"form-group\">
+                <label class=\"col-sm-12 col-md-3\" for=\"sStreet2\">Home address line two:</label>
+                <span class=\"col-sm-12 col-md-5\"><input type=\"text\" name=\"sStreet2\" size=\"27\" maxlength=\"255\" id=\"sStreet2\" aria-label=\"Home address line two\" autocomplete=\"address-line2\" aria-required=\"false\"></span>
+              </div>
+            
+              <div class=\"form-group\">
+                <label class=\"col-sm-12 col-md-3\" for=\"sSuburb\">Suburb:<span class=\"asterisk\" aria-hidden=\"true\">*</span></label>
+                <span class=\"col-sm-12 col-md-5\"><input type=\"text\" name=\"sSuburb\" size=\"11\" maxlength=\"50\" id=\"sSuburb\" autocomplete=\"address-level2\" value=\"St Ives\" aria-required=\"true\"></span>
+              </div>
+            
+    </div>
+  </div>
+</div>
+
+  
+      <script language=\"javascript\">
+        function showPostcode(pbHasPostcodes)
+        {
+          var sPostCodeLabel;
+            var sPostcodeTextField = document.getElementById(\"sPostcode\");
+          
+        }
+      </script>
+      
+     <div class=\"form-group\">
+          <label id=\"sCountry_label\" class=\"col-sm-12 col-md-3\" for=\"sCountry\">Country:<span class=\"asterisk\" aria-hidden=\"true\">*</span></label>
+          <span class=\"col-sm-12 col-md-5\">
+      <script language=\"javascript\">
+        function populateStates(oCountry, sStateFieldName)
+        {
+          var sCountryTitle = oCountry.value;
+          var oState = document.frmPersonalDetails[sStateFieldName];
+
+          if(oState)
+          {
+             sCountryTitle = oCountry.value;
+             
+               document.getElementById(\"stateLoader\").src =  encodeURI(\"getStates.asp?sCountry=\" + sCountryTitle + \"&sStateName=\" + sStateFieldName);
+             
+          }
+        }
+
+        function setStates(aTitles, aValues, sRegionTitle, sStateName)
+        {
+          var oState = document.frmPersonalDetails[sStateName];
+          document.getElementById(\"regionTitle\").innerHTML = sRegionTitle.replace(\"/\", \" / \");
+
+          var readonly = \"\";
+            if (Util.isMobile()){
+            readonly = \"readonly\";
+          }
+          var builderInfo = [];
+          for(i = 1; i < aTitles.length; i++){
+            builderInfo.push([aValues[i], aTitles[i]]);
+          }
+
+          var html = buildDropDown(sStateName, builderInfo, aTitles[0], sStateName, \"\", readonly, \"True\");
+          attachToDom(sStateName, html, oState.parentNode)
+
+        }
+
+        function setPostcodeMandatory(pbHasPostcodes)
+        {
+            if(typeof showPostcode==\"function\")
+            {
+                showPostcode(pbHasPostcodes);
+            }
+        }
+
+        function setPhonePrefix(psPhonePrefix)
+        {
+          // Displaying of phone prefix has now been disabled.
+          return;
+          
+          var oPhonePrefix;
+            
+                oPhonePrefix = document.getElementById(\"sPhonePrefix\").innerHTML = psPhonePrefix;
+               
+                oPhonePrefix = document.getElementById(\"sMobilePrefix\").innerHTML = psPhonePrefix;
+              
+
+         }
+     
+      </script>
+      <iframe src=\"javascript:false;\" id=\"stateLoader\" style=\"display: none\"></iframe>
+      <div id=\"sCountry\" class=\"input-group cb pu-select\">
+<input autocomplete=\"off\" id=\"sCountry-edit\" class=\"sCountry_edit form-control dropdownEdit\" type=\"text\" tabindex=\"0\" role=\"combobox\" aria-labelledby=\"sCountry_label\" aria-activedescendant=\"sCountry-Australia-ID\" aria-autocomplete=\"both\" aria-owns=\"sCountry-list\" aria-expanded=\"false\" aria-describedby=\"sCountry-current-value\" onfocus=\"this.value=''\" aria-controls=\"sCountry-list\" aria-required=\"true\">
+<div id=\"sCountry-button-label\" class=\"hidden\">Open list</div><span class=\"input-group-btn\"><button id=\"sCountry-button\" aria-labelledby=\"sCountry-button-label\" aria-controls=\"sCountry-list\" tabindex=\"-1\" class=\"btn\" type=\"button\"><span class=\"caret\"></span></button></span>
+<input type=\"hidden\" name=\"sCountry\" id=\"sCountry-postback\" class=\"hidden dropdownvalue\" value=\"Australia\" onchange=\"populateStates(this, &quot;sState&quot;)\">
+<span id=\"sCountry-current-value\" class=\"sr-only\"></span>
+<ul id=\"sCountry-list\" class=\"cb_list\" tabindex=\"-1\" role=\"listbox\" aria-expanded=\"false\" style=\"display: none;\">
+  <li role=\"option\" id=\"sCountry--ID\" data-value=\"\" class=\"cb_option\">Select</li>
+  <li role=\"option\" id=\"sCountry-Australia-ID\" data-value=\"Australia\" class=\"cb_option selected\">Australia</li>
+  <li role=\"option\" id=\"sCountry-UnitedStates-ID\" data-value=\"United States\" class=\"cb_option\">United States</li>
+  <li role=\"option\" id=\"sCountry-UnitedKingdom-ID\" data-value=\"United Kingdom\" class=\"cb_option\">United Kingdom</li>
+  <li role=\"option\" id=\"sCountry-Afghanistan-ID\" data-value=\"Afghanistan\" class=\"cb_option\">Afghanistan</li>
+  <li role=\"option\" id=\"sCountry-ÅlandIslands-ID\" data-value=\"Åland Islands\" class=\"cb_option\">Åland Islands</li>
+  <li role=\"option\" id=\"sCountry-Albania-ID\" data-value=\"Albania\" class=\"cb_option\">Albania</li>
+  <li role=\"option\" id=\"sCountry-Algeria-ID\" data-value=\"Algeria\" class=\"cb_option\">Algeria</li>
+  <li role=\"option\" id=\"sCountry-AmericanSamoa-ID\" data-value=\"American Samoa\" class=\"cb_option\">American Samoa</li>
+  <li role=\"option\" id=\"sCountry-Angola-ID\" data-value=\"Angola\" class=\"cb_option\">Angola</li>
+  <li role=\"option\" id=\"sCountry-Antarctica-ID\" data-value=\"Antarctica\" class=\"cb_option\">Antartica</li>
+  <li role=\"option\" id=\"sCountry-Argentina-ID\" data-value=\"Argentina\" class=\"cb_option\">Argentina</li>
+  <li role=\"option\" id=\"sCountry-Armenia-ID\" data-value=\"Armenia\" class=\"cb_option\">Armenia</li>
+  <li role=\"option\" id=\"sCountry-Andorra-ID\" data-value=\"Andorra\" class=\"cb_option\">Andorra</li>
+  <li role=\"option\" id=\"sCountry-Anguilla-ID\" data-value=\"Anguilla\" class=\"cb_option\">Anguilla</li>
+  <li role=\"option\" id=\"sCountry-AntiguaandBarbuda-ID\" data-value=\"Antigua and Barbuda\" class=\"cb_option\">Antigua and Barbuda</li>
+  <li role=\"option\" id=\"sCountry-Aruba-ID\" data-value=\"Aruba\" class=\"cb_option\">Aruba</li>
+  <li role=\"option\" id=\"sCountry-Austria-ID\" data-value=\"Austria\" class=\"cb_option\">Austria</li>
+  <li role=\"option\" id=\"sCountry-Azerbaijan-ID\" data-value=\"Azerbaijan\" class=\"cb_option\">Azerbaijan</li>
+  <li role=\"option\" id=\"sCountry-Bahamas-ID\" data-value=\"Bahamas\" class=\"cb_option\">Bahamas</li>
+  <li role=\"option\" id=\"sCountry-Bahrain-ID\" data-value=\"Bahrain\" class=\"cb_option\">Bahrain</li>
+  <li role=\"option\" id=\"sCountry-Bangladesh-ID\" data-value=\"Bangladesh\" class=\"cb_option\">Bangladesh</li>
+  <li role=\"option\" id=\"sCountry-Barbados-ID\" data-value=\"Barbados\" class=\"cb_option\">Barbados</li>
+  <li role=\"option\" id=\"sCountry-Belarus-ID\" data-value=\"Belarus\" class=\"cb_option\">Belarus</li>
+  <li role=\"option\" id=\"sCountry-Belgium-ID\" data-value=\"Belgium\" class=\"cb_option\">Belgium</li>
+  <li role=\"option\" id=\"sCountry-Belize-ID\" data-value=\"Belize\" class=\"cb_option\">Belize</li>
+  <li role=\"option\" id=\"sCountry-Benin-ID\" data-value=\"Benin\" class=\"cb_option\">Benin</li>
+  <li role=\"option\" id=\"sCountry-Bermuda-ID\" data-value=\"Bermuda\" class=\"cb_option\">Bermuda</li>
+  <li role=\"option\" id=\"sCountry-Bhutan-ID\" data-value=\"Bhutan\" class=\"cb_option\">Bhutan</li>
+  <li role=\"option\" id=\"sCountry-HeardandMcDonaldIslands-ID\" data-value=\"Heard and McDonald Islands\" class=\"cb_option\">Heard and McDonald Islands</li>
+  <li role=\"option\" id=\"sCountry-Bolivia-ID\" data-value=\"Bolivia\" class=\"cb_option\">Bolivia</li>
+  <li role=\"option\" id=\"sCountry-BosniaAndHerzegovina-ID\" data-value=\"Bosnia And Herzegovina\" class=\"cb_option\">Bosnia And Herzegovina</li>
+  <li role=\"option\" id=\"sCountry-Botswana-ID\" data-value=\"Botswana\" class=\"cb_option\">Botswana</li>
+  <li role=\"option\" id=\"sCountry-BouvetIsland-ID\" data-value=\"Bouvet Island\" class=\"cb_option\">Bouvet Island</li>
+  <li role=\"option\" id=\"sCountry-Brazil-ID\" data-value=\"Brazil\" class=\"cb_option\">Brazil</li>
+  <li role=\"option\" id=\"sCountry-BritishIndianOceanTerritory-ID\" data-value=\"British Indian Ocean Territory\" class=\"cb_option\">British Indian Ocean Territory</li>
+  <li role=\"option\" id=\"sCountry-BruneiDarussalam-ID\" data-value=\"Brunei Darussalam\" class=\"cb_option\">Brunei Darussalam</li>
+  <li role=\"option\" id=\"sCountry-Bulgaria-ID\" data-value=\"Bulgaria\" class=\"cb_option\">Bulgaria</li>
+  <li role=\"option\" id=\"sCountry-BurkinaFaso-ID\" data-value=\"Burkina Faso\" class=\"cb_option\">Burkina Faso</li>
+  <li role=\"option\" id=\"sCountry-Burundi-ID\" data-value=\"Burundi\" class=\"cb_option\">Burundi</li>
+  <li role=\"option\" id=\"sCountry-Cambodia-ID\" data-value=\"Cambodia\" class=\"cb_option\">Cambodia</li>
+  <li role=\"option\" id=\"sCountry-Cameroon-ID\" data-value=\"Cameroon\" class=\"cb_option\">Cameroon</li>
+  <li role=\"option\" id=\"sCountry-Canada-ID\" data-value=\"Canada\" class=\"cb_option\">Canada</li>
+  <li role=\"option\" id=\"sCountry-CapeVerde-ID\" data-value=\"Cape Verde\" class=\"cb_option\">Cape Verde</li>
+  <li role=\"option\" id=\"sCountry-CaymanIslands-ID\" data-value=\"Cayman Islands\" class=\"cb_option\">Cayman Islands</li>
+  <li role=\"option\" id=\"sCountry-CentralAfricanRepublic-ID\" data-value=\"Central African Republic\" class=\"cb_option\">Central African Republic</li>
+  <li role=\"option\" id=\"sCountry-Chad-ID\" data-value=\"Chad\" class=\"cb_option\">Chad</li>
+  <li role=\"option\" id=\"sCountry-Chile-ID\" data-value=\"Chile\" class=\"cb_option\">Chile</li>
+  <li role=\"option\" id=\"sCountry-China-ID\" data-value=\"China\" class=\"cb_option\">China</li>
+  <li role=\"option\" id=\"sCountry-ChristmasIsland-ID\" data-value=\"Christmas Island\" class=\"cb_option\">Christmas Island</li>
+  <li role=\"option\" id=\"sCountry-Cocos(Keeling)Islands-ID\" data-value=\"Cocos (Keeling) Islands\" class=\"cb_option\">Cocos (Keeling) Islands</li>
+  <li role=\"option\" id=\"sCountry-Colombia-ID\" data-value=\"Colombia\" class=\"cb_option\">Colombia</li>
+  <li role=\"option\" id=\"sCountry-Comoros-ID\" data-value=\"Comoros\" class=\"cb_option\">Comoros</li>
+  <li role=\"option\" id=\"sCountry-Congo-ID\" data-value=\"Congo\" class=\"cb_option\">Congo</li>
+  <li role=\"option\" id=\"sCountry-Congo,TheDemocraticRepublicOfThe-ID\" data-value=\"Congo, The Democratic Republic Of The\" class=\"cb_option\">Congo, The Democratic Republic Of The</li>
+  <li role=\"option\" id=\"sCountry-CookIslands-ID\" data-value=\"Cook Islands\" class=\"cb_option\">Cook Islands</li>
+  <li role=\"option\" id=\"sCountry-CostaRica-ID\" data-value=\"Costa Rica\" class=\"cb_option\">Costa Rica</li>
+  <li role=\"option\" id=\"sCountry-CôteD'ivoire-ID\" data-value=\"Côte D'ivoire\" class=\"cb_option\">Côte D'ivoire</li>
+  <li role=\"option\" id=\"sCountry-Croatia-ID\" data-value=\"Croatia\" class=\"cb_option\">Croatia</li>
+  <li role=\"option\" id=\"sCountry-Cuba-ID\" data-value=\"Cuba\" class=\"cb_option\">Cuba</li>
+  <li role=\"option\" id=\"sCountry-Cyprus-ID\" data-value=\"Cyprus\" class=\"cb_option\">Cyprus</li>
+  <li role=\"option\" id=\"sCountry-CzechRepublic-ID\" data-value=\"Czech Republic\" class=\"cb_option\">Czech Republic</li>
+  <li role=\"option\" id=\"sCountry-Denmark-ID\" data-value=\"Denmark\" class=\"cb_option\">Denmark</li>
+  <li role=\"option\" id=\"sCountry-Djibouti-ID\" data-value=\"Djibouti\" class=\"cb_option\">Djibouti</li>
+  <li role=\"option\" id=\"sCountry-Dominica-ID\" data-value=\"Dominica\" class=\"cb_option\">Dominica</li>
+  <li role=\"option\" id=\"sCountry-DominicanRepublic-ID\" data-value=\"Dominican Republic\" class=\"cb_option\">Dominican Republic</li>
+  <li role=\"option\" id=\"sCountry-Ecuador-ID\" data-value=\"Ecuador\" class=\"cb_option\">Ecuador</li>
+  <li role=\"option\" id=\"sCountry-Egypt-ID\" data-value=\"Egypt\" class=\"cb_option\">Egypt</li>
+  <li role=\"option\" id=\"sCountry-ElSalvador-ID\" data-value=\"El Salvador\" class=\"cb_option\">El Salvador</li>
+  <li role=\"option\" id=\"sCountry-EquatorialGuinea-ID\" data-value=\"Equatorial Guinea\" class=\"cb_option\">Equatorial Guinea</li>
+  <li role=\"option\" id=\"sCountry-Eritrea-ID\" data-value=\"Eritrea\" class=\"cb_option\">Eritrea</li>
+  <li role=\"option\" id=\"sCountry-Estonia-ID\" data-value=\"Estonia\" class=\"cb_option\">Estonia</li>
+  <li role=\"option\" id=\"sCountry-Ethiopia-ID\" data-value=\"Ethiopia\" class=\"cb_option\">Ethiopia</li>
+  <li role=\"option\" id=\"sCountry-FalklandIslands(Malvinas)-ID\" data-value=\"Falkland Islands (Malvinas)\" class=\"cb_option\">Falkland Islands (Malvinas)</li>
+  <li role=\"option\" id=\"sCountry-FaroeIslands-ID\" data-value=\"Faroe Islands\" class=\"cb_option\">Faroe Islands</li>
+  <li role=\"option\" id=\"sCountry-Fiji-ID\" data-value=\"Fiji\" class=\"cb_option\">Fiji</li>
+  <li role=\"option\" id=\"sCountry-Finland-ID\" data-value=\"Finland\" class=\"cb_option\">Finland</li>
+  <li role=\"option\" id=\"sCountry-France-ID\" data-value=\"France\" class=\"cb_option\">France</li>
+  <li role=\"option\" id=\"sCountry-FrenchGuiana-ID\" data-value=\"French Guiana\" class=\"cb_option\">French Guiana</li>
+  <li role=\"option\" id=\"sCountry-FrenchPolynesia-ID\" data-value=\"French Polynesia\" class=\"cb_option\">French Polynesia</li>
+  <li role=\"option\" id=\"sCountry-FrenchSouthernTerritories-ID\" data-value=\"French Southern Territories\" class=\"cb_option\">French Southern Territories</li>
+  <li role=\"option\" id=\"sCountry-Gabon-ID\" data-value=\"Gabon\" class=\"cb_option\">Gabon</li>
+  <li role=\"option\" id=\"sCountry-Gambia-ID\" data-value=\"Gambia\" class=\"cb_option\">Gambia</li>
+  <li role=\"option\" id=\"sCountry-Georgia-ID\" data-value=\"Georgia\" class=\"cb_option\">Georgia</li>
+  <li role=\"option\" id=\"sCountry-Germany-ID\" data-value=\"Germany\" class=\"cb_option\">Germany</li>
+  <li role=\"option\" id=\"sCountry-Ghana-ID\" data-value=\"Ghana\" class=\"cb_option\">Ghana</li>
+  <li role=\"option\" id=\"sCountry-Gibraltar-ID\" data-value=\"Gibraltar\" class=\"cb_option\">Gibraltar</li>
+  <li role=\"option\" id=\"sCountry-Greece-ID\" data-value=\"Greece\" class=\"cb_option\">Greece</li>
+  <li role=\"option\" id=\"sCountry-Greenland-ID\" data-value=\"Greenland\" class=\"cb_option\">Greenland</li>
+  <li role=\"option\" id=\"sCountry-Grenada-ID\" data-value=\"Grenada\" class=\"cb_option\">Grenada</li>
+  <li role=\"option\" id=\"sCountry-Guadeloupe-ID\" data-value=\"Guadeloupe\" class=\"cb_option\">Guadeloupe</li>
+  <li role=\"option\" id=\"sCountry-Guam-ID\" data-value=\"Guam\" class=\"cb_option\">Guam</li>
+  <li role=\"option\" id=\"sCountry-Guatemala-ID\" data-value=\"Guatemala\" class=\"cb_option\">Guatemala</li>
+  <li role=\"option\" id=\"sCountry-Guernsey-ID\" data-value=\"Guernsey\" class=\"cb_option\">Guernsey</li>
+  <li role=\"option\" id=\"sCountry-Guinea-ID\" data-value=\"Guinea\" class=\"cb_option\">Guinea</li>
+  <li role=\"option\" id=\"sCountry-Guinea-bissau-ID\" data-value=\"Guinea-bissau\" class=\"cb_option\">Guinea-bissau</li>
+  <li role=\"option\" id=\"sCountry-Guyana-ID\" data-value=\"Guyana\" class=\"cb_option\">Guyana</li>
+  <li role=\"option\" id=\"sCountry-Haiti-ID\" data-value=\"Haiti\" class=\"cb_option\">Haiti</li>
+  <li role=\"option\" id=\"sCountry-Honduras-ID\" data-value=\"Honduras\" class=\"cb_option\">Honduras</li>
+  <li role=\"option\" id=\"sCountry-HongKong-ID\" data-value=\"Hong Kong\" class=\"cb_option\">Hong Kong</li>
+  <li role=\"option\" id=\"sCountry-Hungary-ID\" data-value=\"Hungary\" class=\"cb_option\">Hungary</li>
+  <li role=\"option\" id=\"sCountry-Iceland-ID\" data-value=\"Iceland\" class=\"cb_option\">Iceland</li>
+  <li role=\"option\" id=\"sCountry-India-ID\" data-value=\"India\" class=\"cb_option\">India</li>
+  <li role=\"option\" id=\"sCountry-Indonesia-ID\" data-value=\"Indonesia\" class=\"cb_option\">Indonesia</li>
+  <li role=\"option\" id=\"sCountry-Iran,IslamicRepublicOf-ID\" data-value=\"Iran, Islamic Republic Of\" class=\"cb_option\">Iran, Islamic Republic Of</li>
+  <li role=\"option\" id=\"sCountry-Iraq-ID\" data-value=\"Iraq\" class=\"cb_option\">Iraq</li>
+  <li role=\"option\" id=\"sCountry-Ireland-ID\" data-value=\"Ireland\" class=\"cb_option\">Ireland</li>
+  <li role=\"option\" id=\"sCountry-IsleofMan-ID\" data-value=\"Isle of Man\" class=\"cb_option\">Isle of Man</li>
+  <li role=\"option\" id=\"sCountry-Israel-ID\" data-value=\"Israel\" class=\"cb_option\">Israel</li>
+  <li role=\"option\" id=\"sCountry-Italy-ID\" data-value=\"Italy\" class=\"cb_option\">Italy</li>
+  <li role=\"option\" id=\"sCountry-Jamaica-ID\" data-value=\"Jamaica\" class=\"cb_option\">Jamaica</li>
+  <li role=\"option\" id=\"sCountry-Japan-ID\" data-value=\"Japan\" class=\"cb_option\">Japan</li>
+  <li role=\"option\" id=\"sCountry-Jersey-ID\" data-value=\"Jersey\" class=\"cb_option\">Jersey</li>
+  <li role=\"option\" id=\"sCountry-Jordan-ID\" data-value=\"Jordan\" class=\"cb_option\">Jordan</li>
+  <li role=\"option\" id=\"sCountry-Kazakhstan-ID\" data-value=\"Kazakhstan\" class=\"cb_option\">Kazakhstan</li>
+  <li role=\"option\" id=\"sCountry-Kenya-ID\" data-value=\"Kenya\" class=\"cb_option\">Kenya</li>
+  <li role=\"option\" id=\"sCountry-Kiribati-ID\" data-value=\"Kiribati\" class=\"cb_option\">Kiribati</li>
+  <li role=\"option\" id=\"sCountry-Korea,DemocraticPeople'sRepublicOf-ID\" data-value=\"Korea, Democratic People's Republic Of\" class=\"cb_option\">Korea, Democratic People's Republic Of</li>
+  <li role=\"option\" id=\"sCountry-Korea,RepublicOf-ID\" data-value=\"Korea, Republic Of\" class=\"cb_option\">Korea, Republic Of</li>
+  <li role=\"option\" id=\"sCountry-Kosovo-ID\" data-value=\"Kosovo\" class=\"cb_option\">Kosovo</li>
+  <li role=\"option\" id=\"sCountry-Kuwait-ID\" data-value=\"Kuwait\" class=\"cb_option\">Kuwait</li>
+  <li role=\"option\" id=\"sCountry-Kyrgyzstan-ID\" data-value=\"Kyrgyzstan\" class=\"cb_option\">Kyrgyzstan</li>
+  <li role=\"option\" id=\"sCountry-LaoPeople’sDemocraticRepublic-ID\" data-value=\"Lao People’s Democratic Republic\" class=\"cb_option\">Lao People’s Democratic Republic</li>
+  <li role=\"option\" id=\"sCountry-Latvia-ID\" data-value=\"Latvia\" class=\"cb_option\">Latvia</li>
+  <li role=\"option\" id=\"sCountry-Lebanon-ID\" data-value=\"Lebanon\" class=\"cb_option\">Lebanon</li>
+  <li role=\"option\" id=\"sCountry-Lesotho-ID\" data-value=\"Lesotho\" class=\"cb_option\">Lesotho</li>
+  <li role=\"option\" id=\"sCountry-Liberia-ID\" data-value=\"Liberia\" class=\"cb_option\">Liberia</li>
+  <li role=\"option\" id=\"sCountry-LibyanArabJamahiriya-ID\" data-value=\"Libyan Arab Jamahiriya\" class=\"cb_option\">Libyan Arab Jamahiriya</li>
+  <li role=\"option\" id=\"sCountry-Liechtenstein-ID\" data-value=\"Liechtenstein\" class=\"cb_option\">Liechtenstein</li>
+  <li role=\"option\" id=\"sCountry-Lithuania-ID\" data-value=\"Lithuania\" class=\"cb_option\">Lithuania</li>
+  <li role=\"option\" id=\"sCountry-Luxembourg-ID\" data-value=\"Luxembourg\" class=\"cb_option\">Luxembourg</li>
+  <li role=\"option\" id=\"sCountry-Macau-ID\" data-value=\"Macau\" class=\"cb_option\">Macau</li>
+  <li role=\"option\" id=\"sCountry-RepublicofNorthMacedonia-ID\" data-value=\"Republic of North Macedonia\" class=\"cb_option\">Republic of North Macedonia</li>
+  <li role=\"option\" id=\"sCountry-Madagascar-ID\" data-value=\"Madagascar\" class=\"cb_option\">Madagascar</li>
+  <li role=\"option\" id=\"sCountry-Malawi-ID\" data-value=\"Malawi\" class=\"cb_option\">Malawi</li>
+  <li role=\"option\" id=\"sCountry-Malaysia-ID\" data-value=\"Malaysia\" class=\"cb_option\">Malaysia</li>
+  <li role=\"option\" id=\"sCountry-Malta-ID\" data-value=\"Malta\" class=\"cb_option\">Malta</li>
+  <li role=\"option\" id=\"sCountry-Maldives-ID\" data-value=\"Maldives\" class=\"cb_option\">Maldives</li>
+  <li role=\"option\" id=\"sCountry-Mali-ID\" data-value=\"Mali\" class=\"cb_option\">Mali</li>
+  <li role=\"option\" id=\"sCountry-MarshallIslands-ID\" data-value=\"Marshall Islands\" class=\"cb_option\">Marshall Islands</li>
+  <li role=\"option\" id=\"sCountry-Martinique-ID\" data-value=\"Martinique\" class=\"cb_option\">Martinique</li>
+  <li role=\"option\" id=\"sCountry-Mauritania-ID\" data-value=\"Mauritania\" class=\"cb_option\">Mauritania</li>
+  <li role=\"option\" id=\"sCountry-Mauritius-ID\" data-value=\"Mauritius\" class=\"cb_option\">Mauritius</li>
+  <li role=\"option\" id=\"sCountry-Mayotte-ID\" data-value=\"Mayotte\" class=\"cb_option\">Mayotte</li>
+  <li role=\"option\" id=\"sCountry-Mexico-ID\" data-value=\"Mexico\" class=\"cb_option\">Mexico</li>
+  <li role=\"option\" id=\"sCountry-Micronesia,FederatedStatesOf-ID\" data-value=\"Micronesia, Federated States Of\" class=\"cb_option\">Micronesia, Federated States Of</li>
+  <li role=\"option\" id=\"sCountry-Moldova,RepublicOf-ID\" data-value=\"Moldova, Republic Of\" class=\"cb_option\">Moldova, Republic Of</li>
+  <li role=\"option\" id=\"sCountry-Monaco-ID\" data-value=\"Monaco\" class=\"cb_option\">Monaco</li>
+  <li role=\"option\" id=\"sCountry-Mongolia-ID\" data-value=\"Mongolia\" class=\"cb_option\">Mongolia</li>
+  <li role=\"option\" id=\"sCountry-Montenegro-ID\" data-value=\"Montenegro\" class=\"cb_option\">Montenegro</li>
+  <li role=\"option\" id=\"sCountry-Montserrat-ID\" data-value=\"Montserrat\" class=\"cb_option\">Montserrat</li>
+  <li role=\"option\" id=\"sCountry-Morocco-ID\" data-value=\"Morocco\" class=\"cb_option\">Morocco</li>
+  <li role=\"option\" id=\"sCountry-Mozambique-ID\" data-value=\"Mozambique\" class=\"cb_option\">Mozambique</li>
+  <li role=\"option\" id=\"sCountry-Myanmar-ID\" data-value=\"Myanmar\" class=\"cb_option\">Myanmar</li>
+  <li role=\"option\" id=\"sCountry-Namibia-ID\" data-value=\"Namibia\" class=\"cb_option\">Namibia</li>
+  <li role=\"option\" id=\"sCountry-Nauru-ID\" data-value=\"Nauru\" class=\"cb_option\">Nauru</li>
+  <li role=\"option\" id=\"sCountry-Nepal-ID\" data-value=\"Nepal\" class=\"cb_option\">Nepal</li>
+  <li role=\"option\" id=\"sCountry-Netherlands-ID\" data-value=\"Netherlands\" class=\"cb_option\">Netherlands</li>
+  <li role=\"option\" id=\"sCountry-NetherlandsAntilles-ID\" data-value=\"Netherlands Antilles\" class=\"cb_option\">Netherlands Antilles</li>
+  <li role=\"option\" id=\"sCountry-NewCaledonia-ID\" data-value=\"New Caledonia\" class=\"cb_option\">New Caledonia</li>
+  <li role=\"option\" id=\"sCountry-NewZealand-ID\" data-value=\"New Zealand\" class=\"cb_option\">New Zealand</li>
+  <li role=\"option\" id=\"sCountry-Nicaragua-ID\" data-value=\"Nicaragua\" class=\"cb_option\">Nicaragua</li>
+  <li role=\"option\" id=\"sCountry-Niger-ID\" data-value=\"Niger\" class=\"cb_option\">Niger</li>
+  <li role=\"option\" id=\"sCountry-Nigeria-ID\" data-value=\"Nigeria\" class=\"cb_option\">Nigeria</li>
+  <li role=\"option\" id=\"sCountry-Niue-ID\" data-value=\"Niue\" class=\"cb_option\">Niue</li>
+  <li role=\"option\" id=\"sCountry-NorfolkIsland-ID\" data-value=\"Norfolk Island\" class=\"cb_option\">Norfolk Island</li>
+  <li role=\"option\" id=\"sCountry-NorthernMarianaIslands-ID\" data-value=\"Northern Mariana Islands\" class=\"cb_option\">Northern Mariana Islands</li>
+  <li role=\"option\" id=\"sCountry-Norway-ID\" data-value=\"Norway\" class=\"cb_option\">Norway</li>
+  <li role=\"option\" id=\"sCountry-Oman-ID\" data-value=\"Oman\" class=\"cb_option\">Oman</li>
+  <li role=\"option\" id=\"sCountry-Pakistan-ID\" data-value=\"Pakistan\" class=\"cb_option\">Pakistan</li>
+  <li role=\"option\" id=\"sCountry-Palau-ID\" data-value=\"Palau\" class=\"cb_option\">Palau</li>
+  <li role=\"option\" id=\"sCountry-Panama-ID\" data-value=\"Panama\" class=\"cb_option\">Panama</li>
+  <li role=\"option\" id=\"sCountry-PapuaNewGuinea-ID\" data-value=\"Papua New Guinea\" class=\"cb_option\">Papua New Guinea</li>
+  <li role=\"option\" id=\"sCountry-Paraguay-ID\" data-value=\"Paraguay\" class=\"cb_option\">Paraguay</li>
+  <li role=\"option\" id=\"sCountry-Peru-ID\" data-value=\"Peru\" class=\"cb_option\">Peru</li>
+  <li role=\"option\" id=\"sCountry-Philippines-ID\" data-value=\"Philippines\" class=\"cb_option\">Philippines</li>
+  <li role=\"option\" id=\"sCountry-Pitcairn-ID\" data-value=\"Pitcairn\" class=\"cb_option\">Pitcairn</li>
+  <li role=\"option\" id=\"sCountry-Poland-ID\" data-value=\"Poland\" class=\"cb_option\">Poland</li>
+  <li role=\"option\" id=\"sCountry-Portugal-ID\" data-value=\"Portugal\" class=\"cb_option\">Portugal</li>
+  <li role=\"option\" id=\"sCountry-Qatar-ID\" data-value=\"Qatar\" class=\"cb_option\">Qatar</li>
+  <li role=\"option\" id=\"sCountry-Reunion-ID\" data-value=\"Reunion\" class=\"cb_option\">Reunion</li>
+  <li role=\"option\" id=\"sCountry-Romania-ID\" data-value=\"Romania\" class=\"cb_option\">Romania</li>
+  <li role=\"option\" id=\"sCountry-RussianFederation-ID\" data-value=\"Russian Federation\" class=\"cb_option\">Russian Federation</li>
+  <li role=\"option\" id=\"sCountry-Rwanda-ID\" data-value=\"Rwanda\" class=\"cb_option\">Rwanda</li>
+  <li role=\"option\" id=\"sCountry-SaintBarthélemy-ID\" data-value=\"Saint Barthélemy\" class=\"cb_option\">Saint Barthélemy</li>
+  <li role=\"option\" id=\"sCountry-SaintHelena-ID\" data-value=\"Saint Helena\" class=\"cb_option\">Saint Helena</li>
+  <li role=\"option\" id=\"sCountry-SaintLucia-ID\" data-value=\"Saint Lucia\" class=\"cb_option\">Saint Lucia</li>
+  <li role=\"option\" id=\"sCountry-SaintMartin-ID\" data-value=\"Saint Martin\" class=\"cb_option\">Saint Martin</li>
+  <li role=\"option\" id=\"sCountry-SaintPierreandMiquelon-ID\" data-value=\"Saint Pierre and Miquelon\" class=\"cb_option\">Saint Pierre and Miquelon</li>
+  <li role=\"option\" id=\"sCountry-SaintVincentandtheGrenadines-ID\" data-value=\"Saint Vincent and the Grenadines\" class=\"cb_option\">Saint Vincent and the Grenadines</li>
+  <li role=\"option\" id=\"sCountry-Samoa-ID\" data-value=\"Samoa\" class=\"cb_option\">Samoa</li>
+  <li role=\"option\" id=\"sCountry-SanMarino-ID\" data-value=\"San Marino\" class=\"cb_option\">San Marino</li>
+  <li role=\"option\" id=\"sCountry-SaoTomeAndPrincipe-ID\" data-value=\"Sao Tome And Principe\" class=\"cb_option\">Sao Tome And Principe</li>
+  <li role=\"option\" id=\"sCountry-SaudiArabia-ID\" data-value=\"Saudi Arabia\" class=\"cb_option\">Saudi Arabia</li>
+  <li role=\"option\" id=\"sCountry-Senegal-ID\" data-value=\"Senegal\" class=\"cb_option\">Senegal</li>
+  <li role=\"option\" id=\"sCountry-Serbia-ID\" data-value=\"Serbia\" class=\"cb_option\">Serbia</li>
+  <li role=\"option\" id=\"sCountry-Seychelles-ID\" data-value=\"Seychelles\" class=\"cb_option\">Seychelles</li>
+  <li role=\"option\" id=\"sCountry-Singapore-ID\" data-value=\"Singapore\" class=\"cb_option\">Singapore</li>
+  <li role=\"option\" id=\"sCountry-SierraLeone-ID\" data-value=\"Sierra Leone\" class=\"cb_option\">Sierra Leone</li>
+  <li role=\"option\" id=\"sCountry-Slovakia-ID\" data-value=\"Slovakia\" class=\"cb_option\">Slovakia</li>
+  <li role=\"option\" id=\"sCountry-Slovenia-ID\" data-value=\"Slovenia\" class=\"cb_option\">Slovenia</li>
+  <li role=\"option\" id=\"sCountry-SolomonIslands-ID\" data-value=\"Solomon Islands\" class=\"cb_option\">Solomon Islands</li>
+  <li role=\"option\" id=\"sCountry-Somalia-ID\" data-value=\"Somalia\" class=\"cb_option\">Somalia</li>
+  <li role=\"option\" id=\"sCountry-SouthAfrica-ID\" data-value=\"South Africa\" class=\"cb_option\">South Africa</li>
+  <li role=\"option\" id=\"sCountry-SouthGeorgiaandtheSouthSandwichIslands-ID\" data-value=\"South Georgia and the South Sandwich Islands\" class=\"cb_option\">South Georgia and the South Sandwich Islands</li>
+  <li role=\"option\" id=\"sCountry-Spain-ID\" data-value=\"Spain\" class=\"cb_option\">Spain</li>
+  <li role=\"option\" id=\"sCountry-SriLanka-ID\" data-value=\"Sri Lanka\" class=\"cb_option\">Sri Lanka</li>
+  <li role=\"option\" id=\"sCountry-St.KittsandNevis-ID\" data-value=\"St. Kitts and Nevis\" class=\"cb_option\">St. Kitts and Nevis</li>
+  <li role=\"option\" id=\"sCountry-StateofPalestine-ID\" data-value=\"State of Palestine\" class=\"cb_option\">State of Palestine</li>
+  <li role=\"option\" id=\"sCountry-Sudan-ID\" data-value=\"Sudan\" class=\"cb_option\">Sudan</li>
+  <li role=\"option\" id=\"sCountry-SouthSudan,TheRepublicOf-ID\" data-value=\"South Sudan, The Republic Of\" class=\"cb_option\">South Sudan, The Republic Of</li>
+  <li role=\"option\" id=\"sCountry-Suriname-ID\" data-value=\"Suriname\" class=\"cb_option\">Suriname</li>
+  <li role=\"option\" id=\"sCountry-SvalbardandJanMayen-ID\" data-value=\"Svalbard and Jan Mayen\" class=\"cb_option\">Svalbard and Jan Mayen</li>
+  <li role=\"option\" id=\"sCountry-Swaziland-ID\" data-value=\"Swaziland\" class=\"cb_option\">Swaziland</li>
+  <li role=\"option\" id=\"sCountry-Sweden-ID\" data-value=\"Sweden\" class=\"cb_option\">Sweden</li>
+  <li role=\"option\" id=\"sCountry-Switzerland-ID\" data-value=\"Switzerland\" class=\"cb_option\">Switzerland</li>
+  <li role=\"option\" id=\"sCountry-Syria-ID\" data-value=\"Syria\" class=\"cb_option\">Syria</li>
+  <li role=\"option\" id=\"sCountry-Taiwan-ID\" data-value=\"Taiwan\" class=\"cb_option\">Taiwan</li>
+  <li role=\"option\" id=\"sCountry-Tajikistan-ID\" data-value=\"Tajikistan\" class=\"cb_option\">Tajikistan</li>
+  <li role=\"option\" id=\"sCountry-Tanzania,UnitedRepublicOf-ID\" data-value=\"Tanzania, United Republic Of\" class=\"cb_option\">Tanzania, United Republic Of</li>
+  <li role=\"option\" id=\"sCountry-Thailand-ID\" data-value=\"Thailand\" class=\"cb_option\">Thailand</li>
+  <li role=\"option\" id=\"sCountry-Timor-leste-ID\" data-value=\"Timor-leste\" class=\"cb_option\">Timor-leste</li>
+  <li role=\"option\" id=\"sCountry-Togo-ID\" data-value=\"Togo\" class=\"cb_option\">Togo</li>
+  <li role=\"option\" id=\"sCountry-Tokelau-ID\" data-value=\"Tokelau\" class=\"cb_option\">Tokelau</li>
+  <li role=\"option\" id=\"sCountry-Tonga-ID\" data-value=\"Tonga\" class=\"cb_option\">Tonga</li>
+  <li role=\"option\" id=\"sCountry-TrinidadAndTobago-ID\" data-value=\"Trinidad And Tobago\" class=\"cb_option\">Trinidad And Tobago</li>
+  <li role=\"option\" id=\"sCountry-Tunisia-ID\" data-value=\"Tunisia\" class=\"cb_option\">Tunisia</li>
+  <li role=\"option\" id=\"sCountry-Türkiye,Republicof-ID\" data-value=\"Türkiye, Republic of\" class=\"cb_option\">Türkiye, Republic of</li>
+  <li role=\"option\" id=\"sCountry-Turkmenistan-ID\" data-value=\"Turkmenistan\" class=\"cb_option\">Turkmenistan</li>
+  <li role=\"option\" id=\"sCountry-TurksandCaicosIslands-ID\" data-value=\"Turks and Caicos Islands\" class=\"cb_option\">Turks and Caicos Islands</li>
+  <li role=\"option\" id=\"sCountry-Tuvalu-ID\" data-value=\"Tuvalu\" class=\"cb_option\">Tuvalu</li>
+  <li role=\"option\" id=\"sCountry-Uganda-ID\" data-value=\"Uganda\" class=\"cb_option\">Uganda</li>
+  <li role=\"option\" id=\"sCountry-Ukraine-ID\" data-value=\"Ukraine\" class=\"cb_option\">Ukraine</li>
+  <li role=\"option\" id=\"sCountry-UnitedArabEmirates-ID\" data-value=\"United Arab Emirates\" class=\"cb_option\">United Arab Emirates</li>
+  <li role=\"option\" id=\"sCountry-UnitedStatesMinorOutlyingIslands-ID\" data-value=\"United States Minor Outlying Islands\" class=\"cb_option\">United States Minor Outlying Islands</li>
+  <li role=\"option\" id=\"sCountry-Uruguay-ID\" data-value=\"Uruguay\" class=\"cb_option\">Uruguay</li>
+  <li role=\"option\" id=\"sCountry-Uzbekistan-ID\" data-value=\"Uzbekistan\" class=\"cb_option\">Uzbekistan</li>
+  <li role=\"option\" id=\"sCountry-Vanuatu-ID\" data-value=\"Vanuatu\" class=\"cb_option\">Vanuatu</li>
+  <li role=\"option\" id=\"sCountry-VaticanCityState-ID\" data-value=\"Vatican City State\" class=\"cb_option\">Vatican City State</li>
+  <li role=\"option\" id=\"sCountry-Venezuela-ID\" data-value=\"Venezuela\" class=\"cb_option\">Venezuela</li>
+  <li role=\"option\" id=\"sCountry-Vietnam-ID\" data-value=\"Vietnam\" class=\"cb_option\">Vietnam</li>
+  <li role=\"option\" id=\"sCountry-VirginIslands,British-ID\" data-value=\"Virgin Islands, British\" class=\"cb_option\">Virgin Islands, British</li>
+  <li role=\"option\" id=\"sCountry-VirginIslands,U.S.-ID\" data-value=\"Virgin Islands, U.S.\" class=\"cb_option\">Virgin Islands, U.S.</li>
+  <li role=\"option\" id=\"sCountry-WallisandFutuna-ID\" data-value=\"Wallis and Futuna\" class=\"cb_option\">Wallis and Futuna</li>
+  <li role=\"option\" id=\"sCountry-WesternSahara-ID\" data-value=\"Western Sahara\" class=\"cb_option\">Western Sahara</li>
+  <li role=\"option\" id=\"sCountry-Yemen-ID\" data-value=\"Yemen\" class=\"cb_option\">Yemen</li>
+  <li role=\"option\" id=\"sCountry-Zambia-ID\" data-value=\"Zambia\" class=\"cb_option\">Zambia</li>
+  <li role=\"option\" id=\"sCountry-Zimbabwe-ID\" data-value=\"Zimbabwe\" class=\"cb_option\">Zimbabwe</li>
+</ul>
+</div>
+</span>
+        </div>
+    
+     <div class=\"form-group\">
+          <label id=\"sState_label\" class=\"col-sm-12 col-md-3\" for=\"sState\"><span id=\"regionTitle\">State / Territory</span>:<span class=\"asterisk\" aria-hidden=\"true\">*</span></label>
+        <span class=\"col-sm-12 col-md-5\"><div id=\"sState\" class=\"input-group cb pu-select\">
+<input autocomplete=\"off\" id=\"sState-edit\" class=\"sState_edit form-control dropdownEdit\" type=\"text\" tabindex=\"0\" role=\"combobox\" aria-labelledby=\"sState_label\" aria-activedescendant=\"sState-NSW-ID\" aria-autocomplete=\"both\" aria-owns=\"sState-list\" aria-expanded=\"false\" aria-describedby=\"sState-current-value\" onfocus=\"this.value=''\" aria-controls=\"sState-list\" aria-required=\"true\">
+<div id=\"sState-button-label\" class=\"hidden\">Open list</div><span class=\"input-group-btn\"><button id=\"sState-button\" aria-labelledby=\"sState-button-label\" aria-controls=\"sState-list\" tabindex=\"-1\" class=\"btn\" type=\"button\"><span class=\"caret\"></span></button></span>
+<input type=\"hidden\" name=\"sState\" id=\"sState-postback\" class=\"hidden dropdownvalue\" value=\"NSW\">
+<span id=\"sState-current-value\" class=\"sr-only\"></span>
+<ul id=\"sState-list\" class=\"cb_list\" tabindex=\"-1\" role=\"listbox\" aria-expanded=\"false\" style=\"display: none;\">
+  <li role=\"option\" id=\"sState--ID\" data-value=\"\" class=\"cb_option\">Select</li>
+  <li role=\"option\" id=\"sState-ACT-ID\" data-value=\"ACT\" class=\"cb_option\">ACT</li>
+  <li role=\"option\" id=\"sState-NSW-ID\" data-value=\"NSW\" class=\"cb_option selected\">NSW</li>
+  <li role=\"option\" id=\"sState-NT-ID\" data-value=\"NT\" class=\"cb_option\">NT</li>
+  <li role=\"option\" id=\"sState-QLD-ID\" data-value=\"QLD\" class=\"cb_option\">QLD</li>
+  <li role=\"option\" id=\"sState-SA-ID\" data-value=\"SA\" class=\"cb_option\">SA</li>
+  <li role=\"option\" id=\"sState-TAS-ID\" data-value=\"TAS\" class=\"cb_option\">TAS</li>
+  <li role=\"option\" id=\"sState-VIC-ID\" data-value=\"VIC\" class=\"cb_option\">VIC</li>
+  <li role=\"option\" id=\"sState-WA-ID\" data-value=\"WA\" class=\"cb_option\">WA</li>
+</ul>
+</div>
+</span>
+        </div>
+    
+   <div class=\"form-group\">
+      <label class=\"col-sm-12 col-md-3\" id=\"sPostcodeLabel\" for=\"sPostcode\">PostCode/Zip:</label>
+      <span class=\"col-sm-12 col-md-5\"><input type=\"text\" name=\"sPostcode\" size=\"6\" maxlength=\"50\" id=\"sPostcode\" autocomplete=\"postal-code\" aria-required=\"false\"></span>
+    </div>
+    
+</div>
+
+    <div class=\"personalDetailsSection phoneNumbersSection\">
+        
+            <div class=\"form-group\">
+                <label class=\"col-sm-12 col-md-3\" for=\"sPhone1\">Landline phone number:</label>
+                <span class=\"col-sm-12 col-md-5\">
+                    
+                        <!--<span id=\"sPhonePrefix\" >+61</span>-->
+                    <input type=\"tel\" name=\"sPhone1\" size=\"11\" maxlength=\"50\" id=\"sPhone1\" autocomplete=\"tel-national\" value=\"na\" aria-required=\"false\">
+                </span>
+            </div>
+        
+            <div class=\"form-group\">
+                <label class=\"col-sm-12 col-md-3\" for=\"sPhone2\">Mobile number:<span class=\"asterisk\" aria-hidden=\"true\">*</span></label>
+                <span class=\"col-sm-12 col-md-5\">
+                    
+                        <!--<span id=\"sMobilePrefix\">+61</span>-->
+                    <input type=\"tel\" name=\"sPhone2\" size=\"11\" maxlength=\"50\" id=\"sPhone2\" value=\"+61432346630\" aria-required=\"true\">                                      
+                </span>
+            </div>    
+        
+            <div class=\"form-group\"><fieldset role=\"group\" aria-labelledby=\"sNotificationType-label\" aria-required=\"false\">
+                <label id=\"sNotificationType-label\" class=\"col-sm-12 col-md-3\" for=\"sNotificationType\">SMS text notification:</label>
+                <legend class=\"sr-only\">SMS text notification</legend>
+                <div class=\"col-sm-12 col-md-5\">
+                    <label for=\"sNotificationType_yes\" class=\"radio\">
+                        <input type=\"radio\" name=\"sNotificationType\" value=\"sms\" id=\"sNotificationType_yes\" class=\"radio\" checked=\"checked\">Yes
+                    </label>
+                    <label for=\"sNotificationType_no\" class=\"radio\">
+                        <input type=\"radio\" name=\"sNotificationType\" value=\"-1\" id=\"sNotificationType_no\" class=\"radio\">No
+                    </label>
+        
+                    <div class=\"alert alert-info\" style=\"margin: 15px 0 0;\">              
+                        <input type=\"hidden\" name=\"sNotificationType\" value=\"sms\" id=\"sNotificationType\">Would you like to receive SMS from us? If so, please provide a mobile number above
+                    </div>                                                  
+        
+            </div>
+        </fieldset></div>
+        
+     </div>
+     
+     <div class=\"personalDetailslabel\"></div>
+     
+            <input type=\"hidden\" name=\"bConditionalEmployment\" id=\"bConditionalEmployment\" value=\"False\">
+          
+        <script language=\"javascript\">
+        function toggleEmploymentStatus(oSelect)
+        {
+            var sShownResponses = \",2,,3,,4,,5,\";
+            var lSelectedIndex = getSelectedIndex(oSelect.id.replace(\"-postback\", \"\"));
+            var oEmploymentManager = document.getElementById(\"form_sEmploymentManager\");
+            var oEmploymentManagerEmail = document.getElementById(\"form_sEmploymentManagerEmail\");
+            var oEmploymentManagerPosition = document.getElementById(\"form_sEmploymentManagerPosition\");
+            var oEmploymentSite = document.getElementById(\"form_sEmploymentSite\");
+            var oEmploymentDepartment = document.getElementById(\"form_sEmploymentDepartment\");
+            var oEmploymentMonth = document.getElementById(\"form_sEmploymentDate_month\");
+            var oEmploymentYear = document.getElementById(\"form_sEmploymentDate_year\");
+            var oPersonID = document.getElementById(\"form_sPersonID\");
+            var oBadgeID = document.getElementById(\"form_sBadgeID\");
+            var oEmploymentDOB = document.getElementById(\"hiddenRow_dEmploymentDOB\");
+            var oDOBDay = document.getElementById(\"dEmploymentDOB_day\");
+            var oDOBMonth = document.getElementById(\"dEmploymentDOB_month\");
+            var oDOBYear = document.getElementById(\"dEmploymentDOB_year\");
+
+            if (sShownResponses.indexOf(\",\" + lSelectedIndex + \",\") != -1)
+            {
+                document.getElementById(\"bConditionalEmployment\").value = \"true\";
+                changeVisibility(\"\");             
+            }
+            else
+            {
+                document.getElementById(\"bConditionalEmployment\").value = \"false\";
+
+                if(oEmploymentManager)
+                    oEmploymentManager.value = \"\";
+                
+                if(oEmploymentManagerEmail)
+                    oEmploymentManagerEmail.value = \"\";
+                
+                if(oEmploymentManagerPosition)
+                    oEmploymentManagerPosition.value = \"\";
+
+                if(oEmploymentSite)
+                    oEmploymentSite.value = \"\";
+                
+                if(oEmploymentDepartment)
+                    removeSelected(\"form_sEmploymentDepartment\");
+                
+                if(oEmploymentMonth)
+                 removeSelected(\"form_sEmploymentDate_month\");                
+
+                if(oEmploymentYear)
+                    removeSelected(\"form_sEmploymentDate_year\");    
+                
+                if(oPersonID)
+                    oPersonID.value = \"\";
+
+                if(oBadgeID)
+                    oBadgeID.value = \"\";
+
+                if(oEmploymentDOB)
+                {
+                    oEmploymentDOB.value = \"\";
+                    oDOBYear.value = \"\";
+                    removeSelected(\"dEmploymentDOB_day\");    
+                    removeSelected(\"dEmploymentDOB_month\");    
+                }
+
+                changeVisibility(\"none\");
+            }
+        }
+        function getSelectedIndex(fieldid){
+            var cb = pu_search.filter(function(el) { return el.id === fieldid})[0].cb;
+            var curOption = cb.$options.filter('.selected');
+          var index = cb.$options.index(curOption);
+            return index;
+        }
+        
+      
+      
+        function changeVisibility(sDisplay)
+        {
+            var oEmploymentManager = document.getElementById(\"hiddenRow_sEmploymentManager\");
+            var oEmploymentManagerEmail = document.getElementById(\"hiddenRow_sEmploymentManagerEmail\");
+            var oEmploymentManagerPosition = document.getElementById(\"hiddenRow_sEmploymentManagerPosition\");
+            var oEmploymentSite = document.getElementById(\"hiddenRow_sEmploymentSite\");
+            var oEmploymentDepartment = document.getElementById(\"hiddenRow_sEmploymentDepartment\");
+            var oEmploymentDate = document.getElementById(\"hiddenRow_sEmploymentDate\");
+            var oPersonID = document.getElementById(\"hiddenRow_sPersonID\");
+            var oBadgeID = document.getElementById(\"hiddenRow_sBadgeID\");
+            var oEmploymentDOB = document.getElementById(\"hiddenRow_dEmploymentDOB\");
+            var oEmploymentLabel = document.getElementById(\"hiddenRow_sEmploymentLabel\");
+
+            if(oEmploymentDepartment)
+                oEmploymentDepartment.style.display = sDisplay; 
+           
+            if(oEmploymentManager)
+                oEmploymentManager.style.display = sDisplay;
+  
+            if(oEmploymentManagerEmail)
+                oEmploymentManagerEmail.style.display = sDisplay;
+  
+            if(oEmploymentManagerPosition)
+                oEmploymentManagerPosition.style.display = sDisplay;
+  
+            if(oEmploymentSite)
+                oEmploymentSite.style.display = sDisplay;
+
+            if(oEmploymentDate)
+                oEmploymentDate.style.display = sDisplay;
+
+            if(oPersonID)
+                oPersonID.style.display = sDisplay;
+
+            if(oBadgeID)
+                oBadgeID.style.display = sDisplay;
+
+            if(oEmploymentDOB)
+            {
+                oEmploymentDOB.style.display = sDisplay;
+            }
+
+            if(oEmploymentLabel)
+            {
+                oEmploymentLabel.style.display = sDisplay;
+            }
+        }
+
+      </script>
+
+  <div class=\"personalDetailsSection\">
+<div id=\"hiddenRow_sNominatedEmploymentStatus\" class=\"form-group\"><label id=\"lLKP_NominatedEmploymentStatusID_label\" class=\"col-sm-12 col-md-3\" for=\"lLKP_NominatedEmploymentStatusID\">NAB Employment Status<br><font color=\"#FF0000\"><b>Please ensure your Employment Status is up to date</b></font><b>:<span class=\"asterisk\" aria-hidden=\"true\">*</span></b></label><b>
+      <span class=\"col-sm-12 col-md-5\">
+<div id=\"lLKP_NominatedEmploymentStatusID\" class=\"input-group cb pu-select\">
+<input autocomplete=\"off\" id=\"lLKP_NominatedEmploymentStatusID-edit\" class=\"lLKP_NominatedEmploymentStatusID_edit form-control dropdownEdit\" type=\"text\" tabindex=\"0\" role=\"combobox\" aria-labelledby=\"lLKP_NominatedEmploymentStatusID_label\" aria-activedescendant=\"lLKP_NominatedEmploymentStatusID-1-ID\" aria-autocomplete=\"both\" aria-owns=\"lLKP_NominatedEmploymentStatusID-list\" aria-expanded=\"false\" aria-describedby=\"lLKP_NominatedEmploymentStatusID-current-value\" onfocus=\"this.value=''\" aria-controls=\"lLKP_NominatedEmploymentStatusID-list\" aria-required=\"true\">
+<div id=\"lLKP_NominatedEmploymentStatusID-button-label\" class=\"hidden\">Open list</div><span class=\"input-group-btn\"><button id=\"lLKP_NominatedEmploymentStatusID-button\" aria-labelledby=\"lLKP_NominatedEmploymentStatusID-button-label\" aria-controls=\"lLKP_NominatedEmploymentStatusID-list\" tabindex=\"-1\" class=\"btn\" type=\"button\"><span class=\"caret\"></span></button></span>
+<input type=\"hidden\" name=\"lLKP_NominatedEmploymentStatusID\" id=\"lLKP_NominatedEmploymentStatusID-postback\" class=\"hidden dropdownvalue\" value=\"1\" onchange=\"toggleEmploymentStatus(this)\">
+<span id=\"lLKP_NominatedEmploymentStatusID-current-value\" class=\"sr-only\"></span>
+<ul id=\"lLKP_NominatedEmploymentStatusID-list\" class=\"cb_list\" tabindex=\"-1\" role=\"listbox\" aria-expanded=\"false\" style=\"display: none;\">
+  <li role=\"option\" id=\"lLKP_NominatedEmploymentStatusID--ID\" data-value=\"\" class=\"cb_option\">Select</li>
+  <li role=\"option\" id=\"lLKP_NominatedEmploymentStatusID-1-ID\" data-value=\"1\" class=\"cb_option selected\">Never employed or contracted</li>
+  <li role=\"option\" id=\"lLKP_NominatedEmploymentStatusID-2-ID\" data-value=\"2\" class=\"cb_option\">Previous Contractor</li>
+  <li role=\"option\" id=\"lLKP_NominatedEmploymentStatusID-3-ID\" data-value=\"3\" class=\"cb_option\">Previously employed</li>
+  <li role=\"option\" id=\"lLKP_NominatedEmploymentStatusID-4-ID\" data-value=\"4\" class=\"cb_option\">Current contractor</li>
+  <li role=\"option\" id=\"lLKP_NominatedEmploymentStatusID-5-ID\" data-value=\"5\" class=\"cb_option\">Currently employed</li>
+</ul>
+</div>
+
+      </span>
+    </b></div><b>
+
+
+      <div id=\"hiddenRow_sEmploymentLabel\" style=\"display:none;\">
+        If you are a current or previous employee, please answer the following questions:
+      </div>
+
+    <div id=\"hiddenRow_sEmploymentDepartment\" style=\"display:none;\" class=\"form-group\">
+      <label id=\"form_sEmploymentDepartment_label\" class=\"col-sm-12 col-md-3\" for=\"sEmploymentDepartment\">Current/previous business unit:</label>
+      <div>
+      <span class=\"col-sm-12 col-md-5\"><div id=\"form_sEmploymentDepartment\" class=\"input-group cb pu-select\">
+<input autocomplete=\"off\" id=\"form_sEmploymentDepartment-edit\" class=\"form_sEmploymentDepartment_edit form-control dropdownEdit\" type=\"text\" tabindex=\"0\" role=\"combobox\" aria-labelledby=\"form_sEmploymentDepartment_label\" aria-activedescendant=\"form_sEmploymentDepartment--ID\" aria-autocomplete=\"both\" aria-owns=\"form_sEmploymentDepartment-list\" aria-expanded=\"false\" aria-describedby=\"form_sEmploymentDepartment-current-value\" onfocus=\"this.value=''\" aria-controls=\"form_sEmploymentDepartment-list\" aria-required=\"false\">
+<div id=\"form_sEmploymentDepartment-button-label\" class=\"hidden\">Open list</div><span class=\"input-group-btn\"><button id=\"form_sEmploymentDepartment-button\" aria-labelledby=\"form_sEmploymentDepartment-button-label\" aria-controls=\"form_sEmploymentDepartment-list\" tabindex=\"-1\" class=\"btn\" type=\"button\"><span class=\"caret\"></span></button></span>
+<input type=\"hidden\" name=\"sEmploymentDepartment\" id=\"form_sEmploymentDepartment-postback\" class=\"hidden dropdownvalue\" value=\"\">
+<span id=\"form_sEmploymentDepartment-current-value\" class=\"sr-only\"></span>
+<ul id=\"form_sEmploymentDepartment-list\" class=\"cb_list\" tabindex=\"-1\" role=\"listbox\" aria-expanded=\"false\" style=\"display: none;\">
+  <li role=\"option\" id=\"form_sEmploymentDepartment--ID\" data-value=\"\" class=\"cb_option selected\">Select</li>
+  <li role=\"option\" id=\"form_sEmploymentDepartment-BusinessandPrivate-ID\" data-value=\"Business and Private\" class=\"cb_option\">Business and Private</li>
+  <li role=\"option\" id=\"form_sEmploymentDepartment-ChiefTransformationOfficerTeam-ID\" data-value=\"Chief Transformation Officer Team\" class=\"cb_option\">Chief Transformation Officer Team</li>
+  <li role=\"option\" id=\"form_sEmploymentDepartment-CorporateandInstitutional-ID\" data-value=\"Corporate and Institutional\" class=\"cb_option\">Corporate and Institutional</li>
+  <li role=\"option\" id=\"form_sEmploymentDepartment-CorporateOffice-ID\" data-value=\"Corporate Office\" class=\"cb_option\">Corporate Office</li>
+  <li role=\"option\" id=\"form_sEmploymentDepartment-Customer&amp;CorporateServices-ID\" data-value=\"Customer &amp; Corporate Services\" class=\"cb_option\">Customer &amp; Corporate Services</li>
+  <li role=\"option\" id=\"form_sEmploymentDepartment-CustomerExperience-ID\" data-value=\"Customer Experience\" class=\"cb_option\">Customer Experience</li>
+  <li role=\"option\" id=\"form_sEmploymentDepartment-Directors-ID\" data-value=\"Directors\" class=\"cb_option\">Directors</li>
+  <li role=\"option\" id=\"form_sEmploymentDepartment-Finance-ID\" data-value=\"Finance\" class=\"cb_option\">Finance</li>
+  <li role=\"option\" id=\"form_sEmploymentDepartment-GroupChiefOperatingOfficer-ID\" data-value=\"Group Chief Operating Officer\" class=\"cb_option\">Group Chief Operating Officer</li>
+  <li role=\"option\" id=\"form_sEmploymentDepartment-GroupExecutive-ID\" data-value=\"Group Executive\" class=\"cb_option\">Group Executive</li>
+  <li role=\"option\" id=\"form_sEmploymentDepartment-nabAsia-ID\" data-value=\"nabAsia\" class=\"cb_option\">nabAsia</li>
+  <li role=\"option\" id=\"form_sEmploymentDepartment-PeopleandCulture-ID\" data-value=\"People and Culture\" class=\"cb_option\">People and Culture</li>
+  <li role=\"option\" id=\"form_sEmploymentDepartment-PersonalBanking-ID\" data-value=\"Personal Banking\" class=\"cb_option\">Personal Banking</li>
+  <li role=\"option\" id=\"form_sEmploymentDepartment-Risk-ID\" data-value=\"Risk\" class=\"cb_option\">Risk</li>
+  <li role=\"option\" id=\"form_sEmploymentDepartment-TechnologyandEnterpriseOperations-ID\" data-value=\"Technology and Enterprise Operations\" class=\"cb_option\">Technology and Enterprise Operations</li>
+</ul>
+</div>
+
+      </span>
+      </div>
+    </div>
+    
+        <div id=\"hiddenRow_sEmploymentManager\" style=\"display:none;\" class=\"form-group\">
+          <label class=\"col-sm-12 col-md-3\" for=\"sEmploymentManager\">Current/previous position and Managers name:<span class=\"asterisk\" aria-hidden=\"true\">*</span></label>
+          <span class=\"col-sm-12 col-md-5\"><input type=\"text\" name=\"sEmploymentManager\" size=\"25\" maxlength=\"255\" id=\"form_sEmploymentManager\" aria-required=\"false\">     
+        </span>
+        </div>
+        
+    <div id=\"hiddenRow_sEmploymentDate\" style=\"display:none;\" class=\"form-group\">
+      <label id=\"form_sEmploymentDate_label\" class=\"col-sm-12 col-md-3\" for=\"sEmploymentDate\">Current/previous position commencement date:</label>
+      <span class=\"col-sm-12 col-md-5\">
+        <div id=\"form_sEmploymentDate_month\" class=\"input-group cb pu-select\">
+<input autocomplete=\"off\" id=\"form_sEmploymentDate_month-edit\" class=\"form_sEmploymentDate_month_edit form-control dropdownEdit\" type=\"text\" tabindex=\"0\" role=\"combobox\" aria-labelledby=\"form_sEmploymentDate_label\" aria-activedescendant=\"form_sEmploymentDate_month--ID\" aria-autocomplete=\"both\" aria-owns=\"form_sEmploymentDate_month-list\" aria-expanded=\"false\" aria-describedby=\"form_sEmploymentDate_month-current-value\" onfocus=\"this.value=''\" aria-controls=\"form_sEmploymentDate_month-list\" aria-required=\"false\">
+<div id=\"form_sEmploymentDate_month-button-label\" class=\"hidden\">Open list</div><span class=\"input-group-btn\"><button id=\"form_sEmploymentDate_month-button\" aria-labelledby=\"form_sEmploymentDate_month-button-label\" aria-controls=\"form_sEmploymentDate_month-list\" tabindex=\"-1\" class=\"btn\" type=\"button\"><span class=\"caret\"></span></button></span>
+<input type=\"hidden\" name=\"sEmploymentDate_month\" id=\"form_sEmploymentDate_month-postback\" class=\"hidden dropdownvalue\" value=\"\">
+<span id=\"form_sEmploymentDate_month-current-value\" class=\"sr-only\"></span>
+<ul id=\"form_sEmploymentDate_month-list\" class=\"cb_list\" tabindex=\"-1\" role=\"listbox\" aria-expanded=\"false\" style=\"display: none;\">
+  <li role=\"option\" id=\"form_sEmploymentDate_month--ID\" data-value=\"\" class=\"cb_option selected\">Select</li>
+  <li role=\"option\" id=\"form_sEmploymentDate_month-January-ID\" data-value=\"January\" class=\"cb_option\">January</li>
+  <li role=\"option\" id=\"form_sEmploymentDate_month-February-ID\" data-value=\"February\" class=\"cb_option\">February</li>
+  <li role=\"option\" id=\"form_sEmploymentDate_month-March-ID\" data-value=\"March\" class=\"cb_option\">March</li>
+  <li role=\"option\" id=\"form_sEmploymentDate_month-April-ID\" data-value=\"April\" class=\"cb_option\">April</li>
+  <li role=\"option\" id=\"form_sEmploymentDate_month-May-ID\" data-value=\"May\" class=\"cb_option\">May</li>
+  <li role=\"option\" id=\"form_sEmploymentDate_month-June-ID\" data-value=\"June\" class=\"cb_option\">June</li>
+  <li role=\"option\" id=\"form_sEmploymentDate_month-July-ID\" data-value=\"July\" class=\"cb_option\">July</li>
+  <li role=\"option\" id=\"form_sEmploymentDate_month-August-ID\" data-value=\"August\" class=\"cb_option\">August</li>
+  <li role=\"option\" id=\"form_sEmploymentDate_month-September-ID\" data-value=\"September\" class=\"cb_option\">September</li>
+  <li role=\"option\" id=\"form_sEmploymentDate_month-October-ID\" data-value=\"October\" class=\"cb_option\">October</li>
+  <li role=\"option\" id=\"form_sEmploymentDate_month-November-ID\" data-value=\"November\" class=\"cb_option\">November</li>
+  <li role=\"option\" id=\"form_sEmploymentDate_month-December-ID\" data-value=\"December\" class=\"cb_option\">December</li>
+</ul>
+</div>
+<div id=\"form_sEmploymentDate_year\" class=\"input-group cb pu-select\">
+<input autocomplete=\"off\" id=\"form_sEmploymentDate_year-edit\" class=\"form_sEmploymentDate_year_edit form-control dropdownEdit\" type=\"text\" tabindex=\"0\" role=\"combobox\" aria-labelledby=\"form_sEmploymentDate_label\" aria-activedescendant=\"form_sEmploymentDate_year--ID\" aria-autocomplete=\"both\" aria-owns=\"form_sEmploymentDate_year-list\" aria-expanded=\"false\" aria-describedby=\"form_sEmploymentDate_year-current-value\" onfocus=\"this.value=''\" aria-controls=\"form_sEmploymentDate_year-list\" aria-required=\"false\">
+<div id=\"form_sEmploymentDate_year-button-label\" class=\"hidden\">Open list</div><span class=\"input-group-btn\"><button id=\"form_sEmploymentDate_year-button\" aria-labelledby=\"form_sEmploymentDate_year-button-label\" aria-controls=\"form_sEmploymentDate_year-list\" tabindex=\"-1\" class=\"btn\" type=\"button\"><span class=\"caret\"></span></button></span>
+<input type=\"hidden\" name=\"sEmploymentDate_year\" id=\"form_sEmploymentDate_year-postback\" class=\"hidden dropdownvalue\" value=\"\">
+<span id=\"form_sEmploymentDate_year-current-value\" class=\"sr-only\"></span>
+<ul id=\"form_sEmploymentDate_year-list\" class=\"cb_list\" tabindex=\"-1\" role=\"listbox\" aria-expanded=\"false\" style=\"display: none;\">
+  <li role=\"option\" id=\"form_sEmploymentDate_year--ID\" data-value=\"\" class=\"cb_option selected\">Select</li>
+  <li role=\"option\" id=\"form_sEmploymentDate_year-2025-ID\" data-value=\"2025\" class=\"cb_option\">2025</li>
+  <li role=\"option\" id=\"form_sEmploymentDate_year-2024-ID\" data-value=\"2024\" class=\"cb_option\">2024</li>
+  <li role=\"option\" id=\"form_sEmploymentDate_year-2023-ID\" data-value=\"2023\" class=\"cb_option\">2023</li>
+  <li role=\"option\" id=\"form_sEmploymentDate_year-2022-ID\" data-value=\"2022\" class=\"cb_option\">2022</li>
+  <li role=\"option\" id=\"form_sEmploymentDate_year-2021-ID\" data-value=\"2021\" class=\"cb_option\">2021</li>
+  <li role=\"option\" id=\"form_sEmploymentDate_year-2020-ID\" data-value=\"2020\" class=\"cb_option\">2020</li>
+  <li role=\"option\" id=\"form_sEmploymentDate_year-2019-ID\" data-value=\"2019\" class=\"cb_option\">2019</li>
+  <li role=\"option\" id=\"form_sEmploymentDate_year-2018-ID\" data-value=\"2018\" class=\"cb_option\">2018</li>
+  <li role=\"option\" id=\"form_sEmploymentDate_year-2017-ID\" data-value=\"2017\" class=\"cb_option\">2017</li>
+  <li role=\"option\" id=\"form_sEmploymentDate_year-2016-ID\" data-value=\"2016\" class=\"cb_option\">2016</li>
+  <li role=\"option\" id=\"form_sEmploymentDate_year-2015-ID\" data-value=\"2015\" class=\"cb_option\">2015</li>
+  <li role=\"option\" id=\"form_sEmploymentDate_year-2014-ID\" data-value=\"2014\" class=\"cb_option\">2014</li>
+  <li role=\"option\" id=\"form_sEmploymentDate_year-2013-ID\" data-value=\"2013\" class=\"cb_option\">2013</li>
+  <li role=\"option\" id=\"form_sEmploymentDate_year-2012-ID\" data-value=\"2012\" class=\"cb_option\">2012</li>
+  <li role=\"option\" id=\"form_sEmploymentDate_year-2011-ID\" data-value=\"2011\" class=\"cb_option\">2011</li>
+  <li role=\"option\" id=\"form_sEmploymentDate_year-2010-ID\" data-value=\"2010\" class=\"cb_option\">2010</li>
+  <li role=\"option\" id=\"form_sEmploymentDate_year-2009-ID\" data-value=\"2009\" class=\"cb_option\">2009</li>
+  <li role=\"option\" id=\"form_sEmploymentDate_year-2008-ID\" data-value=\"2008\" class=\"cb_option\">2008</li>
+  <li role=\"option\" id=\"form_sEmploymentDate_year-2007-ID\" data-value=\"2007\" class=\"cb_option\">2007</li>
+  <li role=\"option\" id=\"form_sEmploymentDate_year-2006-ID\" data-value=\"2006\" class=\"cb_option\">2006</li>
+  <li role=\"option\" id=\"form_sEmploymentDate_year-2005-ID\" data-value=\"2005\" class=\"cb_option\">2005</li>
+  <li role=\"option\" id=\"form_sEmploymentDate_year-2004-ID\" data-value=\"2004\" class=\"cb_option\">2004</li>
+  <li role=\"option\" id=\"form_sEmploymentDate_year-2003-ID\" data-value=\"2003\" class=\"cb_option\">2003</li>
+  <li role=\"option\" id=\"form_sEmploymentDate_year-2002-ID\" data-value=\"2002\" class=\"cb_option\">2002</li>
+  <li role=\"option\" id=\"form_sEmploymentDate_year-2001-ID\" data-value=\"2001\" class=\"cb_option\">2001</li>
+  <li role=\"option\" id=\"form_sEmploymentDate_year-2000-ID\" data-value=\"2000\" class=\"cb_option\">2000</li>
+  <li role=\"option\" id=\"form_sEmploymentDate_year-1999-ID\" data-value=\"1999\" class=\"cb_option\">1999</li>
+  <li role=\"option\" id=\"form_sEmploymentDate_year-1998-ID\" data-value=\"1998\" class=\"cb_option\">1998</li>
+  <li role=\"option\" id=\"form_sEmploymentDate_year-1997-ID\" data-value=\"1997\" class=\"cb_option\">1997</li>
+  <li role=\"option\" id=\"form_sEmploymentDate_year-1996-ID\" data-value=\"1996\" class=\"cb_option\">1996</li>
+  <li role=\"option\" id=\"form_sEmploymentDate_year-1995-ID\" data-value=\"1995\" class=\"cb_option\">1995</li>
+  <li role=\"option\" id=\"form_sEmploymentDate_year-1994-ID\" data-value=\"1994\" class=\"cb_option\">1994</li>
+  <li role=\"option\" id=\"form_sEmploymentDate_year-1993-ID\" data-value=\"1993\" class=\"cb_option\">1993</li>
+  <li role=\"option\" id=\"form_sEmploymentDate_year-1992-ID\" data-value=\"1992\" class=\"cb_option\">1992</li>
+  <li role=\"option\" id=\"form_sEmploymentDate_year-1991-ID\" data-value=\"1991\" class=\"cb_option\">1991</li>
+  <li role=\"option\" id=\"form_sEmploymentDate_year-1990-ID\" data-value=\"1990\" class=\"cb_option\">1990</li>
+  <li role=\"option\" id=\"form_sEmploymentDate_year-1989-ID\" data-value=\"1989\" class=\"cb_option\">1989</li>
+  <li role=\"option\" id=\"form_sEmploymentDate_year-1988-ID\" data-value=\"1988\" class=\"cb_option\">1988</li>
+  <li role=\"option\" id=\"form_sEmploymentDate_year-1987-ID\" data-value=\"1987\" class=\"cb_option\">1987</li>
+  <li role=\"option\" id=\"form_sEmploymentDate_year-1986-ID\" data-value=\"1986\" class=\"cb_option\">1986</li>
+  <li role=\"option\" id=\"form_sEmploymentDate_year-1985-ID\" data-value=\"1985\" class=\"cb_option\">1985</li>
+  <li role=\"option\" id=\"form_sEmploymentDate_year-1984-ID\" data-value=\"1984\" class=\"cb_option\">1984</li>
+  <li role=\"option\" id=\"form_sEmploymentDate_year-1983-ID\" data-value=\"1983\" class=\"cb_option\">1983</li>
+  <li role=\"option\" id=\"form_sEmploymentDate_year-1982-ID\" data-value=\"1982\" class=\"cb_option\">1982</li>
+  <li role=\"option\" id=\"form_sEmploymentDate_year-1981-ID\" data-value=\"1981\" class=\"cb_option\">1981</li>
+  <li role=\"option\" id=\"form_sEmploymentDate_year-1980-ID\" data-value=\"1980\" class=\"cb_option\">1980</li>
+  <li role=\"option\" id=\"form_sEmploymentDate_year-1979-ID\" data-value=\"1979\" class=\"cb_option\">1979</li>
+  <li role=\"option\" id=\"form_sEmploymentDate_year-1978-ID\" data-value=\"1978\" class=\"cb_option\">1978</li>
+  <li role=\"option\" id=\"form_sEmploymentDate_year-1977-ID\" data-value=\"1977\" class=\"cb_option\">1977</li>
+  <li role=\"option\" id=\"form_sEmploymentDate_year-1976-ID\" data-value=\"1976\" class=\"cb_option\">1976</li>
+  <li role=\"option\" id=\"form_sEmploymentDate_year-1975-ID\" data-value=\"1975\" class=\"cb_option\">1975</li>
+  <li role=\"option\" id=\"form_sEmploymentDate_year-1974-ID\" data-value=\"1974\" class=\"cb_option\">1974</li>
+  <li role=\"option\" id=\"form_sEmploymentDate_year-1973-ID\" data-value=\"1973\" class=\"cb_option\">1973</li>
+  <li role=\"option\" id=\"form_sEmploymentDate_year-1972-ID\" data-value=\"1972\" class=\"cb_option\">1972</li>
+  <li role=\"option\" id=\"form_sEmploymentDate_year-1971-ID\" data-value=\"1971\" class=\"cb_option\">1971</li>
+  <li role=\"option\" id=\"form_sEmploymentDate_year-1970-ID\" data-value=\"1970\" class=\"cb_option\">1970</li>
+  <li role=\"option\" id=\"form_sEmploymentDate_year-1969-ID\" data-value=\"1969\" class=\"cb_option\">1969</li>
+</ul>
+</div>
+
+      </span>
+    </div>
+    
+        <div id=\"hiddenRow_sBadgeID\" style=\"display:none;\" class=\"form-group\">
+            <label class=\"col-sm-12 col-md-3\" for=\"sBadgeID\">Employee no.:</label>
+            <span class=\"col-sm-12 col-md-5\"><input type=\"text\" name=\"sBadgeID\" size=\"25\" maxlength=\"50\" id=\"form_sBadgeID\" aria-required=\"false\"></span>
+        </div>
+    
+
+  </b></div><b>
+  
+  </b>

@@ -886,7 +886,6 @@ const formFiller = (() => {
   
 
   async function performFormFilling(url, profile) {
-
     const tabUrl = new URL(url);
     const baseUrl = tabUrl.origin;
     console.log("Starting form filling for URL:", baseUrl, profile.filename);
@@ -922,143 +921,77 @@ const formFiller = (() => {
       document.head.appendChild(styleEl);
     }
 
-    // Get field values from local storage for the specific URL
+    // Get suggestions from storage
     const result = await new Promise(resolve => {
-      chrome.storage.local.get(['allSuggestions', 'fieldMappingsV2'], function(data) {
+      chrome.storage.local.get(['allSuggestions'], function(data) {
         resolve(data);
       });
     });
 
-    // Extract the field values and field mappings for this URL
+    // Get suggestions for this URL and profile
     const allSuggestions = result.allSuggestions || {};
-    const fieldMappingsV2 = result.fieldMappingsV2 || {};
+    const cacheKey = `${baseUrl}_profile_${profile.filename}`;
+    const fieldValues = allSuggestions[cacheKey] || {};
     
-    console.log('allSuggestions', allSuggestions);
-    console.log('fieldMappingsV2', fieldMappingsV2);
-    console.log('baseUrl', baseUrl);
+    console.log('Suggestions for URL:', fieldValues);
 
-    // Get field values specifically for this URL
-    const fieldValues = allSuggestions[baseUrl + '_profile_' + userProfile.filename] || [];
-    const fieldMappings = fieldMappingsV2[baseUrl] || [];
-    
-    console.log(`Found ${fieldValues.length} suggestions and ${fieldMappings.length} field mappings for URL: ${baseUrl}`);
-    
-    // Initialize stats for tracking fill results
+    // Get current form fields
+    const formFields = document.querySelectorAll('input, select, textarea');
     const stats = {
       filled: 0,
       failed: 0,
       skipped: 0,
-      total: fieldMappings.length
+      total: formFields.length
     };
 
-    // Process each field mapping using AI code
-    for (const control of fieldMappings) {
-      console.log('control.containerDesc.aicode', control.containerDesc.aicode);
+    // Process each form field
+    for (const field of formFields) {
+      if (!field.offsetParent) continue; // Skip hidden fields
+      
       try {
-        // Skip controls without AI code
-        if (!control.containerDesc || !control.containerDesc.aicode) {
-          console.log(`Skipping control without AI code:`, control.id || control.name);
+        const fieldId = field.id || field.name;
+        if (!fieldId) {
+          console.log('Skipping field without id/name');
           stats.skipped++;
           continue;
         }
-        
-        // Parse the AI code from the control
-        let aiCodeObj;
-        try {
-          aiCodeObj = control.containerDesc.aicode;
-        } catch (e) {
-          console.error(`Error parsing AI code for control:`, control.id || control.name, e);
-          stats.failed++;
-          continue;
-        }
-        
-        // Skip if no AI code function available
-        if (!aiCodeObj || !aiCodeObj.aicode) {
-          console.log(`No AI code function found for control:`, control.id || control.name);
-          stats.skipped++;
-          continue;
-        }
-        
-        const id = aiCodeObj.id;
-        const title = aiCodeObj.title;
-        
-        // Find a matching value from suggestions
-        let valueToSet = fieldValues[control.containerDesc.aicode.title];
-        console.log('valueToSet', control.containerDesc.aicode.title, valueToSet);
-        
-        // Skip if value is still undefined
+
+        // Get value from suggestions
+        const valueToSet = fieldValues[fieldId];
         if (valueToSet === undefined || valueToSet === null) {
-          console.log(`No value to set for ${title || id}, skipping`);
+          console.log(`No value to set for ${fieldId}, skipping`);
           stats.skipped++;
           continue;
         }
-        
-        // Create and execute the AI code function
-        console.log(`Executing AI code for ${title || id} with value: ${valueToSet}`);
-        const functionBody = aiCodeObj.aicode;
-        try {
-          // Get the element using the XPath if available
-          let element = null;
-          if (aiCodeObj.xPath) {
-            try {
-              const xpathResult = document.evaluate(
-                aiCodeObj.xPath, 
-                document, 
-                null, 
-                XPathResult.FIRST_ORDERED_NODE_TYPE, 
-                null
-              );
-              
-              if (xpathResult && xpathResult.singleNodeValue) {
-                // Found the container element using XPath
-                const containerElement = xpathResult.singleNodeValue;
-                console.log(`Found container element using XPath: ${aiCodeObj.xPath}`);
-                
-                // First check if the ID is directly available in the container
-                if (id) {
-                  element = containerElement.querySelector(`#${id}`) || document.getElementById(id);
-                }
-                
-                // If element not found by ID, use the container itself
-                if (!element) {
-                  element = containerElement;
-                }
-              }
-            } catch (xpathError) {
-              console.error(`Error evaluating XPath: ${aiCodeObj.xPath}`, xpathError);
-            }
+
+        // Set the value based on field type
+        if (field.type === 'checkbox') {
+          field.checked = Boolean(valueToSet);
+        } else if (field.type === 'radio') {
+          const radio = document.querySelector(`input[type="radio"][name="${field.name}"][value="${valueToSet}"]`);
+          if (radio) radio.checked = true;
+        } else if (field.tagName === 'SELECT') {
+          const option = Array.from(field.options).find(opt => opt.value === valueToSet);
+          if (option) {
+            field.value = valueToSet;
+            // Trigger change event
+            field.dispatchEvent(new Event('change', { bubbles: true }));
           }
-          
-          // Fallback to getElementById if XPath didn't work
-          if (!element && id) {
-            element = document.getElementById(id);
-          }
-          
-          if (element) {
-            // Try filling using fillField_explore with the AI code
-            console.log(`Using fillField_explore with element and AI code`);
-            const fillResult = await fillField_explore(element, valueToSet, functionBody);
-            if (fillResult) {
-              stats.filled++;
-              console.log(`Successfully filled field using fillField_explore: ${title || id}`);
-              continue; // Skip the other methods if this succeeds
-            }
-          }
-          
-          
-          stats.filled++;
-          console.log(`Successfully filled field: ${title || id}`);
-        } catch (error) {
-          console.error(`Error executing AI code for ${title || id}:`, error);
-          stats.failed++;
+        } else {
+          field.value = valueToSet;
+          // Trigger change event
+          field.dispatchEvent(new Event('change', { bubbles: true }));
         }
+
+        // Add visual indicator
+        addPermanentValueIndicator(field, field.tagName, field.type, valueToSet);
+        stats.filled++;
       } catch (error) {
-        console.error(`Error processing control:`, error);
+        console.error('Error filling field:', error);
         stats.failed++;
       }
     }
 
-    console.log("Form filling complete:", stats);
     return stats;
   }
 

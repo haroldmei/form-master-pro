@@ -135,7 +135,7 @@ if (typeof formAnalysisLabels === 'undefined') {
       
       // Get all radios in this group, either from stored groupElements or by querying
       const radioGroup = controlInfo.groupElements || 
-                        document.querySelectorAll(`input[type="radio"][name="${name}"]`);
+                        Array.from(document.querySelectorAll(`input[type="radio"][name="${name}"]`));
       
       // Find common container for all radio buttons in the group
       let commonContainer = null;

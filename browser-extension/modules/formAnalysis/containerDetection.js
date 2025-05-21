@@ -5,53 +5,142 @@
 // Prevent redeclaration error by checking if the module already exists
 if (typeof formAnalysisContainers === 'undefined') {
   const formAnalysisContainers = (() => {
+    // Track the main form container
+    let mainFormContainer = null;
+    
+    /**
+     * Find the main container that encompasses all form controls
+     * @param {Array} formControls - Array of form control elements
+     * @returns {HTMLElement} The main container element
+     */
+    function findMainFormContainer(formControls) {
+      // Validate input
+      if (!formControls || !Array.isArray(formControls) || formControls.length === 0) {
+        console.warn('No form controls provided to findMainFormContainer');
+        return document.body;
+      }
+      
+      // Get all form control elements, filtering out any null/undefined
+      const formElements = formControls
+        .filter(control => control && control.element && control.element.nodeType === Node.ELEMENT_NODE)
+        .map(control => control.element);
+      
+      if (formElements.length === 0) {
+        console.warn('No valid form elements found');
+        return document.body;
+      }
+      
+      // Find the common ancestor of all form controls
+      const commonAncestor = formAnalysisDomUtils.findCommonAncestor(formElements);
+      
+      // If the common ancestor is the body, try to find a more specific container
+      if (commonAncestor === document.body) {
+        // Look for common semantic containers that might contain all form controls
+        const potentialContainers = [
+          document.querySelector('form'),
+          document.querySelector('main'),
+          document.querySelector('[role="main"]'),
+          document.querySelector('.main-content'),
+          document.querySelector('#main-content'),
+          document.querySelector('.form-container'),
+          document.querySelector('.form-wrapper')
+        ].filter(Boolean);
+        
+        // Find the smallest container that contains all form controls
+        for (const container of potentialContainers) {
+          if (container && formElements.every(el => container.contains(el))) {
+            return container;
+          }
+        }
+        
+        // If no semantic container found, try to find the smallest div that contains all controls
+        const allDivs = Array.from(document.getElementsByTagName('div'));
+        const containingDivs = allDivs.filter(div => 
+          formElements.every(el => div.contains(el))
+        );
+        
+        if (containingDivs.length > 0) {
+          // Find the smallest div (most specific) that contains all controls
+          return containingDivs.reduce((smallest, current) => {
+            if (!smallest) return current;
+            return current.contains(smallest) ? smallest : current;
+          }, null);
+        }
+      }
+      
+      return commonAncestor;
+    }
+    
     /**
      * Find the parent container of a form control
      * @param {HTMLElement} element - The form control element
      * @param {Object} controlInfo - The control info object to update
      */
     function findParentContainer(element, controlInfo) {
-      // If container is already set (e.g., by findRadioOptions), don't override it
-      if (controlInfo.container) {
+      if (!element || !controlInfo) {
+        console.warn('Invalid element or controlInfo provided to findParentContainer');
         return;
       }
       
-      // Try to find a semantic parent first (like form-group, input-group, etc.)
-      let parent = element.parentElement;
-      let container = null;
+      // If we haven't found the main container yet, find it
+      if (!mainFormContainer) {
+        try {
+          // Get all form controls on the page
+          const allFormControls = Array.from(document.querySelectorAll('input:not([type="submit"]):not([type="button"]):not([type="reset"]):not([type="hidden"]), select, textarea'))
+            .filter(isElementVisible)
+            .map(element => ({ element }));
+          
+          mainFormContainer = findMainFormContainer(allFormControls);
+        } catch (error) {
+          console.error('Error finding main form container:', error);
+          mainFormContainer = document.body;
+        }
+      }
       
-      // Look up to 5 levels up
-      for (let i = 0; i < 5 && parent && parent.tagName !== 'BODY' && parent.tagName !== 'FORM'; i++) {
-        // Check for common container classes
-        const className = parent.className.toLowerCase();
-        if (className.includes('form-group') || 
-            className.includes('input-group') || 
-            className.includes('form-field') || 
-            className.includes('input-field') ||
-            className.includes('form-control-container') || 
-            className.includes('field-wrapper')) {
-          container = parent;
-          break;
+      // Set the container to the main form container
+      controlInfo.container = mainFormContainer;
+    }
+    
+    /**
+     * Check if an element is visible on the page
+     * @param {HTMLElement} element - The element to check
+     * @returns {boolean} - True if element is visible, false otherwise
+     */
+    function isElementVisible(element) {
+      if (!element) return false;
+      
+      // Check if element or any of its ancestors have display:none or visibility:hidden
+      const style = window.getComputedStyle(element);
+      if (style.display === 'none' || style.visibility === 'hidden') {
+        return false;
+      }
+      
+      // Check if element has 0 dimensions (effectively hidden)
+      if (element.offsetWidth === 0 && element.offsetHeight === 0) {
+        // Special case for radio/checkbox which might be small but still visible
+        if (element.type !== 'radio' && element.type !== 'checkbox') {
+          return false;
         }
-        
-        // Check if this contains the element and its label
-        if (controlInfo.labels && controlInfo.labels.length > 0) {
-          const labelElement = controlInfo.labels[0].element;
-          if (labelElement && parent.contains(labelElement)) {
-            container = parent;
-            break;
-          }
+      }
+      
+      // Check all ancestors as well
+      let parent = element.parentElement;
+      while (parent) {
+        const parentStyle = window.getComputedStyle(parent);
+        if (parentStyle.display === 'none' || parentStyle.visibility === 'hidden') {
+          return false;
         }
-        
         parent = parent.parentElement;
       }
       
-      // If no semantic container found, use immediate parent as fallback
-      if (!container) {
-        container = element.parentElement;
-      }
-      
-      controlInfo.container = container;
+      return true;
+    }
+    
+    /**
+     * Reset the main form container
+     */
+    function resetMainContainer() {
+      mainFormContainer = null;
     }
     
     /**
@@ -205,6 +294,8 @@ if (typeof formAnalysisContainers === 'undefined') {
     
     return {
       findParentContainer,
+      resetMainContainer,
+      findMainFormContainer,
       findBestRadioGroupContainer,
       findRadioGroupLabel,
       findNearbyText
