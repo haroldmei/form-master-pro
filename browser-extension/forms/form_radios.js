@@ -631,22 +631,9 @@ function getRadioGroupLabel(radioElement) {
   }
 }
 
-function getRadioGroupValues(container = document.body) {
-  const values = {};
-  const radioGroups = extractRadioGroups(container);
-  
-  radioGroups.forEach(group => {
-    const selectedOption = group.options.find(opt => opt.checked);
-    values[group.name] = selectedOption ? selectedOption.value : null;
-  });
-  
-  return values;
-}
-
 self.FormRadios = {
   extractRadioGroups,
   getRadioElementLabel,
   getRadioGroupLabel,
-  getRadioGroupValues,
   isElementHidden
 };

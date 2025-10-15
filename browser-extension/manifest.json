@@ -35,7 +35,6 @@
         "<all_urls>"
       ],
       "js": [
-        "content.js",
         "libs/jszip.min.js",
         "ui-injector.js"
       ],
@@ -45,7 +44,6 @@
   "web_accessible_resources": [
     {
       "resources": [
-        "modules/defaultsDialog-popup.js",
         "styles/injector-ui.css",
         "lib/*"
       ],

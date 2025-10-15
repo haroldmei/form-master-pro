@@ -75,17 +75,6 @@ function extractFormControls(formSelector = null) {
   }
 }
 
-function extractFormStructure(formSelector = null) {
-  try {
-    const controls = extractFormControls(formSelector);
-    return controls.label_mapping || {};
-  } catch (e) {
-    console.error(`Error extracting form structure: ${e.message}`);
-    console.error(e.stack);
-    return {};
-  }
-}
-
 function extractInputs(container) {
   const inputs = [];
   const inputElements = container.querySelectorAll('input:not([type="submit"]):not([type="button"]):not([type="image"]):not([type="reset"]):not([type="file"]):not([type="radio"]):not([type="checkbox"]):not([type="hidden"])');
@@ -452,6 +441,5 @@ function createLabelMapping(controls) {
 // Export functions in a way that works in browser context
 self.FormExtract = {
   extractFormControls,
-  extractFormStructure,
   isElementHidden // Export for potential reuse
 };
