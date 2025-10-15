@@ -2,7 +2,7 @@
 
 > **AI-Powered Form Automation for Chrome**
 
-[![Version](https://img.shields.io/badge/version-0.1.26-blue.svg)](https://github.com/haroldmei/form-master-pro)
+[![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)](https://github.com/haroldmei/form-master-pro)
 [![License](https://img.shields.io/badge/license-Proprietary-red.svg)](LICENSE)
 [![Chrome Web Store](https://img.shields.io/badge/Chrome-Extension-brightgreen.svg)](https://chrome.google.com/webstore)
 
@@ -412,9 +412,9 @@ Key configurations in `webpack.config.js`:
 #### Version Management
 
 Version numbers follow [Semantic Versioning](https://semver.org/):
-- **Patch** (0.1.26 → 0.1.27): Bug fixes, minor changes
-- **Minor** (0.1.26 → 0.2.0): New features, backward compatible
-- **Major** (0.1.26 → 1.0.0): Breaking changes
+- **Patch** (1.0.0 → 1.0.1): Bug fixes, minor changes
+- **Minor** (1.0.0 → 1.1.0): New features, backward compatible
+- **Major** (1.0.0 → 2.0.0): Breaking changes
 
 To update version:
 ```bash
