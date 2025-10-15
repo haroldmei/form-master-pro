@@ -3,10 +3,10 @@
 > **AI-Powered Form Automation for Chrome**
 
 [![Version](https://img.shields.io/badge/version-0.1.26-blue.svg)](https://github.com/haroldmei/form-master-pro)
-[![License](https://img.shields.io/badge/license-Proprietary-red.svg)](LICENSE)
+[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Chrome Web Store](https://img.shields.io/badge/Chrome-Extension-brightgreen.svg)](https://chrome.google.com/webstore)
 
-FormMasterPro is an intelligent Chrome extension that eliminates the tedium of filling out online forms by automatically extracting information from your documents and populating form fields using advanced AI technology.
+FormMasterPro is an intelligent, **open-source** Chrome extension that eliminates the tedium of filling out online forms by automatically extracting information from your documents and populating form fields using advanced AI technology.
 
 ---
 
@@ -369,13 +369,13 @@ form-master-pro/
 
 #### Building for Production
 
-```bash
+   ```bash
 # Full production build with obfuscation
-npm run build
-npm run obfuscate
+   npm run build
+   npm run obfuscate
 
 # Package for distribution
-npm run package
+   npm run package
 
 # The packaged extension will be in packages/form-master-pro.zip
 ```
@@ -542,7 +542,11 @@ FormMasterPro uses Manifest V3 for Chrome extensions with:
 
 ### Contributing
 
-We welcome contributions! Please follow these guidelines:
+We welcome contributions! 🎉 
+
+For detailed information on how to contribute, please read our [Contributing Guide](CONTRIBUTING.md).
+
+#### Quick Start for Contributors
 
 #### Code Style
 
@@ -688,11 +692,9 @@ formFiller.fillForm(fieldValues);
 
 ### License
 
-This software is proprietary and protected by copyright law.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-Copyright © 2023-2025 FormMasterPro Team. All rights reserved.
-
-See [LICENSE](LICENSE) file for full terms.
+Copyright © 2023-2025 FormMasterPro Team.
 
 ### Acknowledgments
 
@@ -701,9 +703,20 @@ See [LICENSE](LICENSE) file for full terms.
 - **Mammoth.js** for DOCX conversion
 - **Auth0** for authentication services
 - Icons from [Material Design Icons](https://material.io/resources/icons/)
+- All our amazing [contributors](https://github.com/haroldmei/form-master-pro/graphs/contributors)
 
 ---
 
-**Made with ❤️ by the FormMasterPro Team**
+## ⭐ Support the Project
+
+If you find FormMasterPro useful, please consider:
+
+- ⭐ Starring the repository on GitHub
+- 🐛 Reporting bugs and issues
+- 💡 Suggesting new features
+- 🤝 Contributing code or documentation
+- 📢 Spreading the word about FormMasterPro
+
+**Made with ❤️ by the FormMasterPro Team and Contributors**
 
 *Saving time, one form at a time.*
