@@ -55,7 +55,7 @@ const aiService = (() => {
   }
 
   /**
-   * Make an API call to bargain4me.com API to get suggestions for form fields
+   * Make an API call to Claude API to get suggestions for form fields
    * 
    * @param {Array} fieldKeywords - List of field labels/names
    * @param {Object} userProfile - User profile data
@@ -64,10 +64,28 @@ const aiService = (() => {
    */
   async function getAiSuggestions(fieldKeywords, userProfile, url) {
     try {
-      // Get the access token from the auth service
-      const accessToken = await auth0Service.getAccessToken();
-      if (!accessToken) {
-        throw new Error("Authentication required to use AI suggestions");
+      // Get Claude API key from storage
+      let claudeApiKey;
+      
+      try {
+        claudeApiKey = await new Promise((resolve, reject) => {
+          chrome.storage.local.get(['claudeApiKey'], (result) => {
+            if (chrome.runtime.lastError) {
+              console.error("Chrome storage error:", chrome.runtime.lastError);
+              reject(chrome.runtime.lastError);
+            } else {
+              console.log("Retrieved Claude API key:", result.claudeApiKey ? "Key found" : "No key found");
+              resolve(result.claudeApiKey);
+            }
+          });
+        });
+      } catch (storageError) {
+        console.error("Failed to access chrome storage:", storageError);
+        throw new Error("Unable to access extension storage. Please reload the extension and try again.");
+      }
+
+      if (!claudeApiKey) {
+        throw new Error("Claude API key not found. Please configure it in the extension popup.");
       }
       
       // Process user profile to reduce size before sending to API
@@ -77,80 +95,157 @@ const aiService = (() => {
       const profileJson = JSON.stringify(processedProfile);
       console.log("User profile JSON (first 100 bytes):", profileJson.substring(0, 100));
       
-      // Make the API call using the API_BASE_URL constant with fallback to local development URL
-      const response = await fetch(`${typeof API_BASE_URL !== 'undefined' ? API_BASE_URL : 'http://localhost:3001'}/api/formmaster`, {
+      // Categorize fields based on whether they have options
+      const fieldsWithoutOptions = {};
+      const fieldsWithOptions = {};
+      
+      Object.entries(fieldKeywords).forEach(([field, options]) => {
+        if (!options || (Array.isArray(options) && options.length === 0) || 
+            (typeof options === 'object' && Object.keys(options).length === 0)) {
+          fieldsWithoutOptions[field] = null;
+        } else {
+          fieldsWithOptions[field] = options;
+        }
+      });
+      
+      console.log(`Fields without options: ${Object.keys(fieldsWithoutOptions).length}`);
+      console.log(`Fields with options: ${Object.keys(fieldsWithOptions).length}`);
+      
+      // Create the prompt for Claude
+      const systemPrompt = `You are an advanced form filling assistant that extracts information from user profiles and selects appropriate options for form fields.`;
+      const prompt = `User's profile data: 
+${profileJson}
+
+I need to fill out a form with the following fields. There are two types of fields:
+
+
+1. EXTRACTION FIELDS: Fields where I need you to extract information directly from the profile.
+These fields have no predefined options:
+${JSON.stringify(fieldsWithoutOptions, null, 2)}
+
+
+2. SELECTION FIELDS: Fields where you must select the most appropriate option from a list, you answer must be exactly the same as one of the options.
+These fields have predefined options:
+${JSON.stringify(fieldsWithOptions, null, 2)}
+
+
+INSTRUCTIONS:
+- For EXTRACTION FIELDS, find relevant information in the profile and provide the appropriate value.
+- For SELECTION FIELDS, select the MOST APPROPRIATE OPTION from the given options based on the profile.
+- Return a SINGLE JSON object containing both types of fields.
+- If you don't have enough information for a field, omit it from the response.
+
+
+FORMAT:
+Return your response as a valid JSON object where keys are field names and values are either:
+1. Extracted values from the profile (for extraction fields)
+2. The selected option (for selection fields)
+
+DO NOT include explanations or markdown formatting - ONLY return the JSON object.`;
+      
+      console.log("Prompt:", prompt);
+      console.log("Making Claude API call with key:", claudeApiKey.substring(0, 10) + "...");
+      
+      // Make the API call to Claude
+      const response = await fetch('https://api.anthropic.com/v1/messages', {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${accessToken}`
+          "x-api-key": claudeApiKey,
+          "anthropic-version": "2023-06-01",
+          "anthropic-dangerous-direct-browser-access": "true"
         },
         body: JSON.stringify({
-          profileJson: profileJson,
-          fieldKeywords: fieldKeywords,
-          url: url
+          model: "claude-3-haiku-20240307",
+          max_tokens: 1000,
+          system: systemPrompt,
+          messages: [
+            {
+              role: "user",
+              content: prompt
+            }
+          ]
         })
       });
 
-      const contentType = response.headers.get('content-type');
-      if (contentType && contentType.includes('application/json')) {
-        const responseData = await response.json();
-        //console.log("FromMasterPro API response:", responseData);
-        if (!response.ok) {
-          if (response.status === 403) {
-            throw {
-              status: response.status,
-              message: responseData.message || 'Forbidden',
-              error: responseData.error,
-              isVerificationError: true
-            };
-          }
-          else{
-            throw new Error(`FromMasterPro API error: ${response.status} ${response.statusText}`);
-          }
-        }
+      console.log("Claude API response status:", response.status);
 
-        // Extract the content from the response
-        // Adjust based on the actual response structure from bargain4me.com API
-        const content = responseData.reply;
-        if (!content) {
-          throw new Error("Invalid response format from FromMasterPro API");
-        }
-
-        // Parse the JSON content
-        // First, we need to extract JSON from the response which might contain markdown formatting
-        const jsonMatch = content.match(/```json\n([\s\S]*?)\n```/) || 
-                         content.match(/```([\s\S]*?)```/) || 
-                         [null, content];
-
-        const jsonContent = jsonMatch[1] || content;
-
-        try {
-          return JSON.parse(jsonContent);
-        } catch (parseError) {
-          console.error("Error parsing FromMasterPro response as JSON:", parseError);
-          console.log("Response content:", content);
-          throw new Error("Error parsing FromMasterPro response as JSON:", parseError, content);
-        }
-      } else {
-        // Not JSON, get as text instead
+      if (!response.ok) {
         const errorText = await response.text();
+        console.error("Claude API error response:", errorText);
         
-        // Check for rate limit text
-        if (errorText.includes("Too many requests") || errorText.includes("rate limit")) {
-          throw new Error(`Rate limit exceeded. Please try again later.`);
+        if (response.status === 401) {
+          throw new Error("Invalid Claude API key. Please check your API key in the extension settings.");
+        } else if (response.status === 429) {
+          throw new Error("Rate limit exceeded. Please try again later.");
         } else {
-          throw new Error(`API error (${response.status}): ${errorText.substring(0, 100)}`);
+          throw new Error(`Claude API error: ${response.status} ${response.statusText} - ${errorText}`);
         }
       }
+
+      const responseData = await response.json();
+      console.log("Claude API response:", responseData);
+      
+      // Extract the content from the response
+      const content = responseData.content?.[0]?.text;
+      if (!content) {
+        throw new Error("Invalid response format from Claude API");
+      }
+
+      // Parse the JSON content
+      try {
+        // Clean the content to extract JSON
+        const cleanContent = content.trim();
+        return JSON.parse(cleanContent);
+      } catch (parseError) {
+        console.error("Error parsing Claude response as JSON:", parseError);
+        console.log("Response content:", content);
+        throw new Error("Error parsing Claude response as JSON");
+      }
     } catch (error) {
-      console.error("Error calling FromMasterPro API:", error);
+      console.error("Error calling Claude API:", error);
       throw error;
     }
   }
   
+  /**
+   * Test Claude API key validity
+   * @param {string} apiKey - The API key to test
+   * @returns {Promise<boolean>} - True if valid, false otherwise
+   */
+  async function testClaudeApiKey(apiKey) {
+    try {
+      const response = await fetch('https://api.anthropic.com/v1/messages', {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-api-key": apiKey,
+          "anthropic-version": "2023-06-01",
+          "anthropic-dangerous-direct-browser-access": "true"
+        },
+        body: JSON.stringify({
+          model: "claude-3-haiku-20240307",
+          max_tokens: 10,
+          messages: [
+            {
+              role: "user",
+              content: "Hello"
+            }
+          ]
+        })
+      });
+
+      return response.ok;
+    } catch (error) {
+      console.error("Error testing Claude API key:", error);
+      return false;
+    }
+  }
+
   // Return public API
   return {
-    getAiSuggestions
+    getAiSuggestions,
+    testClaudeApiKey
   };
 })();
 

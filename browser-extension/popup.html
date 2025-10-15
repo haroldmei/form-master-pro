@@ -500,6 +500,22 @@
       </div>
     </div>
     
+    <!-- Claude API Key Configuration -->
+    <div class="panel">
+      <h3 style="margin: 0 0 12px 0; font-size: 16px; color: var(--text-dark);">Claude API Configuration</h3>
+      <div style="margin-bottom: 12px;">
+        <label for="claude-api-key" style="display: block; margin-bottom: 6px; font-size: 13px; color: var(--text-secondary);">Claude API Key:</label>
+        <input 
+          type="password" 
+          id="claude-api-key" 
+          placeholder="Enter your Claude API key"
+          style="width: 100%; padding: 8px 12px; border: 1px solid var(--medium-gray); border-radius: var(--border-radius); font-size: 14px; box-sizing: border-box;"
+        >
+      </div>
+      <button id="save-claude-key" style="margin-bottom: 8px;">Save API Key</button>
+      <button id="test-claude-key" class="secondary-btn" style="margin-bottom: 0;">Test Connection</button>
+    </div>
+
     <!-- Add the analyze form button here -->
     <div class="main-actions panel">
       <button id="analyze-form">Analyze Current Form</button>
