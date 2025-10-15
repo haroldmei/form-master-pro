@@ -28,6 +28,11 @@ document.addEventListener('DOMContentLoaded', function() {
   // Button elements
   const analyzeFormBtn = document.getElementById('analyze-form');
   
+  // Claude API key elements
+  const claudeApiKeyInput = document.getElementById('claude-api-key');
+  const saveClaudeKeyBtn = document.getElementById('save-claude-key');
+  const testClaudeKeyBtn = document.getElementById('test-claude-key');
+  
   // Form analysis panel
   const fieldCount = document.getElementById('field-count');
   const fieldsContainer = document.getElementById('fields-container');
@@ -46,6 +51,9 @@ document.addEventListener('DOMContentLoaded', function() {
   // Check subscription status on popup open
   checkAuthState();
   
+  // Load Claude API key on popup open
+  loadClaudeApiKey();
+  
   // Add auth button listeners
   if (loginButton) loginButton.addEventListener('click', login);
   if (logoutButton) logoutButton.addEventListener('click', logout);
@@ -53,6 +61,8 @@ document.addEventListener('DOMContentLoaded', function() {
   // Set up event listeners
   addSafeEventListener('analyze-form', 'click', analyzeCurrentForm);
   addSafeEventListener('clear-data', 'click', clearSavedData);
+  addSafeEventListener('save-claude-key', 'click', saveClaudeApiKey);
+  addSafeEventListener('test-claude-key', 'click', testClaudeApiKey);
 
   // Add verification-related event listeners
   if (resendVerificationBtn) resendVerificationBtn.addEventListener('click', resendVerificationEmail);
@@ -1311,6 +1321,132 @@ document.addEventListener('DOMContentLoaded', function() {
       if (unsubscribeBtn) {
         unsubscribeBtn.classList.add('hidden');
       }
+    }
+  }
+
+  // Function to save Claude API key
+  async function saveClaudeApiKey() {
+    if (!claudeApiKeyInput || !saveClaudeKeyBtn) return;
+    
+    const apiKey = claudeApiKeyInput.value.trim();
+    
+    if (!apiKey) {
+      showToast('Please enter a Claude API key', 'warning');
+      return;
+    }
+    
+    // Store original text
+    const originalText = saveClaudeKeyBtn.textContent;
+    
+    // Show loading state
+    saveClaudeKeyBtn.textContent = 'Saving...';
+    saveClaudeKeyBtn.disabled = true;
+    
+    try {
+      console.log('Saving Claude API key:', apiKey.substring(0, 10) + '...');
+      
+      // Save to chrome storage
+      await new Promise((resolve, reject) => {
+        chrome.storage.local.set({ claudeApiKey: apiKey }, () => {
+          if (chrome.runtime.lastError) {
+            console.error('Chrome storage error when saving:', chrome.runtime.lastError);
+            reject(chrome.runtime.lastError);
+          } else {
+            console.log('Claude API key saved successfully to storage');
+            resolve();
+          }
+        });
+      });
+      
+      showToast('Claude API key saved successfully', 'success');
+    } catch (error) {
+      console.error('Error saving Claude API key:', error);
+      showToast('Error saving API key', 'error');
+    } finally {
+      // Reset button state
+      saveClaudeKeyBtn.disabled = false;
+      saveClaudeKeyBtn.textContent = originalText;
+    }
+  }
+  
+  // Function to load Claude API key
+  async function loadClaudeApiKey() {
+    if (!claudeApiKeyInput) return;
+    
+    try {
+      const result = await new Promise((resolve, reject) => {
+        chrome.storage.local.get(['claudeApiKey'], (result) => {
+          if (chrome.runtime.lastError) {
+            console.error('Chrome storage error when loading:', chrome.runtime.lastError);
+            reject(chrome.runtime.lastError);
+          } else {
+            console.log('Loaded Claude API key from storage:', result.claudeApiKey ? 'Key found' : 'No key found');
+            resolve(result);
+          }
+        });
+      });
+      
+      if (result.claudeApiKey) {
+        claudeApiKeyInput.value = result.claudeApiKey;
+        console.log('Set API key in input field');
+      }
+    } catch (error) {
+      console.error('Error loading Claude API key:', error);
+    }
+  }
+
+  // Function to test Claude API key
+  async function testClaudeApiKey() {
+    if (!claudeApiKeyInput || !testClaudeKeyBtn) return;
+    
+    const apiKey = claudeApiKeyInput.value.trim();
+    
+    if (!apiKey) {
+      showToast('Please enter a Claude API key first', 'warning');
+      return;
+    }
+    
+    // Store original text
+    const originalText = testClaudeKeyBtn.textContent;
+    
+    // Show loading state
+    testClaudeKeyBtn.textContent = 'Testing...';
+    testClaudeKeyBtn.disabled = true;
+    
+    try {
+      const response = await fetch('https://api.anthropic.com/v1/messages', {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-api-key": apiKey,
+          "anthropic-version": "2023-06-01",
+          "anthropic-dangerous-direct-browser-access": "true"
+        },
+        body: JSON.stringify({
+          model: "claude-3-haiku-20240307",
+          max_tokens: 10,
+          messages: [
+            {
+              role: "user",
+              content: "Hello"
+            }
+          ]
+        })
+      });
+
+      if (response.ok) {
+        showToast('Claude API key is valid!', 'success');
+      } else {
+        const errorData = await response.json().catch(() => ({}));
+        showToast(`API test failed: ${errorData.error?.message || response.statusText}`, 'error');
+      }
+    } catch (error) {
+      console.error('Error testing Claude API key:', error);
+      showToast(`Error testing API key: ${error.message}`, 'error');
+    } finally {
+      // Reset button state
+      testClaudeKeyBtn.disabled = false;
+      testClaudeKeyBtn.textContent = originalText;
     }
   }
 

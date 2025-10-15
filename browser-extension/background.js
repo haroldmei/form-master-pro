@@ -145,27 +145,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
   
-  if (message.action === 'checkCompanionConnection') {
-    // We're now in standalone mode, always "connected"
-    sendResponse({ connected: true, standalone: true });
-    return false;
-  }
-  
-  if (message.action === 'openFilePicker') {
-    // Using a placeholder for file picking, as browser extensions have limited file access
-    sendResponse({ 
-      success: true, 
-      filename: "user_profile.json",
-      message: "Profile data loaded from browser storage" 
-    });
-    return false;
-  }
-  
-  if (message.action === 'settingsUpdated') {
-    // Nothing to do - profile is already in global memory
-    return false;
-  }
-  
   if (message.action === 'analyze-form') {
     analyzeFormInTab(tabId, message.url)
       .then(result => {
@@ -189,13 +168,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       })
       .catch(err => sendResponse({ success: false, error: err.message }));
     return true;
-  }
-  
-  if (message.action === 'data-mappings') {
-    // Open the mappings page in a new tab
-    chrome.tabs.create({ url: 'mappings.html' });
-    sendResponse({ success: true, message: 'Opening field mappings' });
-    return false;
   }
   
   if (message.action === 'auto-fill') {

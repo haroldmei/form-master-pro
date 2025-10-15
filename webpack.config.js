@@ -26,8 +26,6 @@ module.exports = (env, argv) => {
       'modules/aiService': './browser-extension/modules/aiService.js',
       'modules/formFiller': './browser-extension/modules/formFiller.js',
       'modules/formProcessor': './browser-extension/modules/formProcessor.js',
-      'modules/defaultsDialog-popup': './browser-extension/modules/defaultsDialog-popup.js',
-      'modules/defaultsDialog': './browser-extension/modules/defaultsDialog.js',
       'modules/utils': './browser-extension/modules/utils.js',
       // UI injection script
       'ui-injector': './browser-extension/ui-injector.js',
@@ -39,7 +37,6 @@ module.exports = (env, argv) => {
       'libs/jszip.min': './browser-extension/libs/jszip.min.js',
       'libs/pdf.min': './browser-extension/libs/pdf.min.js',
       'libs/pdf.worker.min': './browser-extension/libs/pdf.worker.min.js',
-      'mappings': './browser-extension/mappings.js',
     },
     output: {
       path: path.resolve(__dirname, 'dist'),

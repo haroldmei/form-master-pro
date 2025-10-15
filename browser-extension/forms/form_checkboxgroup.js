@@ -695,10 +695,6 @@ function getGroupedCheckboxIds(checkboxGroups) {
   return ids;
 }
 
-function removeDebugLogs() {
-  // This is a reminder to remove console.logs before production
-  console.log = function() {};
-}
 
 // Export the module functions for use in browser context
 self.FormCheckboxGroups = {

@@ -95,13 +95,6 @@ function saveSettings() {
   
   chrome.storage.local.set({ fieldMappings: mappings }, function() {
     showStatusMessage('Settings saved successfully!', 'success');
-    
-    // Directly apply settings without needing to notify external app
-    chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
-      if (tabs[0]) {
-        chrome.tabs.sendMessage(tabs[0].id, { action: 'settingsUpdated' });
-      }
-    });
   });
 }
 
